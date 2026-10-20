@@ -1,6 +1,6 @@
 {
   "reviewedAt": "2026-10-20",
-  "status": "产品世界、关系契约与浏览器交互已验证；原生真机验收待设备解锁",
+  "status": "产品世界与 HTML 界面对稿已验证；原生真机验收待设备解锁",
   "checks": [
     {
       "name": "产品世界与域 / 能力 / 关系契约",
@@ -9,15 +9,35 @@
       "capabilities": 12,
       "relations": 9,
       "ownedObjects": 10,
-      "documents": 9,
-      "widths": [
-        320,
-        393,
-        736,
-        1440
-      ],
+      "documents": 10,
+      "widths": [320, 393, 736, 1440],
       "pageErrors": 0,
       "deviceApiRequests": 0
+    },
+    {
+      "name": "HTML 界面对稿：8 组页面与隔离交互",
+      "status": "passed",
+      "pages": 8,
+      "cssViewports": [
+        [360, 800],
+        [393, 872],
+        [412, 915]
+      ],
+      "outerWidths": [320, 393, 736, 1440],
+      "pageErrors": 0,
+      "modelOrDeviceRequests": 0,
+      "flows": [
+        "单行候选/动作复用",
+        "语音示意整理/编辑/填入/撤销",
+        "自动缩矮/展开/三风格/更多/返回",
+        "联系人变化取消旧任务，草稿隔离",
+        "热词筛选/搜索/增删/撤销",
+        "文风与人物偏好独立修订",
+        "人物图/来源/计划状态",
+        "设置/密钥禁用/可选同步"
+      ],
+      "realDevice": false,
+      "realModel": false
     },
     {
       "name": "网页界面约定：缩矮、结果、选择风格、撤销草稿",

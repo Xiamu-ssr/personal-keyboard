@@ -29,7 +29,17 @@ try {
     await fs.readFile(path.join(dir, "verification.json"), "utf8"),
   );
 } catch {}
-const [template, css, script, cost, world, panels] = await Promise.all(
+const [
+  template,
+  css,
+  script,
+  cost,
+  world,
+  panels,
+  designHtml,
+  designCss,
+  designJs,
+] = await Promise.all(
   [
     "template.html",
     "style.css",
@@ -37,6 +47,9 @@ const [template, css, script, cost, world, panels] = await Promise.all(
     "cost.mjs",
     "world.mjs",
     "panels.js",
+    "design.html",
+    "design.css",
+    "design.js",
   ].map((f) => fs.readFile(path.join(dir, f), "utf8")),
 );
 const json = JSON.stringify({ ...spec, sources: documents, verification })
@@ -44,7 +57,11 @@ const json = JSON.stringify({ ...spec, sources: documents, verification })
   .replace(/\u2028/g, "\\u2028")
   .replace(/\u2029/g, "\\u2029");
 const output = template
-  .replace("<!-- SPEC_STYLE -->", "<style>" + css + "</style>")
+  .replace(
+    "<!-- SPEC_STYLE -->",
+    "<style>" + css + "\n" + designCss + "</style>",
+  )
+  .replace("<!-- DESIGN_REVIEW -->", designHtml)
   .replace(
     "<!-- SPEC_DATA -->",
     '<script id="spec-data" type="application/json">' + json + "</script>",
@@ -59,6 +76,8 @@ const output = template
       script +
       "\n" +
       panels +
+      "\n" +
+      designJs +
       "</script>",
   );
 await fs.writeFile(path.join(dir, "index.html"), output);

@@ -4,6 +4,8 @@
 
 ## 推荐组合
 
+首版只要 **两种远程能力：一个 ASR + 一个文本模型**。润色、三种回复、差异分类和记忆抽取共用文本模型，不必各申请一个。中文 OCR 随设备端模型运行，不需购买远程 OCR；TTS、生图暂不购买。自用文本可先复用现有 CPA，新增采购主要是 ASR。此处没有执行付费购买或保存任何密钥。
+
 | 能力               | 自用首选                                               | 可采购替代                                 | 原因                                     |
 | ------------------ | ------------------------------------------------------ | ------------------------------------------ | ---------------------------------------- |
 | 中文流式语音       | 阿里云 paraformer-realtime-v2 或 Fun-ASR Realtime 对比 | Groq Whisper Large V3 Turbo 作为非流式对照 | 中文、热词、短句延迟须用本人语音评测     |
@@ -54,9 +56,38 @@ ASR 已不只是逐字转写。Paraformer 官方接口支持自动标点、数�
 4. 面向付费用户，使用官方可采购 API 或清晰约定的企业供应商；不把闲鱼学生/赠送权益、共享 Key、未知中转倍率当作单位经济依据。
 5. 个人数据仍由键盘管理；模型供应商可替换，不把人物记忆锁在某个账号的云端聊天 Session。
 
+### ZenMux 有 ASR，但要分清流式形态
+
+官方已提供 `POST https://zenmux.ai/api/v1/audio/transcriptions`，文档示例模型为 `qwen/qwen3-asr-flash`，JSON 内提交音频 base64 或 URL。`stream: true` 流式返回文字，不等于 WebSocket 持续上传麦克风音频。可用来验证“录完一句再转写”，实时边说边出字优先测百炼原生实时接口。
+
+该模型当前公开标价 US$0.000035 / 秒，即 US$0.126 / 小时、15 小时约 US$1.89。ZenMux 另列 `qwen/qwen-audio-3.1-asr-flash`，描述包含原生润色；它按 token 标价，不能把价格套用到按秒模型。是否适合个人口吻、能否保留原意仍需本人语音评测。
+
+已确认公开接口与模型上架；未登录你的订阅账单做付费请求，不能承诺当前会员已包含 ASR，也不能把“平台支持”写成“本 APK 已接入”。实际试用前核对该模型在你的账号中扣订阅还是余额。
+
+### 阿里云怎么开通
+
+开通[百炼](https://bailian.console.aliyun.com/) → 选择华北 2（北京）→ 创建该地域 API Key → 在模型广场核对 `paraformer-realtime-v2`、免费余量与用完策略 → 首先用短音频测试。它按音频时长结算，直接按量使用，不必先买一个 ASR 月费会员。实时协议由服务适配层处理，不是把文本模型 ID 换成 ASR 就自动支持。
+
+小用量先确认每月 10 小时免费额度；按每天 30 分钟、每月 15 小时算：原价 ¥12.96，有足额免费额度时超出 5 小时为 ¥4.32。以上只算 ASR，不含整理与回复。
+
+### 套餐要按同一产品比较
+
+| 方案                        | 当前规则                                                                       | 自用取舍                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| 百炼千问语音模型节省计划    | 20 元 9.8 折、100 元 9.6 折；这两档有效期 6 个月，包含北京 Paraformer 实时模型 | 20 元约抵 ¥20.41 原价，按 ¥0.864/h 约 23.62 小时；折扣很小，暂不必囤       |
+| 百炼入门型 AI 通用节省计划  | 新客例：10 元抵 20 元、27 元抵 60 元；季包按月各发 20 元，当月未用完清零       | 有资格且预计能用完才考虑；不能写成 60 元一次到账，也不假定已有账号有资格   |
+| 智能语音交互 NLS 实时资源包 | 30 小时 100 元，约 ¥3.33/h，资源包有效期 1 年                                  | 是另一个产品与接口，不作为百炼 Paraformer 的抵扣包；小额单价也未优于本基线 |
+
+稳定大用量再根据每月账单比较。大档位的最高折扣不代表单人应买大量额度；旧 NLS 的试用、并发、AppKey / Token 也不要套到百炼 API Key 上。
+
 ## 官方来源
 
 - [阿里云模型价格](https://help.aliyun.com/zh/model-studio/model-pricing)
+- [百炼节省计划与资源包](https://help.aliyun.com/zh/model-studio/savings-plan-and-resource-package)
+- [智能语音交互 NLS 计费](https://help.aliyun.com/zh/isi/product-overview/billing-10)
+- [ZenMux 转写接口](https://zenmux.ai/docs/api/openai/create-audio-transcriptions.html)
+- [ZenMux Qwen3 ASR Flash 标价](https://zenmux.ai/qwen/qwen3-asr-flash)
+- [ZenMux Qwen-Audio 3.1 ASR Flash](https://zenmux.ai/qwen/qwen-audio-3.1-asr-flash)
 - [阿里云 Fun-ASR](https://help.aliyun.com/zh/model-studio/fun-asr)
 - [阿里云 Paraformer 实时识别参数](https://help.aliyun.com/zh/model-studio/paraformer-real-time-speech-recognition-java-sdk)
 - [阿里云识别准确率与热词](https://help.aliyun.com/zh/model-studio/improve-asr-accuracy)

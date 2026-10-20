@@ -1,7 +1,7 @@
 meta:
   title: Personal Keyboard
   subtitle: 产品世界 · 业务与技术
-  version: 0.2.1
+  version: 0.3.0
   reviewedAt: 2026-10-20
   status: 产品规格；原生交互原型待真机验收
 layout:
@@ -723,6 +723,9 @@ objects:
       tombstones: 删除记录
     invariant: 本机学习不等于同意上传；撤销和删除也传播。
 documents:
+  - id: design
+    title: 界面对稿与尺寸
+    file: design.md
   - id: product
     title: 产品与业务
     file: product.md

@@ -12,6 +12,10 @@
         <span class="brand-mark">p.</span>
         <h1>Personal Keyboard <span>· Spec</span></h1>
       </div>
+      <nav class="spec-sections" aria-label="Spec 栏目">
+        <button id="show-world" aria-pressed="true">产品世界</button>
+        <button id="show-design" aria-pressed="false">界面对稿</button>
+      </nav>
       <div class="header-actions">
         <button id="open-native" class="quiet">真实 APK</button
         ><button id="open-library" class="quiet">约定与来源</button
@@ -45,6 +49,7 @@
         ><button data-doc="acceptance">查看实现边界 ↗</button>
       </div>
     </main>
+    <!-- DESIGN_REVIEW -->
     <div id="panel-shade" hidden></div>
     <aside id="inspector" hidden role="dialog" aria-label="域与关系详情">
       <div class="inspector-top">
@@ -148,6 +153,14 @@
           <p>中文 OCR + SQLite<br />差异分类、异步整理</p>
         </div>
       </div>
+      <p class="notice">
+        先配两项：ASR + 一个共用文本模型。ZenMux 已有 Qwen ASR 转写接口；
+        边说边出字先测百炼原生实时接口。Paraformer 北京原价 ¥0.864 / 小时，
+        免费额度以账号为准。语音 20 元节省计划为 9.8 折，有效期 6 个月；
+        小用量先按量使用。<a href="#docs" data-doc="models-and-cost"
+          >查看开通步骤与套餐比较 ↗</a
+        >
+      </p>
       <div class="cost-layout">
         <div class="cost-inputs">
           <label

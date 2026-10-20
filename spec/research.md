@@ -4,6 +4,8 @@
 
 ## 交互参考
 
+用户本轮补充了七张实际 Typeless 截图，覆盖首页、历史、词典、账户及三种键区状态。已据此制作“界面对稿”：保留键位比例、行内复用、词条来源和底栏层级，新增军师缩矮/展开与人物记忆。参考原图不进入仓库或公开页面，重绘一律使用演示内容。截图可证明可见布局，不证明真实触摸尺寸、ASR 质量或纠错学习实现。
+
 - [Typeless 安卓商店截图](https://play.google.com/store/apps/details?id=com.typeless.mobile)：语音是主任务，关键动作集中在键区内。参考录音与整理状态，不为每项能力加一个常驻导航条。
 - [Typeoff 官方页面](https://www.typeoff.ai/) 与 [上手说明](https://www.typeoff.ai/docs/getting-started)：切入输入法后围绕一次说话/整理，支持跨 App。移动端完整拼音引擎不能仅凭营销截图推定成熟。
 - [Replr 商店截图](https://apps.apple.com/au/app/replr-ai-texting-keyboard/id6775636883)：回复直接在键盘区域呈现，选中后填入消息框；可参考三条候选密度和返回路径。

@@ -370,12 +370,14 @@
     el("inspector").hidden = false;
     el("panel-shade").hidden = false;
     el("world-main").inert = true;
+    el("design-review").inert = true;
     document.querySelector(".header").inert = true;
   }
   function closePanel(restore = true) {
     el("inspector").hidden = true;
     el("panel-shade").hidden = true;
     el("world-main").inert = false;
+    el("design-review").inert = false;
     document.querySelector(".header").inert = false;
     document
       .querySelectorAll(".selected")
