@@ -4,4 +4,6 @@
 
 未选中的回复不是差评，点击更多不是否定。不得将一次礼貌应答推断为关系亲密或对方长期人格。
 
-输出 JSON：candidates[{category,from,to,scope,evidenceIds,confidence,reason}], ignoredReason。
+人物与事件候选不限军师，可从身份明确的语音、输入或主动补充中抽取。区分本人陈述、对方原话、未发送草稿、计划和已发生事件；第三人身份不明不归人。保留来源状态，候选不直接成为事实。
+
+输出 JSON：candidates[{category,from,to,scope,subjectScope,sourceState,evidenceIds,confidence,reason}], ignoredReason。

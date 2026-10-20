@@ -10,7 +10,7 @@ export function validateWorld(spec) {
   )
     fail("Missing world metadata");
   const domains = new Map(),
-    chips = new Set(),
+    chips = new Map(),
     edges = new Set();
   const documents = new Set(spec.documents?.map((d) => d.id));
   if (documents.size !== spec.documents?.length) fail("Duplicate document");
@@ -52,7 +52,7 @@ export function validateWorld(spec) {
     for (const chip of domain.chips) {
       if (!chip.id || chips.has(chip.id) || !chip.name)
         fail("Duplicate or missing capability");
-      chips.add(chip.id);
+      chips.set(chip.id, domain.id);
       references(chip);
     }
   }
@@ -79,6 +79,11 @@ export function validateWorld(spec) {
       fail("Invalid ports");
     if (domains.get(edge.to).zone === "service" && !edge.external)
       fail("Unmarked service boundary: " + edge.id);
+    for (const capability of edge.capabilities || []) {
+      const owner = chips.get(capability);
+      if (!owner || ![edge.from, edge.to].includes(owner))
+        fail("Unknown or unrelated capability: " + capability);
+    }
     references(edge);
   }
   const views = new Set();

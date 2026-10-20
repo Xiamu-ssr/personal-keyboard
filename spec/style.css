@@ -304,10 +304,15 @@ main {
   line-height: 1.5;
   color: var(--muted);
 }
-.domain[data-id="host"] .domain-chips,
-.domain[data-id="app"] .domain-chips,
+.domain[data-chip-count="1"] .domain-chips,
 .domain[data-id="models"] .domain-chips {
   grid-template-columns: 1fr;
+}
+.domain.simple {
+  justify-content: center;
+}
+.domain.simple .domain-role {
+  margin-bottom: 0;
 }
 .domain[data-id="models"] .domain-chip {
   padding: 7px 10px;

@@ -9,15 +9,22 @@ const source = YAML.parse(
 const clone = () => structuredClone(source);
 test("world has complete owned objects and selectable business/implementation relations", () => {
   assert.deepEqual(validateWorld(source), {
-    domains: 8,
-    capabilities: 17,
-    relations: 10,
+    domains: 7,
+    capabilities: 12,
+    relations: 9,
     objects: 10,
   });
   const advisor = relationsForView(source, "advisor");
   assert(advisor.edges.includes("e_capture"));
   assert(advisor.domains.includes("memory"));
   assert(!advisor.domains.includes("doudou"));
+  const personalization = source.edges.find((e) => e.id === "e_personalize");
+  assert(personalization.both);
+  assert(personalization.capabilities.includes("keyboard_voice"));
+  assert(personalization.capabilities.includes("memory_words"));
+  const people = source.edges.find((e) => e.id === "e_people");
+  assert(people.capabilities.includes("keyboard_voice"));
+  assert(people.capabilities.includes("keyboard_advisor"));
   assert.deepEqual(relationsForView(source, "boundary").edges, [
     "e_inference",
     "e_sync",
@@ -26,14 +33,16 @@ test("world has complete owned objects and selectable business/implementation re
 test("world rejects dangling references, incomplete contracts and unmarked egress", () => {
   for (const mutate of [
     (x) => x.domains[0].objects.push("missing"),
-    (x) => (x.domains[0].chips[0].documents = ["missing"]),
+    (x) => (x.domains[1].chips[0].documents = ["missing"]),
     (x) => (x.edges[0].to = "missing"),
     (x) => (x.edges[0].guard = ""),
     (x) => (x.objects.contact.owner = "missing"),
     (x) => x.views[1].edges.push("missing"),
     (x) => (x.edges.find((e) => e.id === "e_sync").external = false),
     (x) => (x.domains[0].mobile = [90, 90, 30, 30]),
-    (x) => x.domains[1].chips.push(structuredClone(x.domains[0].chips[0])),
+    (x) => x.domains[1].chips.push(structuredClone(x.domains[1].chips[0])),
+    (x) => (x.edges[0].capabilities = ["missing"]),
+    (x) => (x.edges[0].capabilities = ["models_asr"]),
   ]) {
     const spec = clone();
     mutate(spec);

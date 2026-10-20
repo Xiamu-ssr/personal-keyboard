@@ -22,8 +22,6 @@
     spark:
       '<path d="m12 2 2.8 6.5L21 11l-6.2 2.5L12 20l-2.8-6.5L3 11l6.2-2.5L12 2zM20 2v4M18 4h4"/>',
     layers: '<path d="m12 3 10 5-10 5L2 8l10-5zM3 12l9 5 9-5M3 16l9 5 9-5"/>',
-    graph:
-      '<circle cx="12" cy="11" r="3"/><circle cx="4" cy="4" r="2"/><circle cx="20" cy="4" r="2"/><circle cx="4" cy="20" r="2"/><circle cx="20" cy="20" r="2"/><path d="m6 5 4 4m4 0 4-4M10 13l-4 5m8-5 4 5"/>',
     rules:
       '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="m8 8 1 1 2-2M13 8h3m-8 6 1 1 2-2M13 14h3"/>',
     sync: '<path d="M4 9a8 8 0 0 1 14-3l2 3M20 15a8 8 0 0 1-14 3l-2-3M20 4v5h-5M4 20v-5h5"/>',
@@ -70,10 +68,11 @@
     .join("");
   for (const [i, d] of data.domains.entries()) {
     const node = document.createElement("article");
-    node.className = "domain";
+    node.className = "domain" + (d.chips.length ? "" : " simple");
     node.dataset.id = d.id;
+    node.dataset.chipCount = d.chips.length;
     node.style.setProperty("--zone", data.zones[d.zone].color);
-    node.innerHTML = `<button class="domain-heading" data-domain="${d.id}"><span class="domain-icon">${icon(d.icon)}</span><strong>${esc(d.name)}</strong><span class="domain-number">${String(i + 1).padStart(2, "0")}</span></button><p class="domain-role">${esc(d.role)}</p><div class="domain-chips">${d.chips.map((c) => `<button class="domain-chip" data-chip="${c.id}"><strong>${esc(c.name)}</strong><span>${esc(c.desc)}</span></button>`).join("")}</div><span class="mobile-chip-count">${d.chips.length ? d.chips.length + " 项能力" : "可选连接"}</span>`;
+    node.innerHTML = `<button class="domain-heading" data-domain="${d.id}"><span class="domain-icon">${icon(d.icon)}</span><strong>${esc(d.name)}</strong><span class="domain-number">${String(i + 1).padStart(2, "0")}</span></button><p class="domain-role">${esc(d.role)}</p>${d.chips.length ? `<div class="domain-chips">${d.chips.map((c) => `<button class="domain-chip" data-chip="${c.id}"><strong>${esc(c.name)}</strong><span>${esc(c.desc)}</span></button>`).join("")}</div>` : ""}<span class="mobile-chip-count">${d.chips.length ? d.chips.length + " 项能力" : esc(d.mobileHint || "可选连接")}</span>`;
     el("world").appendChild(node);
   }
   const defs = svg("defs", {}, el("wires"));
@@ -223,10 +222,6 @@
         out = "right";
         incoming = "top";
       }
-      if (state.mobile && e.id === "e_manage") {
-        out = "right";
-        incoming = "bottom";
-      }
       const offset = state.mobile && e.id === "e_inference" ? 0.5 : e.offset;
       const p = port(a, out, offset),
         q = port(b, incoming, offset),
@@ -308,13 +303,12 @@
       g.classList.toggle("active", state.view !== "all" && activeEdges.has(id));
     }
     const notes = {
-      all: "域里是能力，连线是业务关系。点开任何一处，查看行为、实现、对象归属与数据边界。",
+      all: "点开域、能力或连线，查看业务与实现。",
       advisor:
         "军师：缩矮等待布局 → 本机截屏 / OCR → 确认人物并取记忆 → 生成三条建议 → 用户选中填入。",
-      voice:
-        "语音：短录音 → ASR → 按本人习惯轻整理 → 上屏。热词与文风有范围，可信修改再反馈。",
+      voice: "语音取用热词与文风，可信改词、改句再反哺；人物记忆也可按需取用。",
       learning:
-        "学习：可信差异进入候选，热词、文风与人物事实分别保存；App 可修订，豆豆按选择同步。",
+        "输入与语音积累表达习惯；已知聊天或主动补充积累人物与事件，在设置中统一管理。",
       boundary:
         "只有虚线跨出本机：模型服务接收必要音频或文字；豆豆同步默认关闭，按类别与人物选择。原始聊天截图默认留在本机。",
     };
@@ -342,11 +336,17 @@
       "</div>"
     );
   }
-  function relationLinks(domainId) {
+  function relationLinks(domainId, capabilityId) {
     return (
       '<div class="related">' +
       data.edges
-        .filter((e) => e.from === domainId || e.to === domainId)
+        .filter(
+          (e) =>
+            (e.from === domainId || e.to === domainId) &&
+            (!capabilityId ||
+              !e.capabilities ||
+              e.capabilities.includes(capabilityId)),
+        )
         .map(
           (e) =>
             `<button data-relation="${e.id}">${esc(domains.get(e.from).name)} → ${esc(domains.get(e.to).name)}<br>${esc(e.name)}</button>`,
@@ -448,7 +448,18 @@
         body =
           section("何时发生", `<p>${esc(e.trigger)}</p>`) +
           section("传递什么", `<p>${esc(e.payload)}</p>`) +
-          section("成立条件", `<p class="invariant">${esc(e.guard)}</p>`);
+          section("成立条件", `<p class="invariant">${esc(e.guard)}</p>`) +
+          section(
+            "关联能力",
+            '<div class="related">' +
+              (e.capabilities || [])
+                .map(
+                  (id) =>
+                    `<button data-chip="${id}">${esc(capabilities.get(id).name)} ↗</button>`,
+                )
+                .join("") +
+              "</div>",
+          );
       if (state.tab === "technical")
         body =
           section("实现约定", `<p>${esc(e.technical)}</p>`) +
@@ -485,7 +496,7 @@
       const rules = item.business || owner.business,
         tech = item.technical || owner.technical;
       if (state.tab === "business") {
-        body = section("用户会看到什么", list(rules));
+        body = section("行为", list(rules));
         if (item.chips?.length)
           body += section(
             "域内能力",
@@ -500,34 +511,27 @@
           );
         if (item.preview || item.id === "keyboard")
           body += section("界面约定", previewMarkup());
-        if (item.id === "app_graph")
+        if (item.id === "keyboard_settings")
+          body += section(
+            "管理",
+            '<div class="related"><button data-domain="models">模型服务 ↗</button><button data-chip="memory_words">热词与文风 ↗</button><button data-chip="memory_people">人物关系图与资料 ↗</button><button data-domain="doudou">豆豆同步 ↗</button></div>',
+          );
+        if (item.id === "memory_people")
           body += section(
             "人物资料示例",
             '<div class="object-card"><strong>林然 · 朋友</strong><p>偏好安静的地方</p><p class="invariant">来源：当前对话中的原话。演示人物，不是真实资料。</p><p>人物 → 偏好 / 事件 → 消息证据 → 修订记录</p></div>',
           );
       }
-      if (state.tab === "technical")
-        body =
-          section("由谁负责", `<p>${esc(owner.role)}</p>`) +
-          section("实现约定", list(tech)) +
-          section(
-            "程序需要检查",
-            list(
-              owner.id === "keyboard"
-                ? [
-                    "请求、联系人与编辑器代次匹配后才回写。",
-                    "取消、输入框切换和任务过期均使结果失效。",
-                  ]
-                : owner.business,
-            ),
-          );
+      if (state.tab === "technical") body = section("实现", list(tech));
       if (state.tab === "data")
         body =
           (item.objects || owner.objects || []).map(objectCard).join("") ||
           "<p>此能力沿用所属域的数据；查看相连关系中的对象契约。</p>";
       body +=
-        section("相连关系", relationLinks(owner.id)) +
-        section("引用约定", documents(item.documents || owner.documents));
+        section(
+          "相连关系",
+          relationLinks(owner.id, item.chips ? null : item.id),
+        ) + section("引用约定", documents(item.documents || owner.documents));
     }
     el("breadcrumb").textContent = breadcrumb;
     el("inspector-heading").innerHTML =

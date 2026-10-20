@@ -8,10 +8,17 @@
 | ------------------ | ------------------------------------------------------ | ------------------------------------------ | ---------------------------------------- |
 | 中文流式语音       | 阿里云 paraformer-realtime-v2 或 Fun-ASR Realtime 对比 | Groq Whisper Large V3 Turbo 作为非流式对照 | 中文、热词、短句延迟须用本人语音评测     |
 | 润色、三种回复     | 现有 CPA 中可用的 Gemini Flash                         | 阿里云 qwen3.7-flash                       | 先利用已有订阅；对外收费使用稳定官方 API |
-| 差异分类、记忆抽取 | 小型文本模型，合并/批处理                              | qwen-flash / qwen3.7-flash                 | 短结构化输出，通常不需要 Opus            |
-| 困难对话分析       | 用户主动选择 Opus，经 CPA 优先 Devin                   | 官方 Claude API                            | 按需，日常输入不强制昂贵推理             |
+| 差异分类、记忆抽取 | 小型文本模型，合并/批处理                              | qwen-flash / qwen3.7-flash                 | 处理短结构化输出                         |
 | OCR                | ML Kit 中文设备端模型，随 APK 打包                     | PaddleOCR 本地方案待设备评估               | 无逐次 API 费用，不要求 Play 商店安装    |
 | TTS / 生图         | 首版不需要                                             | 后续按具体功能采购                         | 语音输入不是语音播报；人物图不是生图     |
+
+## 转写与语句整理
+
+ASR 已不只是逐字转写。Paraformer 官方接口支持自动标点、数字等书面化（ITN）、定制热词，以及可选的语气词过滤。它们帮助得到干净的转写，但不等于已经按个人文风重写整句话。
+
+本产品仍分两步：ASR 识别与基础规整 → 文本模型结合适用文风整理。比如把“明天……不对，后天再去”整理成“后天再去”，属于待验证的句意整理要求，不把它冒充为 ASR 已保证的能力。热词供识别使用，文风供整理使用，用户可信修改再反哺两者。
+
+当前 APK 是固定交互样例，真实 ASR 与文本整理尚未接入；供应商支持某能力不等于本项目已实现。
 
 ## 可以直接购买的价格
 
@@ -51,13 +58,13 @@
 
 - [阿里云模型价格](https://help.aliyun.com/zh/model-studio/model-pricing)
 - [阿里云 Fun-ASR](https://help.aliyun.com/zh/model-studio/fun-asr)
-- [阿里云 Paraformer 实时识别](https://help.aliyun.com/zh/model-studio/paraformer-realtime-api)
+- [阿里云 Paraformer 实时识别参数](https://help.aliyun.com/zh/model-studio/paraformer-real-time-speech-recognition-java-sdk)
+- [阿里云识别准确率与热词](https://help.aliyun.com/zh/model-studio/improve-asr-accuracy)
 - [百炼控制台](https://bailian.console.aliyun.com/)
 - [Groq Speech to Text](https://console.groq.com/docs/speech-to-text)
 - [Groq 控制台](https://console.groq.com/)
 - [Gemini API 定价](https://ai.google.dev/gemini-api/docs/pricing)
 - [ML Kit 中文识别](https://developers.google.com/ml-kit/vision/text-recognition/v2/android)
 - [ML Kit 设备端费用说明](https://developers.google.com/ml-kit/migration)
-- [Anthropic 定价](https://platform.claude.com/docs/en/about-claude/pricing)
 
 不存在脱离准确率、短句时长、免费资格、网络与采购地域的“全世界最便宜”结论。本 Spec 提供可复核候选和可改参数的预算。

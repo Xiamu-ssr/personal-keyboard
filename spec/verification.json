@@ -5,9 +5,9 @@
     {
       "name": "产品世界与域 / 能力 / 关系契约",
       "status": "passed",
-      "domains": 8,
-      "capabilities": 17,
-      "relations": 10,
+      "domains": 7,
+      "capabilities": 12,
+      "relations": 9,
       "ownedObjects": 10,
       "documents": 9,
       "widths": [
