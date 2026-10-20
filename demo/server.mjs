@@ -13,6 +13,7 @@ const mime = {
   ".md": "text/plain; charset=utf-8",
   ".yaml": "text/plain; charset=utf-8",
   ".apk": "application/vnd.android.package-archive",
+  ".png": "image/png",
 };
 export function createSpecServer({ session = new DemoSession() } = {}) {
   const token = randomBytes(24).toString("hex");

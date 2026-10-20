@@ -79,9 +79,9 @@
         "enable-capture",
       ].forEach((id) => (el(id).disabled = true));
       el("demo-message").textContent =
-        "这里可查看产品世界、关系契约和成本估算。原生 APK 已构建，真机验收留待设备解锁；演示回复为固定数据。";
+        "这里可以下载自用 APK、查看真实截图及验收记录。实时 Android 画面只在本机连接设备后提供。";
       const placeholder = el("native-placeholder");
-      placeholder.querySelector("h3").textContent = "原生 APK 演示留待本机验收";
+      placeholder.querySelector("h3").textContent = "实时 Android 画面需要本机设备";
       placeholder.querySelector("p").textContent =
         "真实 Android 画面需要连接本机设备，云端阅览不会访问或控制你的手机。";
       const link = placeholder.querySelector("a");

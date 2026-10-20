@@ -1,44 +1,48 @@
-# Personal Keyboard
+# 豆豆输入法
 
-安卓个人输入法：日常输入、个性化语音、原地军师和人物记忆。与豆豆分开安装、分开使用；后续可按用户授权同步选定的个人数据。
+安卓个人输入法：离线拼音、语音整理、原地军师，以及热词、文风和人物记忆。和豆豆是两个独立安装的 App；当前资料保存在输入法本机。
 
-当前交付是可浏览的产品 Spec 与可安装的原生 Android 交互演示。不是已完成的生产输入法。
+当前版本 **0.1.0-alpha.1 · 自用预览版**。原生 App 已替代旧固定场景 APK。按本轮约定，付费 ASR 和实际文字模型账号稍后配置。
 
-## 看 Spec
+- [在线产品 Spec](https://106.14.73.99/keyboard-spec/)：交互式业务 / 技术域模型。
+- [下载自用 APK](https://106.14.73.99/keyboard-spec/demo/doudou-keyboard.apk)：Android 11+，arm64 / x86_64，debug 签名；不含模型密钥。
+- [当前实现与边界](spec/implementation.md) · [验收记录](spec/acceptance.md)
 
-手机或外网查看：[ECS 在线 Spec](https://106.14.73.99/keyboard-spec/)。默认打开可交互的产品世界：7 个域、12 项域内能力、9 条业务关系。输入法 App 包含日常输入、个性语音、军师和设置；热词、文风与语音双向反哺，人物与事件为共享记忆。
+## 现在能做什么
 
-    npm ci
-    npm run spec:build
-    npm run spec:serve
+- 正常打字：AOSP / libgooglepinyin 离线整句解码、候选选词、自定义热词、中英文与符号、长按退格、滑动空格移动光标。候选与动作共用一行。
+- 语音：调用手机提供的 ASR，优先本地；系统在线识别需主动开启。转写可修正、整理、填入、撤销；无语音服务或模型时显示实际原因。
+- 军师：缩矮键盘、等宿主布局稳定、主动截屏、本地中文 OCR、确认人物、修正识字 / 意图。文字模型接入后一次返回三个风格，支持更多和返回旧结果。
+- 个性化：热词、文风、历史和可确认的修改反馈；人物图及分人物的事实、事件、偏好、推断，均可修订、删除和撤销。
+- 数据：SQLite 版本与删除标记、保留期限、导出 / 导入；可选服务密钥使用 Android Keystore 加密保存。密码框禁用语音、军师和学习。
 
-打开 http://127.0.0.1:8560 。离线查看可直接打开 spec/index.html；真实 APK 画面需要本地 Node 服务、Android SDK、已授权的真机或独立模拟器。
+当前没有内置付费 ASR，没有自动跨 App 认人、自动滚屏或豆豆云同步。补前文先由本人滚动聊天，再点“补当前屏”；OCR 不会擅自把说话人或草稿认定为事实。模型自动归类 / 提取记忆留在后续模型联调阶段，现阶段提供可审阅反馈和人物资料管理。
 
-Spec 是产品与技术共同构成的域模型，不以文档列表作为首页。`spec/spec.yaml` 定义域、能力、关系、数据对象与视角，`spec/world.mjs` 检查引用、对象归属和关系契约。完整约定和提示词从图中按需展开；成本估算和真实 APK 是独立入口。
+## 构建与使用
 
-[界面对稿](https://106.14.73.99/keyboard-spec/#design/typing) 用 HTML 绘制可操作的手机界面：日常键盘、语音、军师、首页、历史、热词与文风、人物关系和设置。参考用户提供的 Typeless 管理页与豆包键帽、底行和工具方块，提供三种逻辑画布、100% / 适应窗口和间距标尺。原始私人截图不进入仓库；全部内容是演示数据，不请求设备或模型。
+需要 Node.js 22+、Python 3、JDK 17、Android SDK 35、NDK 27.0.12077973、CMake 3.22.1。用 `ANDROID_SDK_ROOT` 指向 SDK；Mac 会尝试常见路径。
 
-输入法节点中的键区示意可查看日常、缩矮、结果三个状态，选择示例回复、仅更换选中风格或撤销填入。此处明确标为固定数据的网页交互示意，不是 APK 画面，也没有截图或模型请求。真实 Android 画面仍需在本机连接设备。
+```sh
+npm ci
+npm run android:build
+npm run android:test
+npm run android:sanitize
+```
 
-## 真实 APK 演示
+APK 输出到 `spec/demo/doudou-keyboard.apk`，摘要见相邻 `artifact.json`。`android:test` 在 macOS / Linux 编译真实 JNI 解码器，执行 JVM 核心测试和 Android lint；设备测试见验收文档。
 
-需要 Node.js 22+、JDK 17+、Android SDK（platform-tools、build-tools 35+ 和 android-35+）及 zip。Android 11+ 真机或已启动的独立模拟器需要解锁并允许本机 ADB；手机厂商仍可能要求本人确认安装。只看 Spec 不需要 Android SDK。
+安装后，在系统启用并选择豆豆输入法。App 首页有本机练习区。麦克风、主动截屏独立授权；模型设置支持 HTTPS 的 OpenAI / Anthropic 接口，填真实模型 ID，不会悄悄替换成演示回复。服务证书须受设备信任。
 
-    npm run demo:build
-    npm run demo:setup
-    npm run spec:serve
+## 产品世界与真实 Android 画面
 
-在 Spec 的“真实 APK”中选择设备并启动。Node/scrcpy 只传输和控制 Android 画面，APK 实际运行在设备上，不是把 HTML 键盘包装成安卓画面。工具不会默认启动模拟器，也不会把手机序列号或截图上传到仓库。
+```sh
+npm run spec:build
+npm run demo:setup
+npm run spec:serve
+```
 
-演示 APK 实现系统 IME、键盘与结果面板切换、收缩后真实截屏、三种示例回复填入、保留草稿和人物资料页。演示回复使用固定场景；生产中文拼音引擎、流式 ASR、本地 OCR、模型调用、纠错学习与云同步见 Spec 的待实现项。
+打开 `http://127.0.0.1:8560`。Spec 直接表达域、能力、数据归属和关系契约，详细文档从图中展开。Node / ws-scrcpy 只向选定设备传输真实 Android 画面与触摸，不自动启动模拟器；临时验收结束恢复原输入法和辅助功能状态。
 
-- [产品与业务](spec/product.md)
-- [界面对稿与尺寸](spec/design.md)
-- [交互与高度变化](spec/interaction.md)
-- [架构与数据](spec/architecture.md)
-- [模型、购买与成本](spec/models-and-cost.md)
-- [真实 APK 演示](spec/demo.md)
-- [调研及截图观察](spec/research.md)
-- [验收与实现边界](spec/acceptance.md)
-
-价格核验日期：2026-10-20。无账号密钥内置在 APK 或 Spec 中。
+- [产品](spec/product.md) · [交互](spec/interaction.md) · [架构](spec/architecture.md)
+- [模型、购买与成本](spec/models-and-cost.md) · [研究来源](spec/research.md)
+- [设备演示](spec/demo.md) · [第三方拼音源码与改动](android/app/src/main/cpp/vendor/aosp-pinyin/LOCAL-CHANGES.md)

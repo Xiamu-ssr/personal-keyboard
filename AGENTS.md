@@ -1,6 +1,6 @@
-# Personal Keyboard
+# 豆豆输入法
 
-Android-first personal keyboard, a separate product from Doudou. This repository is the product contract and executable native interaction prototype, not a completed production keyboard.
+Android-first personal keyboard, a separate product from Doudou. This repository contains the visual product contract and a native Android personal-use alpha. Paid ASR, real text-model accounts, automatic model memory extraction and Doudou sync are not configured.
 
 - Read spec/product.md, spec/interaction.md and spec/architecture.md before changing behavior. spec/spec.yaml is the visual product map; run npm run spec:build after changing its sources.
 - Spec opens as an interactive domain world, not a documentation landing page. Keep domain capabilities, owned objects, selectable relation contracts, product behavior and implementation responsibilities connected. Documents and prompts are details of this world; native APK and clearly labeled web illustrations are separate surfaces.

@@ -1,6 +1,6 @@
 {
-  "name": "personal-keyboard",
-  "version": "0.0.1",
+  "name": "doudou-keyboard",
+  "version": "0.1.0-alpha.1",
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
@@ -13,7 +13,10 @@
     "demo:setup": "node demo/setup.mjs",
     "demo:build": "node android/build.mjs",
     "test": "node --test tests/*.test.mjs",
-    "check": "npm run spec:build && npm test"
+    "check": "npm run spec:build && npm test",
+    "android:build": "node android/build.mjs",
+    "android:test": "python3 android/tools/native-host.py && cd android && ./gradlew :app:testDebugUnitTest :app:lintDebug",
+    "android:sanitize": "python3 android/tools/native-host.py --sanitize"
   },
   "dependencies": {
     "marked": "18.1.1",

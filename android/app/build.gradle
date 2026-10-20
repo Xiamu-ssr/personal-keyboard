@@ -1,0 +1,28 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'app.doudou.ime'
+    compileSdk 35
+    ndkVersion '27.0.12077973'
+    defaultConfig {
+        applicationId 'app.doudou.ime'
+        minSdk 30
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0-alpha.1'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        ndk { abiFilters 'arm64-v8a', 'x86_64' }
+        externalNativeBuild { cmake { arguments '-DANDROID_STL=c++_static' } }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+    buildTypes { release { minifyEnabled false } }
+    externalNativeBuild { cmake { path file('src/main/cpp/CMakeLists.txt'); version '3.22.1' } }
+    testOptions { unitTests.returnDefaultValues = true; unitTests.all { jvmArgs '-Djava.library.path=' + rootProject.file('../.runtime/native-host').absolutePath } }
+}
+dependencies {
+    // Bundled Chinese OCR: works locally, without downloading a model after installation.
+    implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}

@@ -1286,3 +1286,5 @@ main {
     scroll-behavior: auto !important;
   }
 }
+
+.native-shots{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:20px 0}.native-shots figure{margin:0;width:min(40%,200px)}.native-shots img{display:block;width:100%;border-radius:18px;border:1px solid var(--line)}.native-shots figcaption{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}

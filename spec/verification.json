@@ -1,90 +1,89 @@
 {
-  "reviewedAt": "2026-10-20",
-  "status": "产品世界与 HTML 界面对稿已验证；原生真机验收待设备解锁",
+  "reviewedAt": "2026-10-20T15:19:36.320018+00:00",
+  "status": "原生自用 Alpha：拼音、资料持久化、主动截屏和本地中文 OCR 已在 OPPO 验收；真实模型与付费 ASR 待后续配置。旧界面底稿已移除。",
   "checks": [
     {
-      "name": "产品世界与域 / 能力 / 关系契约",
+      "name": "真实 JNI 拼音与核心状态逻辑",
       "status": "passed",
+      "tests": 21,
+      "failures": 0,
+      "nativeBoundaryCases": 2014,
+      "sanitizers": [
+        "AddressSanitizer",
+        "UndefinedBehaviorSanitizer"
+      ]
+    },
+    {
+      "name": "APK 构建、签名与 Android lint",
+      "status": "passed",
+      "artifact": {
+        "package": "app.doudou.ime",
+        "version": "0.1.0-alpha.1",
+        "sha256": "e4415c8ad7ee5333d1827ac8f2fbd4a5ccdfb208e4d8671c888c19d447d329ac",
+        "bytes": 38661216,
+        "buildType": "debug",
+        "production": false,
+        "modelsBundled": false
+      },
+      "lintErrors": 0
+    },
+    {
+      "name": "OPPO PHW110 原生验收",
+      "status": "passed",
+      "tests": 9,
+      "failures": 0,
+      "realDevice": true,
+      "realModel": false,
+      "displayPx": [
+        1080,
+        2412
+      ],
+      "keyboard": {
+        "normal_height_px": 888,
+        "capture_height_px": 276,
+        "density": 3,
+        "normal_content_dp": 280,
+        "capture_content_dp": 76,
+        "system_bottom_inset_px": 48
+      },
+      "flows": [
+        "真实点键拼音整句 / 退格 / 多行换行",
+        "禁止个性学习输入框关闭读屏与语音",
+        "缩矮 / 主动截屏 / 本地中文 OCR / 修正 / 返回 / 取消",
+        "原草稿保护 / SQLite 修订与持久化 / 删除恢复",
+        "备份人物重映射 / 非法备份回滚 / 历史保留期限"
+      ],
+      "screenshots": "本 App 练习区，已检查无私聊、账号或密钥"
+    },
+    {
+      "name": "测试后恢复设备设置",
+      "status": "passed",
+      "settingsRestored": true,
+      "testPackageRemoved": true,
+      "appRetained": true,
+      "installedApkMatchesDelivery": true,
+      "emulatorStarted": false,
+      "restoredAt": "2026-10-20T15:15:48.647Z"
+    },
+    {
+      "name": "产品世界与本地宿主测试",
+      "status": "passed",
+      "tests": 6,
       "domains": 7,
       "capabilities": 12,
       "relations": 9,
       "ownedObjects": 10,
-      "documents": 10,
-      "widths": [320, 393, 736, 1440],
-      "pageErrors": 0,
-      "deviceApiRequests": 0
+      "documents": 10
     },
     {
-      "name": "HTML 界面对稿：8 组页面与隔离交互",
-      "status": "passed",
-      "pages": 8,
-      "cssViewports": [
-        [360, 800],
-        [393, 872],
-        [412, 915]
-      ],
-      "outerWidths": [320, 393, 736, 1440],
-      "pageErrors": 0,
-      "modelOrDeviceRequests": 0,
-      "flows": [
-        "单行候选/动作复用",
-        "语音示意整理/编辑/填入/撤销",
-        "自动缩矮/展开/三风格/更多/返回",
-        "联系人变化取消旧任务，草稿隔离",
-        "热词筛选/搜索/增删/撤销",
-        "文风与人物偏好独立修订",
-        "人物图/来源/计划状态",
-        "设置/密钥禁用/可选同步",
-        "豆包参考工具宫格/常用语填入撤销/标点/收起恢复"
-      ],
-      "realDevice": false,
-      "realModel": false,
-      "reference": "用户提供的 Typeless 与豆包截图，原图未发布"
-    },
-    {
-      "name": "网页界面约定：缩矮、结果、选择风格、撤销草稿",
-      "status": "passed",
-      "realDevice": false,
-      "realModel": false
-    },
-    {
-      "name": "成本计算器与免费额度开关",
-      "status": "passed",
-      "defaultMonthlyCny": 17.268,
-      "withEligibleTenFreeHoursCny": 8.628
-    },
-    {
-      "name": "原生系统 IME APK 构建与签名",
-      "status": "passed",
-      "artifact": {
-        "package": "app.personalkeyboard.demo",
-        "version": "0.0.1",
-        "sha256": "58f80c11b78a1b8e506ff291f51693d9a8d420efc00ff2e365e17eaf3070d190",
-        "bytes": 25124,
-        "production": false
-      }
-    },
-    {
-      "name": "ws-scrcpy 构建及本机 HTTP/浏览器启动",
-      "status": "passed",
-      "webCodecsH264Supported": true,
-      "loopbackOnly": true,
-      "deviceIsolation": "build validation excluded all real devices"
-    },
-    {
-      "name": "OPPO 真机 APK 安装与视频/触摸",
-      "status": "blocked",
-      "reason": "设备锁屏，系统安装确认未完成；未切换原输入法或读屏设置"
-    },
-    {
-      "name": "原生缩矮/截屏/展开/填入与恢复",
+      "name": "真实文字模型、付费 ASR 与智能学习联调",
       "status": "pending",
-      "reason": "须在解锁设备或独立模拟器实际验收，不能用编译成功代替"
+      "reason": "按本次要求先完成 App 逻辑；未配置真实模型，没有预写回复冒充生成。Android 系统语音适配器已实现，准确率未实测。"
     },
     {
-      "name": "生产拼音、真实 ASR/OCR/模型、学习与同步",
+      "name": "真实聊天 App 兼容性与浏览器视频投屏",
       "status": "pending",
-      "reason": "本次为 Spec 和固定场景原生交互原型"
+      "reason": "本轮真机使用本 App 练习区和 instrumentation；不代表微信 / QQ 及全部 ROM 验收，也不代表浏览器视频已验收。"
     }
   ]
 }

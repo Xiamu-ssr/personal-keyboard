@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(doudou_decoder LANGUAGES CXX)
+file(GLOB DECODER_SOURCES CONFIGURE_DEPENDS vendor/aosp-pinyin/share/*.cpp)
+add_library(doudou_decoder SHARED decoder_jni.cpp ${DECODER_SOURCES})
+target_include_directories(doudou_decoder PRIVATE vendor/aosp-pinyin/include)
+target_compile_features(doudou_decoder PRIVATE cxx_std_11)
+target_compile_options(doudou_decoder PRIVATE -Wno-deprecated-declarations -Wno-write-strings)
+target_link_options(doudou_decoder PRIVATE "-Wl,-z,max-page-size=16384")

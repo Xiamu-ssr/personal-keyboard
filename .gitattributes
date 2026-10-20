@@ -1,0 +1,4 @@
+# Preserve the official Windows wrapper and third-party source formatting.
+android/gradlew.bat whitespace=cr-at-eol
+android/app/src/main/cpp/vendor/aosp-pinyin/** -whitespace
+android/app/src/main/assets/aosp-notice.txt -whitespace

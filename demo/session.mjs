@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { root, adb, devices } from "./tools.mjs";
-const PACKAGE = "app.personalkeyboard.demo",
+const PACKAGE = "app.doudou.ime",
   IME = PACKAGE + "/.KeyboardService",
   CAPTURE = PACKAGE + "/" + PACKAGE + ".CaptureService";
 const runtime = path.join(root, ".runtime");
@@ -74,7 +74,7 @@ export class DemoSession {
       )
     )
       throw Error("设备目前锁屏，请本人解锁后再开始。不会自动解锁。");
-    const apk = path.join(root, "android/build/personal-keyboard-demo.apk");
+    const apk = path.join(root, "android/app/build/outputs/apk/debug/app-debug.apk");
     try {
       await fs.access(apk);
     } catch {
@@ -117,7 +117,7 @@ export class DemoSession {
         await adb(serial, ["install", "-r", apk], { timeout: 60000 });
       } catch {
         throw Error(
-          "演示 APK 安装尚未完成：请在设备上确认本次安装，再重试。输入法与读屏尚未切换。",
+          "豆豆输入法 APK 安装尚未完成：请在设备上确认本次安装，再重试。输入法与读屏尚未切换。",
         );
       }
       if (enableCapture) {
@@ -196,7 +196,7 @@ export class DemoSession {
       return {
         viewerUrl: "http://127.0.0.1:8561/",
         message:
-          "真实 APK 已运行。若未勾选临时授权，请在设备上选择演示输入法并按需开启读屏。回复使用固定演示数据。",
+          "豆豆输入法已运行。未勾选临时授权时，请在设备上选择输入法并按需开启主动截屏；没有配置模型时不会生成回复。",
       };
     } catch (e) {
       await this.stop();

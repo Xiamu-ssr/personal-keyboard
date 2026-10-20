@@ -3,19 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Personal Keyboard · 产品世界</title>
+    <title>豆豆输入法 · 产品世界</title>
     <!-- SPEC_STYLE -->
   </head>
   <body>
     <header class="header">
       <div class="brand">
-        <span class="brand-mark">p.</span>
-        <h1>Personal Keyboard <span>· Spec</span></h1>
+        <span class="brand-mark">豆</span>
+        <h1>豆豆输入法 <span>· Spec</span></h1>
       </div>
-      <nav class="spec-sections" aria-label="Spec 栏目">
-        <button id="show-world" aria-pressed="true">产品世界</button>
-        <button id="show-design" aria-pressed="false">界面对稿</button>
-      </nav>
       <div class="header-actions">
         <button id="open-native" class="quiet">真实 APK</button
         ><button id="open-library" class="quiet">约定与来源</button
@@ -45,11 +41,10 @@
       </section>
       <div id="view-note" class="view-note" aria-live="polite"></div>
       <div class="status-line">
-        <span><i></i>规划规格 · 原生交互原型待真机验收</span
+        <span><i></i>原生自用预览版 · 模型稍后配置</span
         ><button data-doc="acceptance">查看实现边界 ↗</button>
       </div>
     </main>
-    <!-- DESIGN_REVIEW -->
     <div id="panel-shade" hidden></div>
     <aside id="inspector" hidden role="dialog" aria-label="域与关系详情">
       <div class="inspector-top">
@@ -83,6 +78,8 @@
         嵌入开源 ws-scrcpy；画面和触摸来自实际 Android 设备。不会在打开 Spec
         时自动启动模拟器。
       </p>
+      <p class="section-copy"><a href="./demo/doudou-keyboard.apk" download>下载豆豆输入法 APK</a> · Android 11+ · 自用预览版</p>
+      <div class="native-shots"><figure><img src="./demo/typing.png" alt="OPPO 真机上的豆豆拼音输入" loading="lazy"><figcaption>真实拼音上屏</figcaption></figure><figure><img src="./demo/advisor.png" alt="OPPO 真机截屏 OCR 后确认人物" loading="lazy"><figcaption>真实读屏 · 模型尚未配置</figcaption></figure></div>
       <div class="demo-controls">
         <label
           >演示设备<select id="device-select" aria-label="选择已授权的安卓设备">
@@ -97,10 +94,10 @@
         ><input
           id="enable-capture"
           type="checkbox"
-        />在选定设备临时启用演示输入法和读屏；停止时恢复。</label
+        />在选定设备临时启用豆豆输入法和主动截屏；停止时恢复。</label
       >
       <div id="demo-message" class="notice" aria-live="polite">
-        演示回复与语音为固定数据；真实模型、ASR、OCR 与生产中文引擎仍待接入。
+        真实拼音、资料管理与本地 OCR 已接入；付费 ASR、文字模型账号稍后配置。
       </div>
       <div class="native-stage">
         <div id="native-placeholder">

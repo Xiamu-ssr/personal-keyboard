@@ -1,9 +1,9 @@
 meta:
-  title: Personal Keyboard
+  title: 豆豆输入法
   subtitle: 产品世界 · 业务与技术
-  version: 0.3.1
+  version: 0.1.0-alpha.1
   reviewedAt: 2026-10-20
-  status: 产品规格；原生交互原型待真机验收
+  status: 原生自用预览版；模型配置待后续联调
 layout:
   width: 1200
   height: 800
@@ -100,11 +100,10 @@ domains:
           - 输入引擎沿用成熟方案；键位、间距和候选体验单独打磨。
           - 敏感输入不采集。
         technical:
-          - 评估 Fcitx5 Android / Trime；生产拼音引擎尚未集成。
+          - 已集成 AOSP / libgooglepinyin 离线整句引擎；中文输入体验继续实用验证。
         objects:
           - editor
           - vocabulary
-        preview: keyboard
       - id: keyboard_voice
         name: 个性语音
         desc: 识别、整理 · 越用越像你
@@ -113,7 +112,7 @@ domains:
           - 用户可信改词、改句反哺热词与文风，下次再用。
         technical:
           - ASR 转写与基础规整 → 文本模型个性整理 → 上屏 → 可信修改分类。
-          - 当前原型仍是固定样例，真实 ASR 和整理模型尚未接入。
+          - 使用手机系统 ASR；没有系统服务时明确提示。付费 ASR 与真实文字模型稍后配置。
         objects:
           - editor
           - vocabulary
@@ -165,11 +164,11 @@ domains:
       - 3
       - 26
       - 24
-    role: 读懂当前聊天，识别说话人。
+    role: 读当前屏幕，确认聊天对象。
     business:
       - 军师缩矮后读取当前屏；不够再补前文。
     technical:
-      - 用户授权后，等宿主布局稳定再截屏；本地 OCR 提取气泡与身份。
+      - 用户授权后，等宿主布局稳定再截屏；本地 OCR 提取文字；人物身份由本人确认。
       - 截图临时保存并清理；受保护窗口按失败处理。
     objects:
       - capture
@@ -181,11 +180,11 @@ domains:
     chips:
       - id: sensing_ocr
         name: OCR 与身份
-        desc: 本地理解 · 区分说话人
+        desc: 本地识字 · 本人确认
         business:
           - 保留原文位置和置信度；不确定的信息不写成事实。
         technical:
-          - ML Kit 中文 OCR + bubbleBounds / sourceCaptureId；身份确认后才检索记忆。
+          - ML Kit 中文 OCR，明确选择人物后检索；不声称已经识别气泡说话人。
         objects:
           - message
           - contact
@@ -723,9 +722,9 @@ objects:
       tombstones: 删除记录
     invariant: 本机学习不等于同意上传；撤销和删除也传播。
 documents:
-  - id: design
-    title: 界面对稿与尺寸
-    file: design.md
+  - id: implementation
+    title: 当前原生实现
+    file: implementation.md
   - id: product
     title: 产品与业务
     file: product.md

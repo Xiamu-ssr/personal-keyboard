@@ -32,13 +32,6 @@
     tab: "business",
     focus: null,
     mobile: false,
-    preview: {
-      phase: "normal",
-      draft: "周末我都可以",
-      previous: null,
-      style: null,
-      variants: [0, 0, 0],
-    },
   };
   const svgNS = "http://www.w3.org/2000/svg";
   function svg(tag, attributes, parent) {
@@ -370,14 +363,12 @@
     el("inspector").hidden = false;
     el("panel-shade").hidden = false;
     el("world-main").inert = true;
-    el("design-review").inert = true;
     document.querySelector(".header").inert = true;
   }
   function closePanel(restore = true) {
     el("inspector").hidden = true;
     el("panel-shade").hidden = true;
     el("world-main").inert = false;
-    el("design-review").inert = false;
     document.querySelector(".header").inert = false;
     document
       .querySelectorAll(".selected")
@@ -511,8 +502,7 @@
                 .join("") +
               "</div>",
           );
-        if (item.preview || item.id === "keyboard")
-          body += section("界面约定", previewMarkup());
+        if(item.id==="keyboard" || item.id==="keyboard_typing")body+=section("真实界面",'<button data-doc="implementation">查看原生实现与验收范围 ↗</button>');
         if (item.id === "keyboard_settings")
           body += section(
             "管理",
@@ -540,27 +530,6 @@
       `<span class="scope-pill">${selection.kind === "edge" ? "关系契约" : selection.kind === "chip" ? "域内能力" : selection.kind === "domain" ? "域 / 规划规格" : "规格依据"}</span><h2>${esc(heading)}</h2><p>${esc(subtitle)}</p>`;
     el("inspector-content").innerHTML = body;
     el("inspector-content").scrollTop = 0;
-  }
-  const samples = [
-    ["好呀，找家安静点的店，我们慢慢聊。", "可以呀，安静点的地方正合适。"],
-    ["好呀，找个安静的小店，周末见。", "那就找家清静的小店，周末好好聊。"],
-    [
-      "可以。我们选个安静的地方，时间再确认。",
-      "没问题，找家安静的店，具体时间再定。",
-    ],
-  ];
-  function previewMarkup() {
-    const p = state.preview;
-    return `<p class="preview-label">交互示意 · 固定样例，非真实 APK / 模型 / 截图</p><div class="phone-preview" data-phase="${p.phase}"><div class="preview-head"><strong>林然</strong><span>演示对话</span></div><div class="preview-chat"><p>最近事情有点多。</p><p class="mine">周末一起吃饭，聊一聊？</p><p>好呀，想找个安静点的地方。</p></div><div class="preview-composer"><input id="preview-draft" aria-label="示意草稿" value="${esc(p.draft)}"><span>自行发送</span></div><div class="preview-keys"><div class="candidate-line"><span>${p.phase === "normal" ? "好的　好呀　可以" : p.phase === "shrunk" ? "正在等待布局 → 读取当前屏" : "同一意图 · 三种表达"}</span><button data-preview="${p.phase === "normal" ? "shrunk" : "normal"}">${p.phase === "normal" ? "✧ 军师" : "返回"}</button></div>${p.phase === "normal" ? ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"].map((row) => '<div class="key-row">' + [...row].map((k) => "<span>" + k + "</span>").join("") + "</div>").join("") : p.phase === "shrunk" ? '<div class="preview-progress">缩矮键区，让聊天露出更多</div>' : '<div class="preview-results">' + ["自然", "温和", "简洁"].map((s, i) => `<button data-reply="${i}"><strong>${s}${p.style === i ? " · 已选" : ""}</strong>${esc(samples[i][p.variants[i]])}</button>`).join("") + "</div>"}</div></div><div class="preview-controls"><button data-preview="normal" class="${p.phase === "normal" ? "active" : ""}">日常键区</button><button data-preview="shrunk" class="${p.phase === "shrunk" ? "active" : ""}">缩矮读屏</button><button data-preview="results" class="${p.phase === "results" ? "active" : ""}">展开结果</button></div>${p.style !== null ? `<div class="preview-controls"><button id="preview-more">只换“${["自然", "温和", "简洁"][p.style]}”</button><button id="preview-undo" ${p.previous === null ? "disabled" : ""}>撤销填入</button></div>` : ""}<p class="preview-label">点建议只改变示意草稿；这里没有发送功能，也不会访问手机。</p>`;
-  }
-  function rerenderPreview() {
-    const current =
-      el("inspector-content").querySelector(".phone-preview")?.parentElement;
-    if (current) {
-      const position = el("inspector-content").scrollTop;
-      current.outerHTML = section("界面约定", previewMarkup());
-      el("inspector-content").scrollTop = position;
-    }
   }
   function openModal(id) {
     closePanel(false);
@@ -606,37 +575,7 @@
       el(target.dataset.close).close();
       return;
     }
-    if (target.dataset.preview) {
-      state.preview.phase = target.dataset.preview;
-      rerenderPreview();
-      return;
-    }
-    if (target.dataset.reply !== undefined) {
-      const i = Number(target.dataset.reply),
-        p = state.preview;
-      if (p.previous === null) p.previous = p.draft;
-      p.style = i;
-      p.draft = samples[i][p.variants[i]];
-      rerenderPreview();
-      return;
-    }
-    if (target.id === "preview-more") {
-      const p = state.preview;
-      p.variants[p.style] = 1 - p.variants[p.style];
-      rerenderPreview();
-      return;
-    }
-    if (target.id === "preview-undo") {
-      state.preview.draft = state.preview.previous;
-      state.preview.previous = null;
-      rerenderPreview();
-      return;
-    }
     if (target.id === "back-library") select("library", "all");
-  });
-  document.addEventListener("input", (event) => {
-    if (event.target.id === "preview-draft")
-      state.preview.draft = event.target.value;
   });
   document.addEventListener("keydown", (event) => {
     if (
