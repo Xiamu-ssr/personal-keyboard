@@ -112,6 +112,7 @@
   const local =
     location.protocol === "http:" &&
     ["127.0.0.1", "localhost"].includes(location.hostname);
+  document.body.dataset.specMode = local ? "local" : "static";
   async function api(path, body) {
     const r = await fetch(path, {
       method: body ? "POST" : "GET",
@@ -133,8 +134,15 @@
   }
   async function refresh() {
     if (!local) {
-      status("需要本地 Node 服务");
-      el("device-select").innerHTML = "<option>用本地服务打开此 Spec</option>";
+      status(location.protocol === "file:" ? "静态阅览" : "云端阅览");
+      ["device-select", "refresh-devices", "prepare-demo", "stop-demo", "enable-capture"].forEach(id => el(id).disabled = true);
+      el("demo-message").textContent = "这里可查看完整规格、交互流程和成本计算器。原生 APK 已构建，真机验收留待设备解锁；演示回复为固定数据。";
+      const placeholder = el("native-placeholder");
+      placeholder.querySelector("h3").textContent = "原生 APK 演示留待本机验收";
+      placeholder.querySelector("p").textContent = "真实 Android 画面需要连接本机设备，云端阅览不会访问或控制你的手机。";
+      const link = placeholder.querySelector("a");
+      link.dataset.doc = "interaction";
+      link.textContent = "查看军师交互与高度变化";
       return;
     }
     try {
@@ -162,6 +170,7 @@
     }
   }
   async function action(which) {
+    if (!local) return;
     const buttons = [el("prepare-demo"), el("stop-demo")];
     buttons.forEach((b) => (b.disabled = true));
     try {

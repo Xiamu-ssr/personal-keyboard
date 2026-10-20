@@ -6,6 +6,8 @@
 
 ## 看 Spec
 
+手机或外网查看：[ECS 在线 Spec](https://106.14.73.99/keyboard-spec/)。云端提供完整文档与成本计算器；真实 Android 画面仍只在本机连接设备后运行。
+
     npm ci
     npm run spec:build
     npm run spec:serve

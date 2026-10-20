@@ -295,6 +295,16 @@ strong {
 .native-stage iframe[hidden] {
   display: none;
 }
+body[data-spec-mode="static"] #demo .demo-controls,
+body[data-spec-mode="static"] #demo > .consent,
+body[data-spec-mode="static"] .device-outline {
+  display: none;
+}
+body[data-spec-mode="static"] .native-stage {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
 #native-placeholder {
   text-align: center;
   padding: 30px;
