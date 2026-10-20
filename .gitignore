@@ -1,0 +1,13 @@
+node_modules/
+.runtime/
+.env
+.env.*
+!.env.example
+android/build/
+*.keystore
+*.jks
+.DS_Store
+spec/demo/*.apk
+spec/demo/*.png
+spec/demo/*.json
+!spec/demo/README.md

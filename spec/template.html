@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Personal Keyboard · Spec</title>
+    <!-- SPEC_STYLE -->
+  </head>
+  <body>
+    <header class="header">
+      <a class="brand" href="#overview"
+        ><span class="brand-mark">p.</span
+        ><span>Personal Keyboard <small>产品 Spec</small></span></a
+      >
+      <div class="revision" id="revision"></div>
+    </header>
+    <nav class="navigation" aria-label="Spec 导航">
+      <a href="#overview">产品地图</a><a href="#demo">真实 APK</a
+      ><a href="#cost">模型与成本</a><a href="#docs">业务与契约</a>
+    </nav>
+    <main>
+      <section id="overview" class="page-section">
+        <div class="eyebrow">ANDROID FIRST / PERSONAL CONTEXT</div>
+        <h1>会表达，也记得你在和谁说话。</h1>
+        <p class="intro">
+          平时是一副顺手的键盘。需要帮忙时，在当前聊天里说、看、选，再按自己的意思发出去。
+        </p>
+        <div class="principle">
+          <strong>一条候选 / 动作行。</strong
+          ><span
+            >点军师 → 缩矮并截屏 → 结果就绪后展开。人物图与设置留在 App。</span
+          >
+        </div>
+        <div class="map-grid" id="domain-map"></div>
+        <div class="flows" id="business-flows"></div>
+      </section>
+      <section id="demo" class="page-section">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">NATIVE ANDROID</div>
+            <h2>真正运行 APK，再看键盘。</h2>
+          </div>
+          <span class="status" id="demo-status">检查本地服务…</span>
+        </div>
+        <p class="section-copy">
+          嵌入开源 ws-scrcpy；画面和触摸来自实际 Android 设备。不会在打开 Spec
+          时自动启动模拟器。
+        </p>
+        <div class="demo-controls">
+          <label
+            >演示设备<select
+              id="device-select"
+              aria-label="选择已授权的安卓设备"
+            >
+              <option value="">检查设备…</option>
+            </select></label
+          ><button id="refresh-devices" type="button">刷新设备</button
+          ><button id="prepare-demo" type="button" class="primary">
+            安装并运行演示 APK</button
+          ><button id="stop-demo" type="button">停止并恢复</button>
+        </div>
+        <label class="consent"
+          ><input
+            id="enable-capture"
+            type="checkbox"
+          />在选定设备临时启用演示输入法和读屏；停止时恢复。</label
+        >
+        <div id="demo-message" class="notice" aria-live="polite">
+          演示回复与语音为固定数据；真实模型、ASR、OCR 与生产中文引擎仍待接入。
+        </div>
+        <div class="native-stage">
+          <div id="native-placeholder">
+            <span class="device-outline">APK</span>
+            <h3>没有 Android 画面时，就显示离线。</h3>
+            <p>
+              先运行 npm run demo:build 与 npm run demo:setup，然后 npm run
+              spec:serve。
+            </p>
+            <a href="#docs" data-doc="demo">查看运行与设备边界</a>
+          </div>
+          <iframe
+            id="android-frame"
+            title="真实 Android APK 演示"
+            allow="clipboard-read; clipboard-write; fullscreen"
+            hidden
+          ></iframe>
+        </div>
+        <details>
+          <summary>已验证什么 / 尚未实现什么</summary>
+          <div id="verification"></div>
+          <p>原生交互验证不等于微信适配、真实模型质量或完整中文输入法验收。</p>
+        </details>
+      </section>
+      <section id="cost" class="page-section">
+        <div class="eyebrow">CAPABILITIES / PROCUREMENT</div>
+        <h2>能力分开采购，日常不必用 Opus。</h2>
+        <p class="section-copy">
+          自用可先用已有 CPA 的 Gemini。可售服务按官方 API 成本计算；OCR
+          在设备端，TTS 和生图不是首版必需。
+        </p>
+        <div class="model-grid">
+          <div>
+            <strong>语音 → 文字</strong>
+            <p>Paraformer / Fun-ASR<br />中文、热词、流式短句对比</p>
+          </div>
+          <div>
+            <strong>润色与回复</strong>
+            <p>Gemini Flash / Qwen Flash<br />一次三种风格，各一条</p>
+          </div>
+          <div>
+            <strong>本地与记忆</strong>
+            <p>中文 OCR + SQLite<br />差异分类、异步整理</p>
+          </div>
+        </div>
+        <div class="cost-layout">
+          <div class="cost-inputs">
+            <label
+              >每天语音 <output id="minutes-label">30 分钟</output
+              ><input
+                id="minutes"
+                type="range"
+                min="0"
+                max="180"
+                step="5"
+                value="30" /></label
+            ><label
+              >每天军师 <output id="replies-label">100 次</output
+              ><input
+                id="replies"
+                type="range"
+                min="0"
+                max="300"
+                step="10"
+                value="100" /></label
+            ><label
+              >ASR<select id="asr">
+                <option value="paraformer">
+                  Paraformer 实时 · ¥0.864 / 小时
+                </option>
+                <option value="funasr">Fun-ASR 实时 · ¥1.188 / 小时</option>
+              </select></label
+            ><label
+              >文本模型<select id="text-model">
+                <option value="qwen3.7-flash">
+                  Qwen3.7 Flash · 输入0.2 / 输出0.8 元每百万token
+                </option>
+                <option value="qwen-flash">
+                  Qwen Flash · 输入0.15 / 输出1.5 元每百万token
+                </option>
+              </select></label
+            ><label class="consent"
+              ><input id="free-hours" type="checkbox" />我的账户确有当月 10
+              小时语音免费额度</label
+            >
+          </div>
+          <div class="cost-result">
+            <div>每月估算 · 人民币</div>
+            <strong id="cost-total">¥17.27</strong>
+            <dl id="cost-details"></dl>
+            <p>
+              按 30 天、每次军师输入 3,000 / 输出 600 token；另含每天 60
+              次语音整理和 100 次抽取。无缓存、无额外思考
+              token。服务器与失败重试另计。
+            </p>
+          </div>
+        </div>
+        <p class="source-line">
+          核验于 2026-10-20：<a
+            href="https://help.aliyun.com/zh/model-studio/model-pricing"
+            target="_blank"
+            rel="noreferrer"
+            >阿里云价格</a
+          >
+          ·
+          <a
+            href="https://console.groq.com/docs/speech-to-text"
+            target="_blank"
+            rel="noreferrer"
+            >Groq 语音</a
+          >
+          ·
+          <a
+            href="https://developers.google.com/ml-kit/migration"
+            target="_blank"
+            rel="noreferrer"
+            >ML Kit</a
+          >
+          · <a href="#docs" data-doc="models-and-cost">购买与详细预算</a>
+        </p>
+      </section>
+      <section id="docs" class="page-section">
+        <div class="eyebrow">BUSINESS / ARCHITECTURE / EVIDENCE</div>
+        <h2>约定写清，状态可核实。</h2>
+        <div class="docs-layout">
+          <nav id="document-nav" aria-label="业务文档"></nav>
+          <article id="document-content"></article>
+        </div>
+      </section>
+    </main>
+    <footer>
+      Personal Keyboard · Android 原生交互原型 ·
+      演示人物与固定场景，不含私人聊天或账号。
+    </footer>
+    <!-- SPEC_DATA --><!-- SPEC_SCRIPT -->
+  </body>
+</html>

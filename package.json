@@ -1,0 +1,22 @@
+{
+  "name": "personal-keyboard",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "spec:build": "node spec/build.mjs",
+    "spec:serve": "node demo/server.mjs",
+    "demo:setup": "node demo/setup.mjs",
+    "demo:build": "node android/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm run spec:build && npm test"
+  },
+  "dependencies": {
+    "marked": "18.1.1",
+    "yaml": "2.9.1"
+  }
+}

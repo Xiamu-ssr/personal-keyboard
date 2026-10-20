@@ -1,0 +1,52 @@
+{
+  "reviewedAt": "2026-10-20",
+  "status": "Spec、原生构建、浏览器画面组件已验证；真机交互待设备解锁",
+  "checks": [
+    {
+      "name": "Spec 文档与布局",
+      "status": "passed",
+      "documents": 9,
+      "widths": [320, 736, 1440],
+      "pageErrors": 0
+    },
+    {
+      "name": "成本计算器与免费额度开关",
+      "status": "passed",
+      "defaultMonthlyCny": 17.268,
+      "withEligibleTenFreeHoursCny": 8.628
+    },
+    {
+      "name": "原生系统 IME APK 构建与签名",
+      "status": "passed",
+      "artifact": {
+        "package": "app.personalkeyboard.demo",
+        "version": "0.0.1",
+        "sha256": "58f80c11b78a1b8e506ff291f51693d9a8d420efc00ff2e365e17eaf3070d190",
+        "bytes": 25124,
+        "production": false
+      }
+    },
+    {
+      "name": "ws-scrcpy 构建及本机 HTTP/浏览器启动",
+      "status": "passed",
+      "webCodecsH264Supported": true,
+      "loopbackOnly": true,
+      "deviceIsolation": "build validation excluded all real devices"
+    },
+    {
+      "name": "OPPO 真机 APK 安装与视频/触摸",
+      "status": "blocked",
+      "reason": "设备锁屏，系统安装确认未完成；未切换原输入法或读屏设置"
+    },
+    {
+      "name": "原生缩矮/截屏/展开/填入与恢复",
+      "status": "pending",
+      "reason": "须在解锁设备或独立模拟器实际验收，不能用编译成功代替"
+    },
+    {
+      "name": "生产拼音、真实 ASR/OCR/模型、学习与同步",
+      "status": "pending",
+      "reason": "本次为 Spec 和固定场景原生交互原型"
+    }
+  ]
+}

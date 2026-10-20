@@ -1,0 +1,64 @@
+meta:
+  title: Personal Keyboard
+  subtitle: 安卓个人输入法 · 产品与业务 Spec
+  version: 0.1.0
+  reviewedAt: "2026-10-20"
+  status: 原生交互原型，生产能力待验收
+domains:
+  - id: scene
+    title: 聊天现场
+    category: 用户
+    role: 用户留在当前应用，表达自己的意思。
+    items: [普通输入, 语音表达, 点军师, 编辑后自行发送]
+    document: product
+  - id: keyboard
+    title: Android 输入法
+    category: 交互
+    role: 一条候选/动作行，功能接管键区。
+    items: [成熟键位, 录音与整理, 缩矮截屏, 展开回复]
+    document: interaction
+  - id: local
+    title: 本机个人数据
+    category: 数据
+    role: 热词、文风、人物隔离保存，可修订与撤销。
+    items: [词库与改词, 场景语气, 人物事实, 来源与有效期]
+    document: architecture
+  - id: models
+    title: 模型服务
+    category: 服务
+    role: 短任务按能力选择，不为每次输入启动长期 Agent。
+    items: [流式 ASR, 本地中文 OCR, 三种回复, 异步学习]
+    document: models-and-cost
+  - id: app
+    title: 独立 App
+    category: 产品
+    role: 关系图和资料管理，不占键盘常驻面积。
+    items: [人物关系图, 事实修订, 模型与词库, 授权与删除]
+    document: product
+  - id: ecosystem
+    title: 豆豆 · 可选同步
+    category: 生态
+    role: 分开安装和使用，仅同步用户选定的数据。
+    items: [分类授权, 人物范围, 修订冲突, 删除传播]
+    document: architecture
+flows:
+  - id: voice
+    title: 个性语音
+    steps: [说话, ASR, 按本人习惯整理, 上屏, 可信修改反馈]
+  - id: advisor
+    title: 原地军师
+    steps: [点军师, 缩矮并等布局, 截屏与 OCR, 三种风格, 展开结果, 填入编辑]
+  - id: memory
+    title: 异步学习
+    steps:
+      [证据完整的差异, 分类候选, 分离热词与人物偏好, 可撤销保存, 下次按需取用]
+documents:
+  - { id: product, title: 产品与业务, file: product.md }
+  - { id: interaction, title: 交互与状态, file: interaction.md }
+  - { id: architecture, title: 架构与数据, file: architecture.md }
+  - { id: models-and-cost, title: 模型与采购, file: models-and-cost.md }
+  - { id: demo, title: 真实 APK 演示, file: demo.md }
+  - { id: research, title: 对标与截图观察, file: research.md }
+  - { id: acceptance, title: 验收与边界, file: acceptance.md }
+  - { id: reply-prompt, title: 回复提示词, file: prompts/reply.md }
+  - { id: learn-prompt, title: 学习提示词, file: prompts/learn.md }

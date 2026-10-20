@@ -1,0 +1,9 @@
+{
+  "ws-scrcpy": {
+    "repository": "https://github.com/NetrisTV/ws-scrcpy.git",
+    "commit": "cd6cea6ebde17af6685c2b325183fc24bef9d52b",
+    "license": "MIT",
+    "build": "Android only; WebCodecs and MSE; no remote shell, file listing, devtools or iOS",
+    "localChange": "Bind HttpServer to 127.0.0.1 and require PERSONAL_KEYBOARD_DEVICE to scope the tracker; pinned source checked before both changes"
+  }
+}
