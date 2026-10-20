@@ -1,13 +1,29 @@
 {
   "reviewedAt": "2026-10-20",
-  "status": "Spec、原生构建、浏览器画面组件已验证；真机交互待设备解锁",
+  "status": "产品世界、关系契约与浏览器交互已验证；原生真机验收待设备解锁",
   "checks": [
     {
-      "name": "Spec 文档与布局",
+      "name": "产品世界与域 / 能力 / 关系契约",
       "status": "passed",
+      "domains": 8,
+      "capabilities": 17,
+      "relations": 10,
+      "ownedObjects": 10,
       "documents": 9,
-      "widths": [320, 736, 1440],
-      "pageErrors": 0
+      "widths": [
+        320,
+        393,
+        736,
+        1440
+      ],
+      "pageErrors": 0,
+      "deviceApiRequests": 0
+    },
+    {
+      "name": "网页界面约定：缩矮、结果、选择风格、撤销草稿",
+      "status": "passed",
+      "realDevice": false,
+      "realModel": false
     },
     {
       "name": "成本计算器与免费额度开关",

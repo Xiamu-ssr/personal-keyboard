@@ -3,21 +3,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 import { marked, Renderer } from "marked";
+import { validateWorld } from "./world.mjs";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const spec = YAML.parse(await fs.readFile(path.join(dir, "spec.yaml"), "utf8"));
-if (
-  !spec.meta?.title ||
-  spec.domains?.length !== 6 ||
-  !Array.isArray(spec.documents)
-)
-  throw Error("Invalid product map");
+const counts = validateWorld(spec);
 const ids = new Set();
 const documents = {};
 for (const doc of spec.documents) {
   if (ids.has(doc.id)) throw Error("Duplicate document");
   ids.add(doc.id);
-  const resolved = path.resolve(dir, doc.file);
+  const resolved = await fs.realpath(path.resolve(dir, doc.file));
   if (!resolved.startsWith(dir + path.sep) || !doc.file.endsWith(".md"))
     throw Error("Document escaped spec directory");
   const source = await fs.readFile(resolved, "utf8");
@@ -27,20 +23,23 @@ for (const doc of spec.documents) {
   const html = marked.parse(source, { renderer });
   documents[doc.id] = { title: doc.title, html };
 }
-for (const d of spec.domains)
-  if (!ids.has(d.document)) throw Error("Missing domain document");
 let verification = { status: "pending", checks: [] };
 try {
   verification = JSON.parse(
     await fs.readFile(path.join(dir, "verification.json"), "utf8"),
   );
 } catch {}
-const [template, css, script, cost] = await Promise.all(
-  ["template.html", "style.css", "runtime.js", "cost.mjs"].map((f) =>
-    fs.readFile(path.join(dir, f), "utf8"),
-  ),
+const [template, css, script, cost, world, panels] = await Promise.all(
+  [
+    "template.html",
+    "style.css",
+    "runtime.js",
+    "cost.mjs",
+    "world.mjs",
+    "panels.js",
+  ].map((f) => fs.readFile(path.join(dir, f), "utf8")),
 );
-const json = JSON.stringify({ ...spec, documents, verification })
+const json = JSON.stringify({ ...spec, sources: documents, verification })
   .replace(/</g, "\\u003c")
   .replace(/\u2028/g, "\\u2028")
   .replace(/\u2029/g, "\\u2029");
@@ -55,7 +54,11 @@ const output = template
     "<script>" +
       cost.replace("export function", "function") +
       "\n" +
+      world.replaceAll("export function", "function") +
+      "\n" +
       script +
+      "\n" +
+      panels +
       "</script>",
   );
 await fs.writeFile(path.join(dir, "index.html"), output);
@@ -63,6 +66,10 @@ console.log(
   "Built spec/index.html: " +
     spec.domains.length +
     " domains, " +
+    counts.capabilities +
+    " capabilities, " +
+    counts.relations +
+    " relations, " +
     ids.size +
     " documents.",
 );

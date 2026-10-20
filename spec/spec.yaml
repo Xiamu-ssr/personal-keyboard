@@ -1,57 +1,654 @@
 meta:
   title: Personal Keyboard
-  subtitle: 安卓个人输入法 · 产品与业务 Spec
-  version: 0.1.0
+  subtitle: 产品世界 · 业务与技术
+  version: 0.2.0
   reviewedAt: "2026-10-20"
-  status: 原生交互原型，生产能力待验收
+  status: 产品规格；原生交互原型待真机验收
+layout: { width: 1200, height: 800 }
+zones:
+  environment: { name: 聊天现场, color: "#8a77b8" }
+  product: { name: 产品, color: "#289479" }
+  local: { name: 本机运行与数据, color: "#517ec8" }
+  service: { name: 外部服务, color: "#c78542" }
+kinds:
+  action: { name: 动作, color: "#5c83c7" }
+  data: { name: 数据, color: "#a68a52" }
+  result: { name: 结果与反馈, color: "#388d78" }
+  optional: { name: 可选同步, color: "#9672b2" }
 domains:
-  - id: scene
-    title: 聊天现场
-    category: 用户
-    role: 用户留在当前应用，表达自己的意思。
-    items: [普通输入, 语音表达, 点军师, 编辑后自行发送]
-    document: product
+  - id: host
+    name: 聊天现场
+    icon: chat
+    zone: environment
+    rect: [18, 132, 266, 308]
+    mobile: [2, 35, 26, 24]
+    role: 用户正在使用的微信、QQ、其他聊天 App。
+    business:
+      [
+        用户留在原来的聊天中表达；发送始终由用户完成。,
+        当前联系人、草稿和可见消息一起限定这次任务的范围。,
+      ]
+    technical:
+      [
+        宿主 App 不属于输入法进程；InputConnection 只代表当前编辑器。,
+        以应用包名、联系人标识和编辑器代次绑定任务；界面切换使旧结果失效。,
+      ]
+    objects: [editor, contact]
+    documents: [product, interaction]
+    chips:
+      - {
+          id: host_conversation,
+          name: 当前对话,
+          desc: "谁在说话 · 当前可见内容",
+          business:
+            [
+              只处理当前打开的对话；群聊不把所有气泡合并成同一个人。,
+              身份不确定时先选联系人，不把记忆写到猜测的人名下。,
+            ],
+          technical:
+            [应用账号范围 + 会话标识绑定 Contact；显示名不是全局唯一键。],
+          objects: [contact, message],
+        }
+      - {
+          id: host_editor,
+          name: 草稿与发送,
+          desc: "填入可编辑 · 不代发",
+          business:
+            [
+              建议只填入输入框；保留原草稿与撤销入口。,
+              发送后输入框变空，不代表用户删除了这段话。,
+            ],
+          technical:
+            [检查 selection 与 editorGeneration；晚到结果不写入新编辑器。],
+          objects: [editor, feedback],
+        }
   - id: keyboard
-    title: Android 输入法
-    category: 交互
-    role: 一条候选/动作行，功能接管键区。
-    items: [成熟键位, 录音与整理, 缩矮截屏, 展开回复]
-    document: interaction
-  - id: local
-    title: 本机个人数据
-    category: 数据
-    role: 热词、文风、人物隔离保存，可修订与撤销。
-    items: [词库与改词, 场景语气, 人物事实, 来源与有效期]
-    document: architecture
+    name: 输入法
+    icon: keyboard
+    zone: product
+    rect: [376, 244, 340, 292]
+    mobile: [37, 35, 26, 24]
+    role: 一条候选 / 动作行；需要时接管键区。
+    business:
+      [
+        普通打字、语音、军师共用有限的键区；不常驻三个模式页签。,
+        进入军师先缩矮，让聊天多露出来；有结果后再展开。,
+        任务可取消、返回和恢复草稿，失败不冒充已完成。,
+      ]
+    technical:
+      [
+        InputMethodService 管理键盘与当前编辑器；每次击键不启动长期 Agent。,
+        requestId、conversationKey、editorGeneration 贯穿异步任务；回调先核对身份。,
+      ]
+    objects: [editor, capture, reply, feedback]
+    documents: [interaction]
+    chips:
+      - {
+          id: keyboard_typing,
+          name: 日常输入,
+          desc: "候选行 · 成熟中文引擎",
+          business:
+            [
+              输入引擎沿用成熟方案；键位、间距和候选体验单独打磨。,
+              敏感输入不采集。,
+            ],
+          technical: [评估 Fcitx5 Android / Trime；生产拼音引擎尚未集成。],
+          objects: [editor, vocabulary],
+          preview: keyboard,
+        }
+      - {
+          id: keyboard_voice,
+          name: 个性语音,
+          desc: "说完整理 · 按本人习惯",
+          business:
+            [
+              点麦克风录音，识别、轻整理后上屏；保留原意。,
+              热词与文风只取适用范围。,
+            ],
+          technical:
+            [短录音 → 流式 ASR → 文本整理；取消与切换联系人使旧请求失效。],
+          objects: [editor, vocabulary, style],
+        }
+      - {
+          id: keyboard_advisor,
+          name: 原地军师,
+          desc: "缩矮 → 截屏 → 三条回复",
+          business:
+            [
+              点军师自动缩矮并截当前屏；不够时由用户点“补前文”。,
+              三种风格各一条；“更多”仅扩展选中风格，返回保留上一组。,
+            ],
+          technical:
+            [
+              "typing → capture-resizing → capturing → understanding → generating → suggestions；失败进入 recoverable-error。",
+            ],
+          objects: [capture, reply, editor],
+          preview: advisor,
+        }
+      - {
+          id: keyboard_feedback,
+          name: 修改反馈,
+          desc: "看见改了什么 · 才学习",
+          business:
+            [
+              知道填入和修改后的文字才学习；未知最终文本不学习。,
+              未选中的回复不等于不喜欢。,
+            ],
+          technical: [记录 insertionId；文本对齐后分类，低置信候选不直接生效。],
+          objects: [feedback, vocabulary, style],
+        }
+  - id: sensing
+    name: 屏幕感知
+    icon: scan
+    zone: local
+    rect: [376, 18, 340, 155]
+    mobile: [37, 3, 26, 24]
+    role: 截图留在本机；消息带说话人与来源。
+    business:
+      [
+        缩矮后等待宿主布局稳定，再读取当前屏。,
+        截屏受限或无法识别时说明原因，允许取消或手动补充。,
+      ]
+    technical:
+      [
+        AccessibilityService 截屏 + 本地中文 OCR；显式系统授权。,
+        裁掉键盘、状态栏等无关区域；原图临时保存，完成或取消后清理。,
+      ]
+    objects: [capture, message, contact]
+    documents: [architecture, interaction]
+    chips:
+      - {
+          id: sensing_capture,
+          name: 授权截屏,
+          desc: "等布局稳定 · 可补前文",
+          business: [补前文由用户触发，限制翻页次数、去重并恢复原位置。],
+          technical: [等待 IME insets 与宿主布局；不绕过受保护窗口。],
+          objects: [capture],
+        }
+      - {
+          id: sensing_ocr,
+          name: OCR 与身份,
+          desc: "本地识别 · 联系人隔离",
+          business: [保留原文位置和置信度；不确定的信息不写成事实。],
+          technical:
+            [
+              ML Kit 中文 OCR + bubbleBounds / sourceCaptureId；身份确认后才检索记忆。,
+            ],
+          objects: [message, contact],
+        }
   - id: models
-    title: 模型服务
-    category: 服务
-    role: 短任务按能力选择，不为每次输入启动长期 Agent。
-    items: [流式 ASR, 本地中文 OCR, 三种回复, 异步学习]
-    document: models-and-cost
-  - id: app
-    title: 独立 App
-    category: 产品
-    role: 关系图和资料管理，不占键盘常驻面积。
-    items: [人物关系图, 事实修订, 模型与词库, 授权与删除]
-    document: product
-  - id: ecosystem
-    title: 豆豆 · 可选同步
-    category: 生态
-    role: 分开安装和使用，仅同步用户选定的数据。
-    items: [分类授权, 人物范围, 修订冲突, 删除传播]
-    document: architecture
-flows:
-  - id: voice
-    title: 个性语音
-    steps: [说话, ASR, 按本人习惯整理, 上屏, 可信修改反馈]
-  - id: advisor
-    title: 原地军师
-    steps: [点军师, 缩矮并等布局, 截屏与 OCR, 三种风格, 展开结果, 填入编辑]
+    name: 模型服务
+    icon: spark
+    zone: service
+    rect: [824, 18, 358, 226]
+    mobile: [72, 3, 26, 24]
+    role: 按能力采购；只发送本次所需材料。
+    business:
+      [
+        自用先复用现有 CPA；可售版本单独核算官方 API 成本。,
+        不把整库人物和聊天记录放进每次请求。,
+      ]
+    technical:
+      [
+        短任务适配器区分 ASR / reply / rewrite / learn，可取消与超时。,
+        稳定提示词前缀利于缓存；预算不假设缓存命中。,
+      ]
+    objects: [reply, feedback]
+    documents: [models-and-cost]
+    chips:
+      - {
+          id: models_asr,
+          name: 中文 ASR,
+          desc: Paraformer / Fun-ASR,
+          business: [测试中文短句、专名、热词和端到端延迟。],
+          technical:
+            [
+              官方百炼实时语音；Groq Whisper Turbo 可作非流式对照，跨境延迟另测。,
+            ],
+          documents: [models-and-cost],
+        }
+      - {
+          id: models_text,
+          name: 回复与整理,
+          desc: "Gemini / Qwen Flash · Opus 可选",
+          business: [相同意图的三种表达；不替用户作承诺、编造事实。],
+          technical:
+            [
+              自用 Gemini 优先 Google、Opus 优先 Devin 属于网关策略；不代表共享订阅权益。,
+            ],
+          objects: [reply],
+          documents: [reply-prompt],
+        }
+      - {
+          id: models_budget,
+          name: 采购与成本,
+          desc: "¥17.27 / 月 · 默认用量估算",
+          business:
+            [
+              每天30分钟语音和100次军师；服务器、重试与税费另计。,
+              免费额度按账户资格，不能作为无限生产资源。,
+            ],
+          technical: [本地 OCR 不按请求收费；首版无需 TTS / 生图。],
+          action: cost,
+          documents: [models-and-cost],
+        }
   - id: memory
-    title: 异步学习
-    steps:
-      [证据完整的差异, 分类候选, 分离热词与人物偏好, 可撤销保存, 下次按需取用]
+    name: 个人记忆
+    icon: layers
+    zone: local
+    rect: [824, 350, 358, 224]
+    mobile: [72, 35, 26, 24]
+    role: 热词、我的文风、人物资料分开保存。
+    business:
+      [
+        事实、推断、偏好分开；每条有来源、时间和修订。,
+        不把人物 A 的资料写给人物 B。,
+      ]
+    technical:
+      [
+        本机 SQLite；用户、应用账号、联系人分别限定 scope。,
+        异步抽取先形成候选，带 sourceIds / confidence / revision。,
+      ]
+    objects: [vocabulary, style, contact, memory, feedback]
+    documents: [architecture]
+    chips:
+      - {
+          id: memory_words,
+          name: 热词与文风,
+          desc: "我的表达 · 场景有范围",
+          business: [专名进词库，措辞习惯进文风；适用范围分别记录。],
+          technical: [可信差异 → 分类候选 → 置信检查 → 可撤销版本。],
+          objects: [vocabulary, style, feedback],
+        }
+      - {
+          id: memory_people,
+          name: 人物与事件,
+          desc: "关系 · 事实 · 时间与证据",
+          business:
+            [“喜欢安静的地方”带原话来源；单次回复风格不升级为人格结论。],
+          technical: [Contact 关联 MemoryItem；检索按联系人和时效过滤。],
+          objects: [contact, memory, message],
+        }
+  - id: app
+    name: 独立 App
+    icon: graph
+    zone: product
+    rect: [18, 530, 266, 252]
+    mobile: [2, 68, 26, 24]
+    role: 关系图、资料修订、模型与授权管理。
+    business:
+      [
+        关系图与输入法是同一产品；管理页不挤占聊天键区。,
+        可单独使用；与豆豆分开安装和收费。,
+      ]
+    technical:
+      [
+        独立 Activity 与 IME、AccessibilityService 同 APK，共用数据层。,
+        逐项检测系统授权和可用能力；“已授权”不等于全部功能就绪。,
+      ]
+    objects: [contact, memory, vocabulary, style]
+    documents: [product, acceptance]
+    chips:
+      - {
+          id: app_graph,
+          name: 人物关系图,
+          desc: "谁 · 发生过什么 · 何时",
+          business: [点人物看事实和来源，支持编辑、删除、撤销。],
+          technical: [Contact / MemoryItem 的视图；不复制成第二份关系数据库。],
+          objects: [contact, memory],
+        }
+      - {
+          id: app_settings,
+          name: 模型与授权,
+          desc: "服务 · 词库 · 数据管理",
+          business: [可只用基础输入；分别管理录音、读屏和服务。],
+          technical: [密钥受系统保护，不放入公开 Spec、APK 固定配置或日志。],
+          documents: [models-and-cost, acceptance],
+        }
+  - id: rules
+    name: 业务约定与提示词
+    icon: rules
+    zone: local
+    rect: [376, 642, 340, 140]
+    mobile: [37, 68, 26, 24]
+    role: 提示词限定行为，代码守住关键边界。
+    business: [不自动发送、不跨人记忆、不从未知修改中学习。]
+    technical: [身份、取消和数据范围由代码检查；提示词限定生成与分类。]
+    documents: [interaction, acceptance]
+    chips:
+      - {
+          id: rules_reply,
+          name: 回复约定,
+          desc: "同一意图 · 三种风格",
+          documents: [reply-prompt],
+        }
+      - {
+          id: rules_learn,
+          name: 学习约定,
+          desc: "可信差异 · 候选与证据",
+          documents: [learn-prompt],
+        }
+  - id: doudou
+    name: 豆豆生态
+    icon: sync
+    zone: service
+    rect: [824, 680, 358, 102]
+    mobile: [72, 68, 26, 24]
+    role: 可选连接；按类别与人物范围同步。
+    business:
+      [
+        不用豆豆也能用输入法；只共享明确选择的数据。,
+        断开、删除与修订冲突对用户可见。,
+      ]
+    technical:
+      [
+        独立 SyncPolicy；用 revision 与墓碑处理增量和删除传播。,
+        原始录音、整屏截图、完整聊天默认不出端；同步协议尚未实现。,
+      ]
+    objects: [memory, sync]
+    documents: [architecture]
+    chips: []
+edges:
+  - id: e_editor
+    from: host
+    to: keyboard
+    name: 草稿 / 填入
+    short: 填入
+    kind: action
+    both: true
+    ports: [right, left]
+    offset: 0.5
+    business: 用户选择才填入当前输入框，不触发发送。
+    trigger: 编辑、选择建议或撤销。
+    payload: EditorSession + 选中文字 / 目标草稿。
+    guard: 对话、编辑器代次、选区仍匹配；否则不回写。
+    technical: InputConnection；保留原草稿和 insertionId。
+    objects: [editor, feedback]
+  - id: e_capture
+    from: keyboard
+    to: sensing
+    name: 缩矮后读屏
+    short: 读屏
+    kind: action
+    ports: [top, bottom]
+    business: 点军师后缩矮键区，再截当前屏。
+    trigger: 点击军师，或明确点补前文。
+    payload: CaptureJob（请求、联系人、编辑器、有效期）。
+    guard: 宿主布局稳定、截屏许可有效；取消即废弃任务。
+    technical: IME insets/layout → AccessibilityService → 裁图 → 本地 OCR。
+    objects: [capture]
+  - id: e_screen
+    from: host
+    to: sensing
+    name: 当前屏消息
+    short: 可见内容
+    kind: data
+    ports: [top, left]
+    business: 读取当前对话可见内容；需要时再补前文，不扫描完整历史。
+    trigger: 任务进入 capturing。
+    payload: 局部截图 → 带位置和说话人的 ChatMessage。
+    guard: 受保护窗口失败就停止；身份不明不入人物库；原图清理。
+    technical: OCR 留在本机；原图默认不发模型，也不发豆豆。
+    objects: [capture, message]
+  - id: e_identity
+    mobileVia: [[67.5, 15], [67.5, 31], [85, 31]]
+    mobileLabelFraction: 0.35
+    via: [[770, 95], [770, 300], [1003, 300]]
+    labelFraction: 0.5
+    from: sensing
+    to: memory
+    name: 身份与证据
+    short: 证据
+    kind: data
+    ports: [right, top]
+    business: 先确认在和谁说话，再取该人物的资料。
+    trigger: OCR 完成且会话身份确认。
+    payload: Contact + ChatMessage + 来源范围。
+    guard: 同名不合并，推断与事实分开，低置信待确认。
+    technical: 解析 conversationKey，按 appAccountScope / contactId 查询。
+    objects: [contact, message, memory]
+  - id: e_inference
+    from: keyboard
+    to: models
+    name: 识别 / 生成
+    short: 模型调用
+    kind: result
+    both: true
+    external: true
+    ports: [right, left]
+    offset: 0.16
+    business: 识别语音、整理表达，或返回同意图的三条建议。
+    trigger: 录音结束；或军师上下文就绪。
+    payload: ASR 音频，或必要 OCR 文本 + 有关记忆 + 用户意图；返回文本 / ReplySet。
+    guard: 敏感输入不采集；结果须匹配原请求和编辑器。
+    technical: 能力适配器 → 已选供应商；超时可重试，取消不继续填入。
+    objects: [reply, editor]
+  - id: e_recall
+    from: memory
+    to: keyboard
+    name: 相关记忆
+    short: 取用
+    kind: data
+    ports: [left, right]
+    offset: 0.36
+    business: 只取当前人物相关事实、适用文风和热词。
+    trigger: 身份确认后的回复 / 整理任务。
+    payload: 少量带来源与有效期的 MemoryItem，词库和文风分别取用。
+    guard: 已失效、已删除和其他人的记忆不进入请求。
+    technical: 本机查询 + 上下文预算，返回 basedOnMemoryIds 供溯源。
+    objects: [memory, vocabulary, style, reply]
+  - id: e_learning
+    from: keyboard
+    to: memory
+    name: 可信修改反馈
+    short: 学习
+    kind: result
+    ports: [right, left]
+    offset: 0.8
+    business: 确实看见填入与修改内容，才形成可撤销候选。
+    trigger: 同一编辑器中观测到可信修改；异步分类。
+    payload: Feedback → 热词 / 文风候选，附证据和置信度。
+    guard: 突然清空、发送后不知最终文本、切换联系人，均为 unknown，不学习。
+    technical: 文本对齐 → 分类器 → 范围与置信检查 → revision；未选项不是负反馈。
+    objects: [feedback, vocabulary, style]
+  - id: e_manage
+    mobileVia: [[32.5, 80], [32.5, 64], [85, 64]]
+    mobileLabelFraction: 0.15
+    via: [[330, 656], [330, 610], [1003, 610]]
+    labelFraction: 0.58
+    from: app
+    to: memory
+    name: 查看 / 修订
+    short: 管理
+    kind: action
+    both: true
+    ports: [right, bottom]
+    business: 同一份个人数据在 App 中查看、改正、删除和撤销。
+    trigger: 打开人物图、词库或记忆详情。
+    payload: Contact / MemoryItem / 版本修订与删除标记。
+    guard: 删除后不再取用；保留可解释的版本关系。
+    technical: 共享 repository + SQLite；图与列表不另存一套业务状态。
+    objects: [contact, memory, vocabulary]
+  - id: e_rules
+    from: rules
+    to: keyboard
+    name: 生成与学习约定
+    short: 约定
+    kind: action
+    ports: [top, bottom]
+    business: 提示词说清表达与学习规则；代码保证不代发、不过期回写。
+    trigger: 准备 reply / rewrite / learn 请求。
+    payload: 任务提示词 + 业务参数。
+    guard: 对话内容是分析资料，不把其中的指令当系统规则。
+    technical: 稳定前缀与结构化输出；身份与记忆范围由程序校验。
+    objects: [reply, feedback]
+  - id: e_sync
+    from: memory
+    to: doudou
+    name: 选择性同步
+    short: 可选同步
+    kind: optional
+    external: true
+    ports: [bottom, top]
+    business: 按选定类别和人物，与豆豆同步资料。
+    trigger: 用户开启该范围的同步；后续修订或删除。
+    payload: 选定 MemoryItem 的增量、revision、删除墓碑。
+    guard: 默认关闭，不默认上传原录音、截图、完整聊天；可断开。
+    technical: 独立 SyncPolicy，冲突保留来源和修订；目标能力，尚未实现。
+    objects: [memory, sync]
+views:
+  - { id: all, name: 全景, edges: [] }
+  - {
+      id: advisor,
+      name: 原地军师,
+      edges:
+        [
+          e_editor,
+          e_capture,
+          e_screen,
+          e_identity,
+          e_recall,
+          e_inference,
+          e_rules,
+        ],
+    }
+  - {
+      id: voice,
+      name: 个性语音,
+      edges: [e_editor, e_recall, e_inference, e_learning],
+    }
+  - {
+      id: learning,
+      name: 学习与关系,
+      edges: [e_editor, e_learning, e_identity, e_manage, e_recall, e_sync],
+    }
+  - { id: boundary, name: 数据出端, edges: [e_inference, e_sync] }
+objects:
+  editor:
+    name: EditorSession · 当前输入
+    owner: keyboard
+    fields:
+      {
+        packageName: 宿主应用,
+        conversationKey: 当前对话,
+        editorGeneration: 编辑器代次,
+        draft: 草稿与选区,
+        insertionId: 本次填入,
+      }
+    invariant: 切换联系人或编辑器后，旧任务不再拥有写入权。
+  capture:
+    name: CaptureJob · 一次读屏
+    owner: sensing
+    fields:
+      {
+        requestId: 请求,
+        conversationKey: 对话范围,
+        editorGeneration: 所属编辑器,
+        stage: 缩矮 / 截屏 / 识别 / 生成,
+        expiresAt: 有效期,
+      }
+    invariant: 缩矮不等于截屏成功；没有截图就没有 OCR 证据。
+  message:
+    name: ChatMessage · 可溯源消息
+    owner: sensing
+    fields:
+      {
+        speakerId: 谁说的,
+        text: OCR 文字,
+        bubbleBounds: 气泡位置,
+        sourceCaptureId: 截图来源,
+        confidence: 识别置信度,
+      }
+    invariant: 说话人不确定，不把这句话写成某人的事实。
+  reply:
+    name: ReplySet · 一组三种表达
+    owner: keyboard
+    fields:
+      {
+        requestId: 本次任务,
+        conversationKey: 联系人范围,
+        intent: 相同意图,
+        styles: 三种风格各一条,
+        basedOnMemoryIds: 引用记忆,
+        contextVersion: 依据版本,
+      }
+    invariant: “更多”只扩展所选风格；选中只填入，不发送。
+  feedback:
+    name: Feedback · 可信修改
+    owner: keyboard
+    fields:
+      {
+        insertionId: 原填入,
+        contactId: 联系人,
+        suggestedText: 原建议,
+        latestObservedText: 最新可信文字,
+        finality: known / unknown,
+        confidence: 对齐可信度,
+      }
+    invariant: finality=unknown 不学习；未选建议不算负反馈。
+  contact:
+    name: Contact · 人物身份
+    owner: memory
+    fields:
+      {
+        localId: 本机人物标识,
+        appAccountScope: 应用与账号范围,
+        conversationIdentifiers: 对话标识集合,
+        displayName: 展示名称,
+      }
+    invariant: 同名不等于同一个人，未确认身份不跨人合并。
+  vocabulary:
+    name: Vocabulary · 我的热词
+    owner: memory
+    fields:
+      {
+        term: 词或专名,
+        scope: 适用范围,
+        sourceIds: 改词证据,
+        confidence: 置信度,
+        revision: 可撤销版本,
+      }
+    invariant: 专名、纠错与语气分开保存。
+  style:
+    name: StylePreference · 表达偏好
+    owner: memory
+    fields:
+      {
+        scope: 全局 / 场景 / 联系人,
+        content: 表达习惯,
+        sourceIds: 来源,
+        observedAt: 时间,
+        revision: 版本,
+      }
+    invariant: 针对某人的聊天方式，不自动升级为全局人格。
+  memory:
+    name: MemoryItem · 事实与偏好
+    owner: memory
+    fields:
+      {
+        id: 记忆标识,
+        contactId: 所属人物,
+        kind: 事实 / 偏好 / 推断,
+        content: 内容,
+        sourceIds: 原消息或修改证据,
+        observedAt: 时间,
+        validUntil: 有效期,
+        confidence: 置信度,
+        revision: 修订与删除状态,
+      }
+    invariant: 推断不冒充事实；每条可查来源、修正、删除。
+  sync:
+    name: SyncPolicy · 可选同步
+    owner: app
+    fields:
+      {
+        enabled: 默认关闭,
+        categories: 已选类别,
+        contactIds: 已选人物,
+        revisions: 同步位置,
+        tombstones: 删除记录,
+      }
+    invariant: 本机学习不等于同意上传；撤销和删除也传播。
 documents:
   - { id: product, title: 产品与业务, file: product.md }
   - { id: interaction, title: 交互与状态, file: interaction.md }
