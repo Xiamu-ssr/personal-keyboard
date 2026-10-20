@@ -31,6 +31,10 @@
     plus: '<path d="M12 4v16M4 12h16"/>',
     search: '<circle cx="10" cy="10" r="7"/><path d="m15.5 15.5 5 5"/>',
     more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    tiles:
+      '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+    phrase:
+      '<path d="M4 3h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-8l-6 4v-4H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M7 8h10M7 12h7"/>',
     shift: '<path d="m3 11 9-9 9 9h-5v10H8V11H3Z"/>',
     delete:
       '<path d="m2 12 6-8h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8l-6-8Z"/><path d="m11 8 7 8m0-8-7 8"/>',
@@ -181,16 +185,17 @@
   const notes = {
     typing: {
       title: "一行解决入口",
-      copy: "没有候选时放品牌与两个动作；开始拼音后，这一行让给候选词。键位跟随熟悉的错列，额外能力不挤占字母区。",
+      copy: "按键与工具块参考豆包：饱满键帽、清楚边界，底行保留标点和中英切换。空闲行放工具、说话与军师；开始拼音后让给候选词。工具宫格按需打开。",
       tokens: [
         ["48", "候选 / 动作行"],
         ["6", "水平键隙"],
-        ["8", "垂直键隙"],
+        ["9", "垂直键隙"],
         ["44", "工具命中区"],
       ],
       phases: [
         ["idle", "空闲"],
         ["composing", "拼音候选"],
+        ["tools", "工具面板"],
       ],
     },
     voice: {
@@ -387,25 +392,50 @@
   }
   function keys() {
     const row = (str, cls = "") =>
-      `<div class="pk-key-row ${cls}">${[...str].map((k) => btn("key", s.caps ? k.toUpperCase() : k, `输入 ${k}`, "", `data-key="${k}"`)).join("")}</div>`;
-    return `<div class="pk-keys">${s.symbols ? row("1234567890") : row("qwertyuiop")}${s.symbols ? row("@#￥%&*()", "offset") : row("asdfghjkl", "offset")}<div class="pk-key-row">${ibtn("shift", "shift", "切换大小写", "pk-key-special", `aria-pressed="${s.caps}"`)}${[...(s.symbols ? "，。？！：；/" : "zxcvbnm")].map((k) => btn("key", s.caps ? k.toUpperCase() : k, `输入 ${k}`, "", `data-key="${k}"`)).join("")}${ibtn("backspace", "delete", "退格", "pk-key-special")}</div><div class="pk-key-row">${btn("symbols", s.symbols ? "ABC" : "123", "数字与符号", "pk-key-num")}${btn("space", s.letters ? "English" : "拼音 · 空格", "空格 / 选择候选", "pk-space")}${ibtn("newline", "enter", "换行", "pk-enter")}</div></div>`;
+      `<div class="pk-key-row ${cls}">${[...str].map((k) => btn("key", s.caps || !s.letters ? k.toUpperCase() : k, `输入 ${k}`, "", `data-key="${k}"`)).join("")}</div>`;
+    return `<div class="pk-keys">${s.symbols ? row("1234567890") : row("qwertyuiop")}${s.symbols ? row("@#￥%&*()", "offset") : row("asdfghjkl", "offset")}<div class="pk-key-row">${ibtn("shift", "shift", "切换大小写", "pk-key-special", `aria-pressed="${s.caps}"`)}${[...(s.symbols ? "，。？！：；/" : "zxcvbnm")].map((k) => btn("key", s.caps || !s.letters ? k.toUpperCase() : k, `输入 ${k}`, "", `data-key="${k}"`)).join("")}${ibtn("backspace", "delete", "退格", "pk-key-special")}</div><div class="pk-key-row">${btn("symbols", s.symbols ? "ABC" : "123", "数字与符号", "pk-key-num")}${btn("punctuation", "，", "输入逗号", "pk-key-punctuation")}${btn("space", s.letters ? "space" : "空格", "空格 / 选择候选", "pk-space")}${btn("language", s.letters ? "EN" : "中", "切换拼音和英文", "pk-key-language")}${btn("newline", "换行", "换行", "pk-enter")}</div></div>`;
   }
   function candidates() {
     if (s.composition === "nihao") return ["你好", "你好呀", "你好吗"];
     if (s.composition === "mingtian") return ["明天", "明天见", "明天再说"];
     return [s.composition];
   }
+  function keyboardFoot() {
+    return `<div class="pk-ime-foot">${ibtn("language", "globe", "切换拼音和英文")}<span>${s.letters ? "EN" : "简体拼音"}</span>${ibtn("app-settings", "settings", "输入法设置")}</div>`;
+  }
+  function tools() {
+    const items = [
+      ["voice", "mic", "语音输入"],
+      ["advisor", "spark", "原地军师"],
+      ["phrases", "phrase", "常用语"],
+      ["app-dictionary", "book", "热词文风"],
+      ["app-history", "history", "历史记录"],
+      ["app-people", "people", "人物记忆"],
+      ["switch-language", "globe", "中英切换"],
+      ["app-settings", "settings", "设置"],
+    ];
+    return `<section class="pk-ime" data-ui="tools">${head("工具", ibtn("app-settings", "settings", "输入法设置"))}<div class="pk-tools-grid">${items.map(([a, ic, name]) => btn(a, icon(ic) + `<span>${name}</span>`, name, "pk-tool-tile")).join("")}</div>${keyboardFoot()}</section>`;
+  }
   function keyboard() {
+    if (s.phase === "tools") return tools();
+    if (s.phase === "collapsed")
+      return `<section class="pk-ime collapsed" data-ui="collapsed">${head("键盘已收起", btn("keyboard", "恢复键盘", "恢复键盘", "pk-restore"))}</section>`;
     const composing = !!s.composition;
     return `<section class="pk-ime" data-ui="typing"><div class="pk-ime-head">${
       composing
         ? `<div class="pk-candidates">${candidates()
             .map((w) =>
-              btn("candidate", w, `选择候选 ${w}`, "", `data-word="${w}"`),
+              btn(
+                "candidate",
+                esc(w),
+                `选择候选 ${w}`,
+                "",
+                `data-word="${esc(w)}"`,
+              ),
             )
-            .join("")}</div>`
-        : `${btn("app-home", "p.", "打开输入法首页", "pk-mark")}<span class="pk-wordmark">Personal Keyboard</span><span class="pk-head-space"></span>`
-    }${ibtn("voice", "mic", "语音输入")}${ibtn("advisor", "spark", "军师")}</div>${composing ? `<div class="pk-composition">${esc(s.composition === "nihao" ? "ni hao" : s.composition)}</div>` : ""}${keys()}<div class="pk-ime-foot">${ibtn("language", "globe", "切换拼音和英文")}<span>${s.letters ? "EN" : "简体拼音"}</span>${ibtn("app-settings", "settings", "输入法设置")}</div></section>`;
+            .join("")}</div>${ibtn("voice", "mic", "语音输入")}`
+        : `${ibtn("tools", "tiles", "打开工具面板", "pk-tool-menu")}${btn("voice", icon("mic") + "<span>点击说话</span>", "语音输入", "pk-voice-shortcut")}<span class="pk-head-space"></span>`
+    }${ibtn("advisor", "spark", "军师")}${composing ? "" : ibtn("collapse", "down", "收起键盘", "pk-collapse")}</div>${composing ? `<div class="pk-composition">${esc(s.composition === "nihao" ? "ni hao" : s.composition)}</div>` : ""}${keys()}${keyboardFoot()}</section>`;
   }
   function wave() {
     return `<div class="pk-wave" aria-hidden="true">${[10, 21, 32, 17, 27, 13, 32, 20, 9].map((h, i) => `<i style="--h:${h}px;--d:${i * -0.14}s"></i>`).join("")}</div>`;
@@ -605,6 +635,10 @@
     let titleText = "",
       body = "";
     if (s.sheet === "person") body = personSheet();
+    if (s.sheet === "phrases") {
+      titleText = "常用语";
+      body = `<div class="pk-list">${["收到，我稍后看一下。", "我先确认一下，稍后回复你。", "谢谢，辛苦啦。"].map((text) => btn("insert-phrase", `<strong>${text}</strong>`, text, "", `data-text="${text}"`)).join("")}</div><p>点击填入当前草稿，发送由你决定。</p>`;
+    }
     if (s.sheet === "contacts") {
       titleText = "切换演示聊天";
       body = `<div class="pk-list">${["林然", "陈珂"].map((name) => btn("switch-contact", `<span class="pk-avatar">${name.slice(-1)}</span><strong>${name}</strong>${name === s.contact ? icon("check") : ""}`, `切到${name}`, "", `data-person="${name}"`)).join("")}</div><p>演示联系人变化会取消旧任务；每位联系人保留自己的草稿。</p>`;
@@ -752,6 +786,41 @@
   function act(action, target) {
     if (action.startsWith("app-")) {
       goto(action.slice(4));
+      return;
+    }
+    if (action === "tools") {
+      s.phase = "tools";
+      render();
+      return;
+    }
+    if (action === "collapse") {
+      s.phase = "collapsed";
+      render();
+      return;
+    }
+    if (action === "switch-language") {
+      s.letters = !s.letters;
+      s.phase = "idle";
+      s.composition = "";
+      render();
+      return;
+    }
+    if (action === "punctuation") {
+      setDraft(draft() + (s.letters ? "," : "，"), false);
+      render();
+      return;
+    }
+    if (action === "phrases") {
+      s.sheet = "phrases";
+      render();
+      return;
+    }
+    if (action === "insert-phrase") {
+      setDraft(draft() + target.dataset.text);
+      s.sheet = null;
+      s.phase = "idle";
+      s.toast = "常用语已填入，尚未发送";
+      render();
       return;
     }
     if (action === "try-keyboard" || action === "keyboard") {
