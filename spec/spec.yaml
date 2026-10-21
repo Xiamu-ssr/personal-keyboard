@@ -916,6 +916,7 @@ workflows:
           - settle
         status:
           app.writer: rawAsrText 已保留
+          cloud.asr: 结果已校验并回传
         facts:
           rawAsrText: 今晚跟豆包聊 CPA。
           contextEvidence: null
@@ -1053,6 +1054,7 @@ workflows:
           - learning-prompt
         status:
           cloud.learn: 校验来源、作用域、冲突与版本
+          provider.text: 结构化候选已返回
       - id: memory-patch
         edge: patch
         title: 程序校验后应用记忆补丁
@@ -1064,6 +1066,8 @@ workflows:
         status:
           app.memory: 记忆 v18 · 热词新增“豆豆”
           app.batch: 本批已确认，推进处理断点
+          app.history: 已整理，原文与证据保留
+          cloud.learn: 校验完成，补丁已返回
         facts:
           memoryRevision: 18
           processed:
@@ -1733,6 +1737,9 @@ workflows:
           - settle
         status:
           app.writer: 展示三条回复
+          cloud.advisor: 结果已校验并回传
+          phone.screen: 本次截图已释放
+          app.capture: 本次图片已释放
         facts:
           rawAsrText: null
           contextEvidence: 林同学：刚忙完，今天有点累。
@@ -1870,6 +1877,7 @@ workflows:
           - learning-prompt
         status:
           cloud.learn: 校验来源、作用域、冲突与版本
+          provider.text: 结构化候选已返回
       - id: memory-patch
         edge: patch
         title: 程序校验后应用记忆补丁
@@ -1881,6 +1889,8 @@ workflows:
         status:
           app.memory: 记忆 v18 · 风格证据 +1
           app.batch: 本批已确认，推进处理断点
+          app.history: 已整理，原文与证据保留
+          cloud.learn: 校验完成，补丁已返回
         facts:
           memoryRevision: 18
           processed:

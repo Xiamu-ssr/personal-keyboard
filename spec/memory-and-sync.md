@@ -11,11 +11,11 @@
 - `Memory`：id、类别（热词 / 文风 / 人物 / 事件）、subject、内容、有效期、sourceRefs、revision、manual / learned、撤销修订。
 - `LearningReceipt`：batchId、pipelineVersion、cutoff、sourceSpans、appliedPatchId、处理状态。水位不是简单时间戳，来源修订改变后作为新证据处理。
 
-输入框清空前只要已观察到有效改稿，就保留；清空可能是发送 / 清除 / 切换，不再把空串与原文比较。不能观察到的最后修改明确缺失，不猜测。差异计算和学习准入见 [本轮决定](decisions.md)。
+输入框清空前只要已观察到有效改稿，就保留；相关编辑通知尽力即时读入内存快照，300ms 是合并写盘的窗口，不是首次采集的等待时间。清空可能是发送 / 清除 / 切换，关闭本次观察并保存上一有效快照，不再把空串与原文比较。不能观察到的最后修改明确缺失，不猜测。差异计算和学习准入见 [本轮决定](decisions.md)。
 
 ## 每约五小时如何整理
 
-1. App 冻结本次增量集合和截止修订，只取未处理来源；同时检索本批相关旧热词、文风和对应人物，绝不整库上传。
+1. App 冻结本次增量集合和截止修订，只取未处理来源；当前仍在编辑的范围留待下轮，会话结束不假定发送成功。同时检索本批相关旧热词、文风和对应人物，绝不整库上传。
 2. 按供应商 tokenizer 的实际输入 token 组批。初始每批总输入预算 6K token（提示词、旧记忆与证据都算），另留 2K 输出预算；预算不足就减少事件。单条长历史切成带 recordId / revision / offset 的片段，证据边界不丢。tokenizer 与预算属于模型适配层，不以“字符数约等于 token”保证不超限。
 3. `batchId = hash(account, sourceSpans, revisions, pipelineVersion)`；Cloud 的 Job 与每批唯一键持久化。超长增量连续多批排队，并限制每轮总预算；失败只重试原批，后台被杀可继续。
 4. Cloud 组装学习提示词：来源白名单 + 增量片段 + 相关旧记忆 + 分类规则。文字模型只返回 `candidates[{category,subject,operation,content,sourceRefs,baseRevision}]`；每条必须引用本批具体片段，不许自由补写人物信息。
