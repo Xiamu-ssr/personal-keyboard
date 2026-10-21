@@ -25,6 +25,18 @@ for (const doc of spec.documents) {
   const renderer = new Renderer();
   renderer.html = ({ text }) =>
     text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  renderer.link = function ({ href, title, tokens }) {
+    const internal = spec.documents.find((d) => d.file === href);
+    const target = internal ? "#doc/" + internal.id : href;
+    const escape = (value) =>
+      String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;");
+    if (!internal && !/^https?:\/\//.test(target))
+      return this.parser.parseInline(tokens);
+    return `<a href="${escape(target)}"${title ? ` title="${escape(title)}"` : ""}>${this.parser.parseInline(tokens)}</a>`;
+  };
   const html = marked.parse(source, { renderer });
   documents[doc.id] = { title: doc.title, html };
 }
@@ -58,7 +70,9 @@ const output = template
   .replace(
     "<!-- SPEC_SCRIPT -->",
     "<script>" +
-      world.replaceAll("export function", "function").replaceAll("export class", "class") +
+      world
+        .replaceAll("export function", "function")
+        .replaceAll("export class", "class") +
       "\n" +
       script +
       "\n" +

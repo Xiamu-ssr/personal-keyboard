@@ -8,102 +8,67 @@
   </head>
   <body>
     <header class="header">
-      <a class="brand" href="#domains"
-        ><span class="brand-mark">豆</span
-        ><strong>豆豆输入法 <span>产品规格</span></strong></a
+      <a class="brand" href="#domains" aria-label="豆豆输入法基础域"
+        ><span class="brand-mark">豆</span><strong>豆豆输入法</strong></a
       >
+      <nav id="sections" class="section-tabs" aria-label="规格栏目">
+        <button data-section="domains" aria-selected="true" class="active">
+          基础域
+        </button>
+        <button data-section="business" aria-selected="false">业务图</button>
+      </nav>
+      <nav
+        id="workflow-tabs"
+        class="workflow-tabs"
+        aria-label="选择业务图"
+        hidden
+      ></nav>
       <div class="header-actions">
-        <button id="open-native">截图与动画</button><span id="revision"></span>
+        <button id="open-native">截图与动画</button
+        ><button data-doc="decisions" title="方案与实现边界">约定 ↗</button>
       </div>
     </header>
     <main id="spec-main">
-      <nav id="sections" class="section-tabs" aria-label="规格栏目">
-        <button data-section="domains" aria-selected="true" class="active">
-          基础域</button
-        ><button data-section="business" aria-selected="false">业务图</button>
-      </nav>
       <section id="domains-section" aria-label="基础域">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">谁负责什么</p>
-            <h1>五个域，一套清晰的边界。</h1>
-          </div>
-          <p class="section-intro">卡片与业务图采用相同颜色。</p>
-        </div>
         <div id="domain-cards" class="domain-cards"></div>
-        <section class="offer-strip" aria-label="账户权益">
-          <div class="offer-label">
-            <span class="pill">免费账户</span>
-            <h2>新账号，一次性赠送。</h2>
-          </div>
-          <div class="offer-metric">
-            <strong id="free-characters"></strong><span>转写字符</span>
-          </div>
-          <div class="offer-metric">
-            <strong id="free-advisor"></strong><span>次军师生成</span>
-          </div>
-          <div class="offer-metric">
-            <strong>本地</strong><span>历史与个人记忆</span>
-          </div>
-          <button data-doc="commercial">权益与后台配置 ↗</button>
-        </section>
-        <div class="domain-footnote">
-          <span>付费套餐可含更多用量与产品云同步；价格和额度由后台配置。</span
-          ><button data-doc="architecture">App / Cloud / Spec 结构 ↗</button>
-        </div>
       </section>
       <section id="business-section" aria-label="业务图" hidden>
-        <div class="business-heading">
-          <div>
-            <p class="eyebrow">域与数据</p>
-            <h1>业务图</h1>
-          </div>
-          <nav
-            id="workflow-tabs"
-            class="workflow-tabs"
-            aria-label="选择业务图"
-          ></nav>
+        <div class="graph-tools" aria-label="画布控制">
+          <button id="pause-streams" title="播放模拟世界">▶ 播放</button
+          ><button id="step-world" title="推进一个事件">单步</button
+          ><button id="reset-world" title="回到开始">↺</button>
+          <span class="tool-divider"></span
+          ><button id="zoom-out" aria-label="缩小">−</button
+          ><span id="zoom-level">100%</span
+          ><button id="zoom-in" aria-label="放大">＋</button
+          ><button id="zoom-fit">全图</button>
         </div>
-        <div class="workflow-intro">
-          <div>
-            <h2 id="workflow-title"></h2>
-            <p id="workflow-summary"></p>
-          </div>
-          <div id="domain-legend" class="domain-legend"></div>
-        </div>
-        <div class="graph-tools">
-          <span>示意数据流 · 滚动卡片查看更早记录</span>
-          <div>
-            <button id="pause-streams">暂停动画</button
-            ><button id="zoom-out" aria-label="缩小">−</button
-            ><span id="zoom-level">100%</span
-            ><button id="zoom-in" aria-label="放大">＋</button
-            ><button id="zoom-fit">全图</button>
-          </div>
-        </div>
+        <div class="simulation-label">目标规格 · 模拟数据</div>
         <div
           id="graph-scroll"
           class="graph-scroll"
           tabindex="0"
-          aria-label="域业务图画布，可双向滚动"
+          aria-label="节点世界画布，可拖动、缩放；双击节点查看数据约定"
         >
           <div id="graph-size">
             <div id="graph-stage">
-              <svg id="flow-wires" aria-label="域之间一来一回的数据关系"></svg>
+              <svg id="flow-wires" aria-label="节点之间的输入输出"></svg>
               <div id="flow-nodes"></div>
               <div id="flow-streams"></div>
             </div>
           </div>
         </div>
-        <div class="graph-footer">
-          <span>大域内是能力；两域之间最多一来一回。</span
-          ><button data-doc="memory-and-sync">数据与记忆约定 ↗</button>
+        <div class="world-progress">
+          <div id="phase-tabs" aria-label="当前模拟阶段">
+            <span data-phase="input">输入</span><i></i
+            ><span data-phase="history">留存与改稿</span><i></i
+            ><span data-phase="learning">约 5 小时后</span><i></i
+            ><span data-phase="reuse">下次输入</span>
+          </div>
+          <span id="world-event" role="status">点播放，看数据怎么走</span
+          ><span id="event-count"></span>
         </div>
       </section>
-      <footer class="implementation-note">
-        <span>0.4 开发版 · 短信资质、供应商凭据与商户支付仍需配置。</span
-        ><button data-doc="implementation">查看当前实现 ↗</button>
-      </footer>
     </main>
     <div id="panel-shade" hidden></div>
     <aside
