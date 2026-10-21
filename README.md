@@ -42,4 +42,6 @@ APK输出 `spec/demo/doudou-keyboard.apk`，摘要见 `artifact.json`。安装�
 
 公开页面只提供真实APK截图、录屏和下载，不启动或连接个人Mac / ADB；旧在线Android桥接代码已移除。GitHub Pages与ECS发布同一份验收APK并校验摘要。
 
+ECS 静态路由见 [Nginx 配置](spec/deploy/nginx-location.inc)，媒体使用明确白名单；旧在线演示路径固定返回 410。
+
 Cloud通过独立API / PostgreSQL容器部署，宿主仅监听loopback8088，再经HTTPS反代。[运行说明](cloud/README.md) · [商业状态](spec/commercial.md) · [模型与成本](spec/models-and-cost.md) · [历史与同步](spec/memory-and-sync.md)。
