@@ -3,7 +3,7 @@ meta:
   subtitle: 产品世界 · 业务与技术
   version: 0.3.0-alpha.1
   reviewedAt: 2026-10-21
-  status: 原生自用预览版；模型配置待后续联调
+  status: 原生自用预览版；云 ASR 已独立验证，APK 待接入
 layout:
   width: 1200
   height: 800
@@ -108,11 +108,11 @@ domains:
         name: 个性语音
         desc: 识别、整理 · 越用越像你
         business:
-          - 结合热词识别，按适用文风整理；保留本意。
+          - 结合热词与近期上下文识别；个人文风改写可开关，保留本意。
           - 用户可信改词、改句反哺热词与文风，下次再用。
         technical:
-          - ASR 转写与基础规整 → 文本模型个性整理 → 上屏 → 可信修改分类。
-          - 使用手机系统 ASR；没有系统服务时明确提示。付费 ASR 与真实文字模型稍后配置。
+          - ASR 转写与基础规整 → 可选个性改写 → 上屏 → 可信修改入历史。
+          - APK 当前使用系统 ASR；Message / Fun-ASR 已独立验证，尚未接入 APK。
         objects:
           - editor
           - vocabulary
@@ -138,7 +138,7 @@ domains:
         desc: 模型 · 个人记忆
         business:
           - 管理模型、热词、文风、人物关系图与资料、授权。
-          - 查看来源、改正或删除记忆；豆豆同步按范围开关。
+          - 查看历史和来源、修订记忆；个人改写、云备份与豆豆共享分别设置。
         technical:
           - App 管理页与键盘共用本机数据层；不是第二个 App。
         objects:
@@ -150,6 +150,7 @@ domains:
         documents:
           - product
           - architecture
+          - memory-and-sync
   - id: sensing
     name: 屏幕感知
     icon: scan
@@ -216,12 +217,12 @@ domains:
     chips:
       - id: models_asr
         name: 中文 ASR
-        desc: 系统 / 云端识别
+        desc: 实时识别 · 上下文与热词
         business:
           - 转写，并补标点、规范数字等；热词辅助识别。
-          - 按个人文风改写整句由后续文本模型完成。
+          - 个人文风由可选后续文字模型处理，不把近期上下文当作文风训练。
         technical:
-          - 当前用系统识别；优先评测 Qwen-Audio 3.1 Message，与 Fun-ASR 实时对照。
+          - Message / Fun-ASR 实时接口已通过公共短音频验证；APK 接入与本人录音评测待完成。
         documents:
           - models-and-cost
       - id: models_text
@@ -266,15 +267,18 @@ domains:
       - 同一份记忆供语音、军师取用，可在设置里查看、修订与删除。
     technical:
       - 本机 SQLite，共用记忆层；按用户、场景与联系人限定范围。
-      - 区分事实、推断和待确认候选，保留来源、时间与修订。
+      - 历史按增量分批提取，校验来源与版本后合并；用户修订和删除优先。
     objects:
       - vocabulary
       - style
       - contact
       - memory
       - feedback
+      - history
+      - update
     documents:
       - architecture
+      - memory-and-sync
     chips:
       - id: memory_words
         name: 热词与文风
@@ -284,7 +288,7 @@ domains:
           - 日常打字的可信纠错也可积累，不限语音。
         technical:
           - 热词进 ASR 词表 / 上下文；文风进文字整理提示。
-          - 文本对齐可信才分类，未知最终文本不学习。
+          - 可信修改先记历史，再批量分类；未知最终文本不学习。
         objects:
           - vocabulary
           - style
@@ -335,8 +339,8 @@ domains:
         desc: 可信差异 · 候选与证据
         documents:
           - learn-prompt
-  - id: doudou
-    name: 豆豆生态
+  - id: storage
+    name: 同步与恢复
     icon: sync
     zone: service
     rect:
@@ -349,18 +353,19 @@ domains:
       - 68
       - 26
       - 24
-    role: 选定资料，可选同步。
+    role: 云端备份，换机恢复。
     business:
-      - 不用豆豆也能用输入法；只共享明确选择的数据。
-      - 断开、删除与修订冲突对用户可见。
+      - 自有 WebDAV 先行，不要求输入法账号；云备份默认关闭。
+      - 与豆豆共享是独立授权；断开、删除与修订冲突可见。
     technical:
-      - 独立 SyncPolicy；用 revision 与墓碑处理增量和删除传播。
-      - 原始录音、整屏截图、完整聊天默认不出端；同步协议尚未实现。
+      - 客户端加密增量包；全局 ID、版本与墓碑合并，不同步活动数据库文件。
+      - 新设备需恢复密钥；云同步与自动记忆整理尚未实现。
     objects:
       - memory
       - sync
     documents:
       - architecture
+      - memory-and-sync
     chips: []
 edges:
   - id: e_editor
@@ -474,7 +479,7 @@ edges:
       - left
     offset: 0.16
     business: 识别语音、整理表达，或返回同意图的三条建议。
-    trigger: 录音结束；或军师上下文就绪。
+    trigger: 录音开始流式上传；个人改写开启且转写完成；或军师上下文就绪。
     payload: ASR 音频，或必要 OCR 文本 + 有关记忆 + 用户意图；返回文本 / ReplySet。
     guard: 敏感输入不采集；结果须匹配原请求和编辑器。
     technical: 能力适配器 → 已选供应商；超时可重试，取消不继续填入。
@@ -499,14 +504,16 @@ edges:
       - left
     offset: 0.35
     business: 热词与文风帮助语音识别、整理；可信修改反哺记忆。
-    trigger: 语音识别 / 整理时取用；用户可信修改后更新。
-    payload: 热词、适用文风 ↔ 带来源的改词 / 改句候选。
+    trigger: 语音识别 / 整理时取用；有新增历史时按批整理。
+    payload: 热词、适用文风 ↔ HistoryEvent / MemoryUpdate 候选。
     guard: 范围匹配且修改证据可信；发送后丢失最终文本不学习。
-    technical: 词库供 ASR 使用，文风供文本模型使用；异步分类后保存可撤销修订。
+    technical: 按 token 预算组批；校验证据与 baseRevision 后事务合并，再推进游标。
     objects:
       - vocabulary
       - style
       - feedback
+      - history
+      - update
     capabilities:
       - keyboard_voice
       - keyboard_typing
@@ -561,7 +568,7 @@ edges:
       - rules_learn
   - id: e_sync
     from: memory
-    to: doudou
+    to: storage
     name: 选择性同步
     short: 可选同步
     kind: optional
@@ -569,11 +576,11 @@ edges:
     ports:
       - bottom
       - top
-    business: 按选定类别和人物，与豆豆同步资料。
-    trigger: 用户开启该范围的同步；后续修订或删除。
-    payload: 选定 MemoryItem 的增量、revision、删除墓碑。
-    guard: 默认关闭，不默认上传原录音、截图、完整聊天；可断开。
-    technical: 独立 SyncPolicy，冲突保留来源和修订；目标能力，尚未实现。
+    business: 加密备份并恢复选定历史与记忆；共享给豆豆需另行选择。
+    trigger: 用户开启对应范围的备份或共享；后续增量、修订、删除。
+    payload: 加密增量包、清单、全局 ID、revision、删除墓碑。
+    guard: 默认关闭；备份、模型推理与豆豆共享分别授权；无原始录音或截图。
+    technical: WebDAV / 对象存储适配器；幂等合并而非覆盖本机，尚未实现。
     objects:
       - memory
       - sync
@@ -718,9 +725,32 @@ objects:
       enabled: 默认关闭
       categories: 已选类别
       contactIds: 已选人物
+      destination: 自有存储 / 单独授权的豆豆
+      encryptedBundle: 云备份加密增量包与清单
       revisions: 同步位置
       tombstones: 删除记录
     invariant: 本机学习不等于同意上传；撤销和删除也传播。
+  history:
+    name: HistoryEvent · 本地证据
+    owner: memory
+    fields:
+      id: deviceId + 递增事件序号
+      kind: 语音 / 军师 / 可信修改
+      scope: 应用、人物与陈述方
+      text: 转写、OCR、意图与建议分开存储
+      finality: 草稿 / 已选 / 可信最终观察
+      revisions: 相关记忆与模型设置版本
+    invariant: 不保存截图；建议不冒充事实，已选不等于发送。
+  update:
+    name: MemoryUpdate · 增量整理
+    owner: memory
+    fields:
+      jobId: 幂等任务标识
+      cursor: 本批起止位置
+      baseRevision: 整理依据版本
+      proposals: 分类、范围、内容与 sourceIds
+      status: 待处理 / 校验 / 已提交 / 冲突
+    invariant: 成功合并才推进游标；不覆盖用户修订、不复活删除项。
 documents:
   - id: implementation
     title: 当前原生实现
@@ -734,6 +764,9 @@ documents:
   - id: architecture
     title: 架构与数据
     file: architecture.md
+  - id: memory-and-sync
+    title: 历史、记忆与同步
+    file: memory-and-sync.md
   - id: models-and-cost
     title: 模型与采购
     file: models-and-cost.md

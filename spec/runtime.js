@@ -303,7 +303,7 @@
       learning:
         "输入与语音积累表达习惯；已知聊天或主动补充积累人物与事件，在设置中统一管理。",
       boundary:
-        "只有虚线跨出本机：模型服务接收必要音频或文字；豆豆同步默认关闭，按类别与人物选择。原始聊天截图默认留在本机。",
+        "只有虚线跨出本机：模型接收必要音频或文字；加密云备份与豆豆共享分别选择。截图处理后释放，不进入历史。",
     };
     el("view-note").textContent = notes[state.view];
   }
@@ -506,7 +506,7 @@
         if (item.id === "keyboard_settings")
           body += section(
             "管理",
-            '<div class="related"><button data-domain="models">模型服务 ↗</button><button data-chip="memory_words">热词与文风 ↗</button><button data-chip="memory_people">人物关系图与资料 ↗</button><button data-domain="doudou">豆豆同步 ↗</button></div>',
+            '<div class="related"><button data-domain="models">模型服务 ↗</button><button data-chip="memory_words">热词与文风 ↗</button><button data-chip="memory_people">人物关系图与资料 ↗</button><button data-domain="storage">同步与恢复 ↗</button></div>',
           );
         if (item.id === "memory_people")
           body += section(

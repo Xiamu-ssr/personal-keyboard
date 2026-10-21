@@ -2,7 +2,7 @@
 
 安卓个人输入法：离线拼音、语音整理、原地军师，以及热词、文风和人物记忆。和豆豆是两个独立安装的 App；当前资料保存在输入法本机。
 
-当前版本 **0.3.0-alpha.1 · 自用预览版**。原生界面参照 Typeless 的层级与豆包的键帽 / 工具格重做，代码按业务域拆分。新版使用 Typeless 参考的炭灰与白色主题、麦克风胶囊及真实音量反馈。按本轮约定，付费 ASR 和实际文字模型账号稍后配置。
+当前版本 **0.3.0-alpha.1 · 自用预览版**。原生界面参照 Typeless 的层级与豆包的键帽 / 工具格重做，代码按业务域拆分。新版使用 Typeless 参考的炭灰与白色主题、麦克风胶囊及真实音量反馈。Qwen Message 和 Fun-ASR 实时接口已通过独立短音频测试；APK 尚未接入云 ASR 或实际文字模型账号。
 
 - [在线产品 Spec](https://xiamu-ssr.github.io/personal-keyboard/) · [ECS 镜像](https://106.14.73.99/keyboard-spec/)：交互式业务 / 技术域模型。
 - [下载自用 APK](https://xiamu-ssr.github.io/personal-keyboard/demo/doudou-keyboard.apk)：Android 11+，arm64 / x86_64，debug 签名；不含模型密钥。
@@ -46,4 +46,5 @@ npm run spec:serve
 
 - [产品](spec/product.md) · [交互](spec/interaction.md) · [架构](spec/architecture.md)
 - [模型、购买与成本](spec/models-and-cost.md) · [研究来源](spec/research.md)
+- [本地历史、增量记忆与可选同步](spec/memory-and-sync.md)
 - [设备演示](spec/demo.md) · [第三方拼音源码与改动](android/app/src/main/cpp/vendor/aosp-pinyin/LOCAL-CHANGES.md)

@@ -6,4 +6,6 @@
 
 人物与事件候选不限军师，可从身份明确的语音、输入或主动补充中抽取。区分本人陈述、对方原话、未发送草稿、计划和已发生事件；第三人身份不明不归人。保留来源状态，候选不直接成为事实。
 
-输出 JSON：candidates[{category,from,to,scope,subjectScope,sourceState,evidenceIds,confidence,reason}], ignoredReason。
+每次只处理传入的本批新增事件和相关旧记忆，不要求整段历史。仅引用本批允许的 sourceIds；模型回复、未发送草稿和真实观察不得混写。已经存在的同一证据不要重复计数，用户手动修订与删除项不得由模型覆盖或复活。
+
+输出 JSON：proposals[{category,scope,subject,content,sourceIds,baseRevision,confidence,reason}], ignoredReason。只提候选，不输出删库、替换目录或直接覆盖本机的指令。程序校验结构、来源和版本后才合并。

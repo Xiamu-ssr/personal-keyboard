@@ -1,6 +1,6 @@
 # 豆豆输入法
 
-Android-first personal keyboard, a separate product from Doudou. This repository contains the visual product contract and a native Android personal-use alpha. Paid ASR, real text-model accounts, automatic model memory extraction and Doudou sync are not configured.
+Android-first personal keyboard, a separate product from Doudou. This repository contains the visual product contract and a native Android personal-use alpha. Qwen Message and Fun-ASR have passed standalone API smoke checks; neither is integrated into the APK. Real text-model accounts, automatic model memory extraction and cloud sync are not configured.
 
 - Read spec/product.md, spec/interaction.md and spec/architecture.md before changing behavior. spec/spec.yaml is the visual product map; run npm run spec:build after changing its sources.
 - Spec opens as an interactive domain world, not a documentation landing page. Keep domain capabilities, owned objects, selectable relation contracts, product behavior and implementation responsibilities connected. Documents and prompts are details of this world; native APK and clearly labeled web illustrations are separate surfaces.
@@ -12,4 +12,5 @@ Android-first personal keyboard, a separate product from Doudou. This repository
 - No raw chat screenshots, account addresses, credentials, personal profiles or device serials in Git. Runtime and screenshots belong under ignored .runtime/.
 - Model prices need a dated official source and unit conversion. Personal subscription quota is not an unlimited production API entitlement.
 - Local vocabulary, personal style and per-contact relationship memories are separate. Missing final text is not a negative example; skipped reply options are not dislikes.
+- Local textual history is evidence, separate from derived memory. Personal voice rewriting is optional. Batch only new events within token budgets; validate evidence and revisions before merging model proposals. Never overwrite device directories with model output. Cloud backup, model analysis and Doudou sharing have separate scopes; see spec/memory-and-sync.md.
 - Report actual native, browser, device and model verification separately. Never label this demo a full Chinese input engine or real ASR until those are implemented and tested.

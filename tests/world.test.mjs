@@ -12,12 +12,12 @@ test("world has complete owned objects and selectable business/implementation re
     domains: 7,
     capabilities: 12,
     relations: 9,
-    objects: 10,
+    objects: 12,
   });
   const advisor = relationsForView(source, "advisor");
   assert(advisor.edges.includes("e_capture"));
   assert(advisor.domains.includes("memory"));
-  assert(!advisor.domains.includes("doudou"));
+  assert(!advisor.domains.includes("storage"));
   const personalization = source.edges.find((e) => e.id === "e_personalize");
   assert(personalization.both);
   assert(personalization.capabilities.includes("keyboard_voice"));
