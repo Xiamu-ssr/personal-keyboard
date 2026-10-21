@@ -68,22 +68,73 @@
     parent.appendChild(n);
     return n;
   }
-  function labelPosition(e) {
-    if (e.labelAt) return e.labelAt;
-    const pairs = e.points
-      .slice(1)
-      .map((p, i) => ({
-        a: e.points[i],
-        b: p,
-        len: Math.hypot(p[0] - e.points[i][0], p[1] - e.points[i][1]),
-      }))
-      .sort((a, b) => b.len - a.len);
-    const p = pairs[0];
-    if (p.len < 140) return null;
-    return [(p.a[0] + p.b[0]) / 2, (p.a[1] + p.b[1]) / 2 - 15];
+  let streamTimer = null,
+    streams = new Map(),
+    graphScale = 1;
+  const flowData = () => data.workflows.find((f) => f.id === state.flow);
+  function scaleGraph(value) {
+    const f = flowData();
+    graphScale = Math.max(0.28, Math.min(1.4, value));
+    el("graph-stage").style.transform = `scale(${graphScale})`;
+    el("graph-size").style.width = f.width * graphScale + "px";
+    el("graph-size").style.height = f.height * graphScale + "px";
+    el("zoom-level").textContent = Math.round(graphScale * 100) + "%";
+  }
+  function packetCards(channel) {
+    const h = streams.get(channel.id);
+    return h
+      .visible()
+      .map((p) => {
+        const from = domains.get(p.from.split(".")[0]),
+          to = domains.get(p.to.split(".")[0]);
+        return `<button class="packet-card ${p.kind}" data-packet="${channel.id}:${p.sequence}" tabindex="${p.offset === 0 ? "0" : "-1"}" aria-hidden="${p.offset !== 0}" style="--offset:${p.offset};--distance:${Math.abs(p.offset)};--packet-color:${from.color}"><span>${esc(from.name)} <b>→</b> ${esc(to.name)}<i>#${String(p.sequence).padStart(3, "0")}</i></span><strong>${esc(p.title)}</strong><p>${esc(p.body)}</p></button>`;
+      })
+      .join("");
+  }
+  function renderStream(channel) {
+    const host = el("stream-" + channel.id),
+      h = streams.get(channel.id),
+      viewport = host.querySelector(".packet-viewport");
+    const template = document.createElement("template");
+    template.innerHTML = packetCards(channel);
+    const desired = [...template.content.children],
+      keys = new Set(desired.map((n) => n.dataset.packet));
+    for (const node of [...viewport.children])
+      if (!keys.has(node.dataset.packet)) {
+        node.style.setProperty("--offset", -3);
+        node.style.opacity = 0;
+        node._removalTimer = setTimeout(() => node.remove(), 660);
+      }
+    for (const next of desired) {
+      let node = [...viewport.children].find(
+        (n) => n.dataset.packet === next.dataset.packet,
+      );
+      if (node) {
+        clearTimeout(node._removalTimer);
+        node.setAttribute("style", next.getAttribute("style"));
+        node.tabIndex = next.tabIndex;
+        node.setAttribute("aria-hidden", next.getAttribute("aria-hidden"));
+      } else {
+        node = next;
+        const target = node.getAttribute("style");
+        node.style.setProperty("--offset", 3);
+        node.style.opacity = 0;
+        viewport.appendChild(node);
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            if (node.isConnected) {
+              node.setAttribute("style", target);
+            }
+          }),
+        );
+      }
+    }
+    host.querySelector(".stream-live").hidden = h.follow;
   }
   function graph() {
-    const f = data.workflows.find((f) => f.id === state.flow),
+    clearInterval(streamTimer);
+    streams = new Map();
+    const f = flowData(),
       w = el("flow-wires");
     el("workflow-title").textContent = f.name;
     el("workflow-summary").textContent = f.summary;
@@ -92,17 +143,13 @@
     w.innerHTML = "";
     w.setAttribute("viewBox", `0 0 ${f.width} ${f.height}`);
     const defs = svg("defs", {}, w);
-    for (const [k, color] of Object.entries({
-      main: "#98aabb",
-      optional: "#a08cc2",
-      learning: "#7da99e",
-    })) {
-      const m = svg(
+    for (const d of data.domains) {
+      const marker = svg(
         "marker",
         {
-          id: "arrow-" + k,
+          id: "arrow-" + d.id,
           viewBox: "0 0 10 10",
-          refX: 8.5,
+          refX: 9,
           refY: 5,
           markerWidth: 6,
           markerHeight: 6,
@@ -110,66 +157,135 @@
         },
         defs,
       );
-      svg("path", { d: "M0 0 10 5 0 10z", fill: color }, m);
+      svg("path", { d: "M0 0 10 5 0 10z", fill: d.color }, marker);
     }
-    for (const e of f.edges) {
-      const path = e.points
-          .map((p, i) => (i ? "L" : "M") + p.join(" "))
-          .join(" "),
-        g = svg("g", {}, w);
-      svg(
-        "path",
-        {
-          d: path,
-          class: "flow-line " + e.kind,
-          "marker-end": `url(#arrow-${e.kind})`,
-        },
-        g,
-      );
-      svg(
-        "path",
-        {
-          d: path,
-          class: "edge-hit",
-          role: "button",
-          tabindex: 0,
-          "aria-label": e.label,
-          "data-edge": e.id,
-        },
-        g,
-      );
-      const pos = labelPosition(e);
-      if (pos) {
-        const label = svg(
-            "g",
-            {
-              class: "edge-label",
-              "data-edge": e.id,
-              transform: `translate(${pos[0]},${pos[1]})`,
-            },
-            g,
-          ),
-          width =
-            Array.from(e.label).reduce(
-              (n, c) => n + (/[^\x00-\xff]/.test(c) ? 12 : 6.5),
-              0,
-            ) + 16;
-        svg("rect", { x: -width / 2, y: -12, width, height: 24, rx: 6 }, label);
-        svg("text", {}, label).textContent = e.label;
+    for (const c of f.channels) {
+      for (const direction of ["ab", "ba"]) {
+        const ps = c.paths[direction],
+          from = direction === "ab" ? c.a : c.b,
+          to = direction === "ab" ? c.b : c.a;
+        const d =
+          ps.length === 3
+            ? `M${ps[0]} Q${ps[1]} ${ps[2]}`
+            : ps.map((p, i) => (i ? "L" : "M") + p.join(" ")).join(" ");
+        svg(
+          "path",
+          {
+            d,
+            class: "domain-wire",
+            stroke: domains.get(from).color,
+            "marker-end": "url(#arrow-" + from + ")",
+            "data-channel": c.id,
+            "data-direction": direction,
+          },
+          w,
+        );
+        svg(
+          "path",
+          {
+            d,
+            class: "edge-hit",
+            role: "button",
+            tabindex: 0,
+            "aria-label": domains.get(from).name + " → " + domains.get(to).name,
+            "data-edge": c.id,
+          },
+          w,
+        );
       }
+      streams.set(c.id, new PacketHistory(c.packets));
     }
-    el("flow-nodes").innerHTML = f.nodes
-      .map((n) => {
-        const d = domains.get(n.domain);
-        return `<article class="flow-node ${n.prompts.length ? "has-prompt" : ""}" data-node="${n.id}" style="--domain:${d.color};left:${n.rect[0]}px;top:${n.rect[1]}px;width:${n.rect[2]}px;height:${n.rect[3]}px"><button class="step-button" data-step="${n.id}"><span class="step-owner"><i></i>${esc(d.name)}</span><h3>${esc(n.title)}</h3><p class="step-summary">${esc(n.summary)}</p></button>${n.prompts.map((id) => `<button class="prompt-link" data-prompt="${id}">查看提示词 →</button>`).join("")}</article>`;
+    el("flow-nodes").innerHTML = f.groups
+      .map((g) => {
+        const d = domains.get(g.domain);
+        return `<article class="domain-group" data-group="${g.domain}" style="--domain:${d.color};left:${g.rect[0]}px;top:${g.rect[1]}px;width:${g.rect[2]}px;height:${g.rect[3]}px"><button class="group-heading" data-domain="${d.id}"><span class="domain-icon"><svg viewBox="0 0 24 24">${icons[d.icon]}</svg></span><h3>${esc(d.name)}</h3><span>↗</span></button><div class="capabilities">${g.children.map((n) => `<div class="capability" data-capability="${g.domain}.${n.id}"><button class="capability-detail" data-step="${g.domain}.${n.id}"><strong>${esc(n.title)}</strong><span>${esc(n.summary)}</span></button>${(n.prompts || []).map((id) => `<button class="capability-prompt" data-prompt="${id}" aria-label="${esc(prompts.get(id).name)}">提示词 → 模型</button>`).join("")}</div>`).join("")}</div></article>`;
       })
       .join("");
+    el("flow-streams").innerHTML = f.channels
+      .map(
+        (c) =>
+          `<section class="packet-stream" id="stream-${c.id}" tabindex="0" aria-label="${esc(domains.get(c.a).name + "与" + domains.get(c.b).name + "的数据卡片，可滚动查看历史")}" data-stream="${c.id}" style="left:${c.stack[0] - c.stack[2] / 2}px;top:${c.stack[1] - c.stack[3] / 2}px;width:${c.stack[2]}px;height:${c.stack[3]}px"><div class="packet-viewport">${packetCards(c)}</div><div class="stream-controls"><button data-history="${c.id}" data-delta="-1" aria-label="${esc(c.id)} 较早数据">↑</button><span>模拟数据</span><button data-history="${c.id}" data-delta="1" aria-label="${esc(c.id)} 较晚数据">↓</button></div><button class="stream-live" data-live="${c.id}" hidden>回到最新</button></section>`,
+      )
+      .join("");
+    for (const c of f.channels) {
+      const host = el("stream-" + c.id),
+        h = streams.get(c.id);
+      host.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          h.scroll(Math.sign(e.deltaY));
+          renderStream(c);
+        },
+        { passive: false },
+      );
+      host.addEventListener("keydown", (e) => {
+        if (["ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) {
+          e.preventDefault();
+          if (e.key === "End") h.latest();
+          else if (e.key === "Home") {
+            h.follow = false;
+            h.index = 0;
+          } else h.scroll(e.key === "ArrowUp" ? -1 : 1);
+          renderStream(c);
+        }
+      });
+      let touchY = null;
+      host.addEventListener(
+        "touchstart",
+        (e) => {
+          touchY = e.touches[0].clientY;
+        },
+        { passive: true },
+      );
+      host.addEventListener(
+        "touchmove",
+        (e) => {
+          if (touchY === null) return;
+          const delta = touchY - e.touches[0].clientY;
+          if (Math.abs(delta) > 18) {
+            e.preventDefault();
+            h.scroll(delta > 0 ? 1 : -1);
+            touchY = e.touches[0].clientY;
+            renderStream(c);
+          }
+        },
+        { passive: false },
+      );
+      host.addEventListener("touchend", () => (touchY = null));
+    }
     el("workflow-tabs")
       .querySelectorAll("button")
       .forEach((b) => {
         b.classList.toggle("active", b.dataset.flow === f.id);
         b.setAttribute("aria-pressed", String(b.dataset.flow === f.id));
       });
+    scaleGraph(
+      innerWidth < 700
+        ? 1
+        : Math.min(1, (el("graph-scroll").clientWidth - 24) / f.width),
+    );
+    if (innerWidth < 700) el("graph-scroll").scrollLeft = 400;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el("pause-streams").textContent = reduced ? "播放数据" : "暂停动画";
+    state.paused = reduced;
+    streamTimer = setInterval(() => {
+      if (
+        state.paused ||
+        state.section !== "business" ||
+        !el("inspector").hidden ||
+        document.hidden
+      )
+        return;
+      for (const c of f.channels) {
+        const host = el("stream-" + c.id);
+        if (host.matches(":hover") || host.contains(document.activeElement))
+          continue;
+        streams.get(c.id).tick();
+        renderStream(c);
+      }
+    }, 3000);
   }
   function hash(value) {
     history.replaceState(null, "", "#" + value);
@@ -250,20 +366,22 @@
     hash("domain/" + id);
   }
   function stepPanel(id) {
-    const f = data.workflows.find((f) => f.id === state.flow),
-      n = f.nodes.find((n) => n.id === id);
+    const [owner, child] = id.split("."),
+      group = flowData().groups.find((g) => g.domain === owner),
+      n = group?.children.find((n) => n.id === child);
     if (!n) return;
-    const d = domains.get(n.domain);
+    const d = domains.get(owner);
+    const related = flowData()
+      .channels.flatMap((c) => c.packets)
+      .filter((p) => p.from === id || p.to === id);
     openPanel(
       n.title,
       n.summary,
-      f.name + " / " + d.name,
-      section("输入", `<p>${esc(n.input)}</p>`) +
-        section("输出", `<p>${esc(n.output)}</p>`) +
-        (n.rules.length ? section("处理约定", list(n.rules)) : "") +
-        (n.prompts.length
+      flowData().name + " / " + d.name,
+      section("数据往来", list(related.map((p) => p.title + "：" + p.body))) +
+        ((n.prompts || []).length
           ? section(
-              "由 Cloud 使用的提示词",
+              "提示词与模型",
               '<div class="related">' +
                 n.prompts
                   .map(
@@ -271,40 +389,55 @@
                       `<button data-prompt="${p}">${esc(prompts.get(p).name)} ↗</button>`,
                   )
                   .join("") +
-                "</div>",
+                "</div><p>Cloud 组装 → " +
+                (n.targets || [])
+                  .map((t) =>
+                    esc(
+                      flowData()
+                        .groups.flatMap((g) =>
+                          g.children.map((c) => ({
+                            ...c,
+                            key: g.domain + "." + c.id,
+                          })),
+                        )
+                        .find((c) => c.key === t)?.title,
+                    ),
+                  )
+                  .join("、") +
+                "</p>",
             )
+          : "") +
+        ((n.documents || []).length
+          ? section("相关约定", docs(n.documents))
           : "") +
         section(
           "负责的域",
           `<div class="related"><button data-domain="${d.id}">${esc(d.name)} ↗</button></div>`,
-        ) +
-        (n.documents.length ? section("相关约定", docs(n.documents)) : ""),
+        ),
       d,
     );
     hash("step/" + state.flow + "/" + id);
   }
-  function edgePanel(id) {
-    const f = data.workflows.find((f) => f.id === state.flow),
-      e = f.edges.find((e) => e.id === id);
-    if (!e) return;
-    const a = f.nodes.find((n) => n.id === e.from),
-      b = f.nodes.find((n) => n.id === e.to);
+  function edgePanel(id, sequence) {
+    const c = flowData().channels.find((c) => c.id === id);
+    if (!c) return;
+    const p = sequence
+      ? streams.get(c.id)?.items.find((p) => p.sequence === Number(sequence))
+      : null;
     openPanel(
-      e.label,
-      e.note,
-      f.name,
-      section(
-        "从哪里",
-        `<p>${esc(domains.get(a.domain).name)} · ${esc(a.title)}</p>`,
-      ) +
-        section(
-          "到哪里",
-          `<p>${esc(domains.get(b.domain).name)} · ${esc(b.title)}</p>`,
-        ) +
-        section(
-          "查看步骤",
-          `<div class="related"><button data-step="${a.id}">来源步骤 ↗</button><button data-step="${b.id}">接收步骤 ↗</button></div>`,
-        ),
+      p ? p.title : "两个域的数据往来",
+      p ? p.body : "每个方向一条连线；卡片按时间顺序滚动。",
+      flowData().name,
+      p
+        ? section(
+            "传递路径",
+            `<div class="related"><button data-step="${p.from}">${esc(p.from)} ↗</button><button data-step="${p.to}">${esc(p.to)} ↗</button></div>`,
+          )
+        : section(
+            "消息约定",
+            list(c.packets.map((p) => p.title + "：" + p.body)),
+          ),
+      domains.get(c.a),
     );
   }
   document.addEventListener("click", (e) => {
@@ -314,6 +447,23 @@
       e.preventDefault();
       closePanel();
       show("domains");
+      return;
+    }
+    if (t.dataset.history) {
+      const c = flowData().channels.find((c) => c.id === t.dataset.history);
+      streams.get(c.id).scroll(Number(t.dataset.delta));
+      renderStream(c);
+      return;
+    }
+    if (t.dataset.live) {
+      const c = flowData().channels.find((c) => c.id === t.dataset.live);
+      streams.get(c.id).latest();
+      renderStream(c);
+      return;
+    }
+    if (t.dataset.packet) {
+      const [id, sequence] = t.dataset.packet.split(":");
+      edgePanel(id, sequence);
       return;
     }
     if (t.dataset.section) {
@@ -375,6 +525,15 @@
         first.focus();
       }
     }
+  });
+  el("zoom-in").addEventListener("click", () => scaleGraph(graphScale + 0.1));
+  el("zoom-out").addEventListener("click", () => scaleGraph(graphScale - 0.1));
+  el("zoom-fit").addEventListener("click", () =>
+    scaleGraph((el("graph-scroll").clientWidth - 24) / flowData().width),
+  );
+  el("pause-streams").addEventListener("click", () => {
+    state.paused = !state.paused;
+    el("pause-streams").textContent = state.paused ? "播放数据" : "暂停动画";
   });
   el("close-inspector").addEventListener("click", closePanel);
   el("panel-shade").addEventListener("click", closePanel);

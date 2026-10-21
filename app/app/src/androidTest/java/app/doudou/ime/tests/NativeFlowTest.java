@@ -273,8 +273,8 @@ public class NativeFlowTest {
     await("开始说话");
     screenshot("voice");
     click("开始说话");
-    // The emulator has no authorized ASR; a real explanation must replace the recording state.
-    await("请先在设置中允许麦克风权限");
+    // The isolated emulator is not signed in; no supplier call may be made.
+    await("请先到设置登录豆豆账户");
     await("开始说话");
     click("返回");
     await("工具");

@@ -174,7 +174,6 @@ public final class VoiceController extends PanelController {
     final long gen = host.generation();
     final String prefix = transcript.isEmpty() ? "" : transcript + " ";
     voice.start(
-        app.prefs().getBoolean("onlineVoice", false),
         new VoiceInput.Listener() {
           boolean active() {
             return gen == host.generation() && host.mode().equals("voice");
@@ -188,6 +187,7 @@ public final class VoiceController extends PanelController {
               recording = false;
               microphone.setState(VoiceButton.State.IDLE);
               status.setText("说完了 · 可修正、整理或填入");
+              if (app.prefs().getBoolean("personalRewrite", false)) polishVoice();
             }
           }
 
@@ -225,7 +225,7 @@ public final class VoiceController extends PanelController {
       return;
     }
     if (!model.configured()) {
-      status.setText("文字模型尚未配置；原始转写可直接填入");
+      status.setText("请先登录豆豆账户；原始转写可直接填入");
       return;
     }
     final long gen = host.generation();
@@ -233,6 +233,7 @@ public final class VoiceController extends PanelController {
     status.setText("按热词和文风整理中…");
     model.polish(
         original,
+        voice.sourceJob(),
         (text, error) -> {
           if (gen != host.generation() || !host.mode().equals("voice")) return;
           microphone.setState(VoiceButton.State.IDLE);

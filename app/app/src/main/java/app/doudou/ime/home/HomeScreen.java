@@ -21,8 +21,7 @@ public final class HomeScreen extends Screen {
     LinearLayout hero = Ui.card(activity);
     Ui.pad(activity, hero, 22, 24);
     GradientDrawable color =
-        new GradientDrawable(
-            GradientDrawable.Orientation.TL_BR, new int[] {Ui.HERO, Ui.PANEL});
+        new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[] {Ui.HERO, Ui.PANEL});
     color.setCornerRadius(Ui.dp(activity, 20));
     hero.setBackground(color);
     TextView title = Ui.text(activity, "说出来，\n还是你的语气。", 27, Ui.INK);
@@ -48,7 +47,7 @@ public final class HomeScreen extends Screen {
             activity,
             active ? "闪光" : "工具",
             active ? "键盘已就绪" : enabled() ? "切换到豆豆输入法" : "开启豆豆输入法",
-            active ? "到任意输入框，开始自己的表达。" : "离线拼音先用起来，模型可以稍后再接。",
+            active ? "到任意输入框，开始自己的表达。" : "本地拼音无需登录，语音和军师使用豆豆账户。",
             active ? "正在使用" : "",
             () -> {
               if (enabled())

@@ -141,4 +141,38 @@ public final class ManagementFlowTest {
       ins.runOnMainSync(() -> activity.finish());
     }
   }
+
+  @Test
+  public void accountIsOptionalAndShowsUnconfiguredSmsHonestly() throws Exception {
+    org.junit.Assume.assumeFalse(
+        new app.doudou.ime.cloud.CloudClient(
+                InstrumentationRegistry.getInstrumentation().getTargetContext())
+            .publicRequest("/healthz", null)
+            .getJSONObject("readiness")
+            .getBoolean("sms"));
+    android.app.Instrumentation ins = InstrumentationRegistry.getInstrumentation();
+    ui = ins.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+    android.accessibilityservice.AccessibilityServiceInfo info = ui.getServiceInfo();
+    info.flags |=
+        android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
+    ui.setServiceInfo(info);
+    activity =
+        (MainActivity)
+            ins.startActivitySync(
+                new Intent(ins.getTargetContext(), MainActivity.class)
+                    .putExtra("page", "account")
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    try {
+      await("手机号");
+      set("手机号", "13800001234");
+      click("获取验证码");
+      await("短信登录尚待企业资质、签名和模板配置；本地输入仍可使用");
+      set("13800001234", "");
+      shot("account");
+      click("返回");
+      await("系统权限");
+    } finally {
+      ins.runOnMainSync(() -> activity.finish());
+    }
+  }
 }

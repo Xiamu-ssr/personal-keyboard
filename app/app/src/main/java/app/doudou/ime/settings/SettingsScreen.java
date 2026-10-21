@@ -9,11 +9,11 @@ import android.provider.Settings;
 import android.view.*;
 import android.view.inputmethod.*;
 import android.widget.*;
+import app.doudou.ime.BuildConfig;
 import app.doudou.ime.app.*;
 import app.doudou.ime.capture.CaptureService;
 import app.doudou.ime.design.Ui;
-import app.doudou.ime.model.TextModelClient;
-import app.doudou.ime.security.Vault;
+import app.doudou.ime.memory.LearningBatch;
 import java.io.*;
 import java.util.*;
 import org.json.*;
@@ -58,18 +58,38 @@ public final class SettingsScreen extends Screen {
     toggle(input, "按键轻振", "haptic", true);
     toggle(input, "学习本地候选排序", "learning", true);
     toggle(input, "保存主动使用历史", "history", true);
-    toggle(input, "允许系统在线语音", "onlineVoice", false);
-    captionIn(input, "在线语音由手机的系统服务处理音频；关闭时只尝试本地服务。专用 ASR、文风整理可稍后配置。");
+    toggle(input, "ASR 基础规整", "asrPolish", true);
+    toggle(input, "按我的口吻整理", "personalRewrite", false);
+    captionIn(input, "语音实时识别会携带少量热词与近期文字；个人整理开启后，再用文字模型按文风处理。");
     add(input);
-    LinearLayout model =
-        section(
-            "文字模型 · 可稍后配置",
-            app.prefs().getString("modelId", "").isEmpty()
-                ? "尚未连接；不会生成演示回复。"
-                : app.prefs().getString("modelId", ""));
-    action(model, "配置服务", this::modelSettings);
-    add(model);
-    LinearLayout privacy = section("数据与备份", "备份含人物、词库和本机历史，请保存到你信任的位置；不包含模型密钥。");
+    LinearLayout account =
+        section("豆豆账户", app.cloud.loggedIn() ? app.cloud.phoneHint() : "登录后使用语音和军师；普通输入离线可用。");
+    action(account, app.cloud.loggedIn() ? "账户、权益与云同步" : "手机号登录", () -> nav.open("account", 0));
+    add(account);
+    LinearLayout intelligence = section("军师与学习", "截图不进入历史或云备份；文字历史和学习候选留在本机。");
+    toggle(intelligence, "军师使用图文理解", "advisorVision", false);
+    captionIn(intelligence, "关闭时仅上传本地 OCR 文字；开启时，把本次截图一并交给图文模型，帮助理解气泡、表情与聊天结构。");
+    toggle(intelligence, "定期整理新增历史", "cloudLearning", false);
+    action(
+        intelligence,
+        "整理新增历史",
+        () -> {
+          Ui.toast(activity, "开始整理新增文字，完成后可在待学习里确认");
+          app.worker.execute(
+              () -> {
+                String result;
+                try {
+                  result = new LearningBatch(app).run();
+                } catch (Exception e) {
+                  result = e.getMessage() == null ? "整理失败，新增历史保留" : e.getMessage();
+                }
+                final String message = result;
+                activity.runOnUiThread(() -> Ui.toast(activity, message));
+              });
+        });
+    captionIn(intelligence, "开启后约每五小时检查新增文字，分批处理；没有新增不调用。候选须经确认，不覆盖手动修订。");
+    add(intelligence);
+    LinearLayout privacy = section("数据与备份", "备份含人物、词库和本机历史，请保存到你信任的位置；不包含登录凭据和同步密钥。");
     action(
         privacy,
         "历史保留：" + app.prefs().getInt("retentionDays", 30) + " 天",
@@ -124,11 +144,13 @@ public final class SettingsScreen extends Screen {
                 .setNegativeButton("取消", null)
                 .show());
     add(privacy);
-    caption("豆豆同步尚未接入，当前资料只在本机。不会自动上传聊天或截图。");
+    caption("本地资料随时可导出。云同步在账户页按权益开启，和模型分析分别管理。");
     LinearLayout about =
         section(
-            "豆豆输入法 0.2.0-alpha.1",
-            "拼音：AOSP PinyinIME（Apache 2.0）\n中文 OCR：Google ML Kit 本地模型\n系统 ASR 的可用性因设备而异。");
+            "豆豆输入法 " + BuildConfig.VERSION_NAME,
+            "拼音：AOSP PinyinIME（Apache 2.0）\n"
+                + "中文 OCR：Google ML Kit 本地模型\n"
+                + "语音：Qwen Message，经豆豆 Cloud 代理。");
     action(
         about,
         "开源许可",
@@ -160,80 +182,6 @@ public final class SettingsScreen extends Screen {
     s.setChecked(app.prefs().getBoolean(key, def));
     s.setOnCheckedChangeListener((b, v) -> app.prefs().edit().putBoolean(key, v).apply());
     c.addView(s);
-  }
-
-  private void modelSettings() {
-    LinearLayout f = Ui.col(activity);
-    Ui.pad(activity, f, 20, 12);
-    EditText base = Ui.edit(activity, "HTTPS Base URL", app.prefs().getString("modelBase", "")),
-        model = Ui.edit(activity, "模型 ID", app.prefs().getString("modelId", "")),
-        key = Ui.edit(activity, "新 API Key（留空保留原值）", "");
-    base.setInputType(
-        android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
-    key.setInputType(129);
-    key.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
-    f.addView(base);
-    Ui.gap(activity, f, 10);
-    f.addView(model);
-    Ui.gap(activity, f, 10);
-    f.addView(key);
-    try {
-      String saved = new Vault(activity).get();
-      if (!saved.isEmpty()) captionIn(f, "已保存：" + Vault.hint(saved));
-    } catch (Exception e) {
-      captionIn(f, "原密钥无法解密，请重新填写");
-    }
-    Switch protocol = new Switch(activity);
-    protocol.setText("使用 Anthropic 协议");
-    protocol.setTextColor(Ui.INK);
-    protocol.setChecked(app.prefs().getBoolean("modelAnthropic", false));
-    f.addView(protocol);
-    captionIn(f, "保存后，只有主动点整理或生成回复才会发送相关文字；不上传原截图。服务端自行判断额度。");
-    ScrollView scroll = new ScrollView(activity);
-    scroll.addView(f);
-    AlertDialog d =
-        new AlertDialog.Builder(activity)
-            .setTitle("自定义文字模型")
-            .setView(scroll)
-            .setPositiveButton("保存", null)
-            .setNeutralButton(
-                "移除服务",
-                (x, w) -> {
-                  try {
-                    new Vault(activity).set("");
-                  } catch (Exception ignored) {
-                  }
-                  app.prefs().edit().remove("modelBase").remove("modelId").apply();
-                  nav.refresh();
-                })
-            .setNegativeButton("取消", null)
-            .create();
-    d.setOnShowListener(
-        x ->
-            d.getButton(-1)
-                .setOnClickListener(
-                    v -> {
-                      try {
-                        String b = TextModelClient.validateBase(base.getText().toString().trim());
-                        if (model.getText().toString().trim().isEmpty())
-                          throw new IllegalArgumentException("请填模型 ID");
-                        String k = key.getText().toString().trim();
-                        if (!k.isEmpty()) new Vault(activity).set(k);
-                        if (new Vault(activity).get().isEmpty())
-                          throw new IllegalArgumentException("请填写 API Key");
-                        app.prefs()
-                            .edit()
-                            .putString("modelBase", b)
-                            .putString("modelId", model.getText().toString().trim())
-                            .putBoolean("modelAnthropic", protocol.isChecked())
-                            .apply();
-                        d.dismiss();
-                        nav.refresh();
-                      } catch (Exception e) {
-                        Ui.toast(activity, e.getMessage() == null ? "保存失败" : e.getMessage());
-                      }
-                    }));
-    d.show();
   }
 
   @Override

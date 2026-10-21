@@ -22,6 +22,7 @@ public final class AdvisorSession {
   public String packageName = "", error = "";
   public static final int MAX_PAGES = 6, MAX_CHARS = 16000;
   private int revision, pages;
+  private final List<String> images = new ArrayList<>();
   private final LinkedHashSet<String> lines = new LinkedHashSet<>();
 
   public int begin(long gen, String pkg) {
@@ -29,6 +30,7 @@ public final class AdvisorSession {
     packageName = pkg;
     person = 0;
     lines.clear();
+    images.clear();
     pages = 0;
     error = "";
     stage = Stage.RESIZING;
@@ -47,6 +49,7 @@ public final class AdvisorSession {
     revision++;
     stage = Stage.CANCELLED;
     lines.clear();
+    images.clear();
     person = 0;
   }
 
@@ -63,6 +66,15 @@ public final class AdvisorSession {
     lines.addAll(next);
     pages++;
     stage = person > 0 ? Stage.READY : Stage.IDENTITY;
+  }
+
+  public void image(String jpeg) {
+    if (images.size() == 3) images.remove(0);
+    images.add(jpeg);
+  }
+
+  public List<String> images() {
+    return new ArrayList<>(images);
   }
 
   public void identify(long id) {

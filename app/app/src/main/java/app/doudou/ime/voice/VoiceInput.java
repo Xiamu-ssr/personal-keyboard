@@ -1,180 +1,288 @@
 package app.doudou.ime.voice;
 
 import android.Manifest;
-import android.content.*;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.media.*;
 import android.os.*;
-import android.speech.*;
-import java.util.*;
+import app.doudou.ime.BuildConfig;
+import app.doudou.ime.app.KeyboardApp;
+import app.doudou.ime.memory.MemoryStore;
+import java.util.UUID;
+import okhttp3.*;
+import okio.ByteString;
+import org.json.*;
 
-/** Device-provided ASR is separate from future paid ASR. Online system ASR requires opt-in. */
-public final class VoiceInput implements RecognitionListener {
+/**
+ * PCM capture only; ASR is proxied and metered by the product Cloud. No system recognizer fallback.
+ */
+public final class VoiceInput {
   public interface Listener {
-    void text(String value, boolean finalResult);
+    void text(String value, boolean fin);
 
     void status(String value);
 
     void error(String value);
 
-    default void level(float rmsDb) {}
+    void level(float rmsDb);
 
-    default void processing() {}
+    void processing();
   }
 
   private final Context context;
-  private SpeechRecognizer recognizer;
-  private Listener listener;
-  private boolean cancelled;
-  private int epoch;
+  private final Handler main = new Handler(Looper.getMainLooper());
+  private volatile int epoch;
+  private volatile boolean recording, finished, stopRequested;
+  private volatile AudioRecord recorder;
+  private volatile WebSocket socket;
+  private volatile Listener listener;
+  private volatile String jobId = "";
 
   public VoiceInput(Context c) {
     context = c;
   }
 
-  public void start(boolean allowOnline, Listener l) {
+  public String sourceJob() {
+    return jobId;
+  }
+
+  private void post(int token, Runnable r) {
+    main.post(
+        () -> {
+          if (token == epoch && listener != null) r.run();
+        });
+  }
+
+  public void start(Listener next) {
     cancel();
-    listener = l;
-    cancelled = false;
+    listener = next;
+    final int token = epoch;
+    jobId = "";
+    finished = false;
+    stopRequested = false;
     if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO)
         != PackageManager.PERMISSION_GRANTED) {
-      l.error("请先在设置中允许麦克风权限");
+      next.error("请先到豆豆设置允许麦克风");
       return;
     }
-    boolean offline =
-        Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context);
-    if (!offline && !allowOnline) {
-      l.error("这台手机没有本地语音服务。可在设置中自愿启用系统在线识别，或稍后接入专用 ASR");
+    KeyboardApp app = KeyboardApp.instance;
+    if (!app.cloud.loggedIn()) {
+      next.error("请先到设置登录豆豆账户");
       return;
     }
-    if (!SpeechRecognizer.isRecognitionAvailable(context) && !offline) {
-      l.error("系统没有可用语音识别服务；专用 ASR 尚未配置");
+    next.status("正在连接豆豆语音…");
+    app.network.execute(
+        () -> {
+          try {
+            String access = app.cloud.accessToken();
+            JSONObject config =
+                new JSONObject()
+                    .put("type", "configure")
+                    .put("requestId", UUID.randomUUID().toString())
+                    .put("polish", app.prefs().getBoolean("asrPolish", true));
+            JSONArray words = new JSONArray();
+            for (MemoryStore.Item i : app.store.list("word", 0)) {
+              if (words.length() == 50) break;
+              if (i.title.length() <= 60) words.put(i.title);
+            }
+            config.put("words", words);
+            StringBuilder recent = new StringBuilder();
+            for (MemoryStore.Item i : app.store.list("history", 0)) {
+              if (!app.prefs().getBoolean("history", true)) break;
+              if (!(i.source.startsWith("asr:") || i.source.equals("voice"))) continue;
+              if (recent.length() >= 350) break;
+              String s = i.body.substring(0, Math.min(i.body.length(), 250));
+              recent.append(s).append('\n');
+            }
+            config.put("context", recent.substring(0, Math.min(400, recent.length())));
+            Request request =
+                new Request.Builder()
+                    .url(BuildConfig.API_BASE_URL.replace("https:", "wss:") + "/v1/asr")
+                    .header("Authorization", "Bearer " + access)
+                    .build();
+            WebSocket created =
+                app.cloud.http.newWebSocket(
+                    request,
+                    new WebSocketListener() {
+                      @Override
+                      public void onOpen(WebSocket ws, Response response) {
+                        if (token != epoch) {
+                          ws.cancel();
+                          return;
+                        }
+                        ws.send(config.toString());
+                      }
+
+                      @Override
+                      public void onMessage(WebSocket ws, String data) {
+                        if (token != epoch) return;
+                        try {
+                          JSONObject m = new JSONObject(data);
+                          String type = m.optString("type");
+                          if (type.equals("accepted")) jobId = m.getString("jobId");
+                          if (type.equals("ready")) {
+                            post(token, () -> listener.status("正在听，说完点停止"));
+                            capture(ws, token);
+                          }
+                          if (type.equals("partial")) {
+                            String text = m.optString("text");
+                            post(token, () -> listener.text(text, false));
+                          }
+                          if (type.equals("error")) {
+                            JSONObject e = m.optJSONObject("error");
+                            fail(token, e == null ? "语音连接失败" : e.optString("message"));
+                          }
+                          if (type.equals("job")) {
+                            finished = true;
+                            releaseRecorder();
+                            JSONObject result = m.optJSONObject("result");
+                            if (m.optString("status").equals("succeeded") && result != null) {
+                              String text = result.getString("text");
+                              jobId = m.getString("id");
+                              if (app.prefs().getBoolean("history", true))
+                                app.store.save(
+                                    0, 0, "history", 0, "语音转写", text, "transcript", "asr:" + jobId);
+                              post(token, () -> listener.text(text, true));
+                            } else {
+                              JSONObject e = m.optJSONObject("error");
+                              fail(token, e == null ? "任务已结束，请重试" : e.optString("message"));
+                            }
+                          }
+                        } catch (Exception e) {
+                          fail(token, "语音返回格式不正确");
+                        }
+                      }
+
+                      @Override
+                      public void onFailure(WebSocket ws, Throwable error, Response response) {
+                        if (!finished) fail(token, "语音连接失败，请检查网络后重试");
+                      }
+
+                      @Override
+                      public void onClosed(WebSocket ws, int code, String why) {
+                        if (!finished) fail(token, "语音连接已结束，可重试");
+                      }
+                    });
+            if (token != epoch) created.cancel();
+            else socket = created;
+          } catch (Exception e) {
+            fail(token, e.getMessage() == null ? "连接失败" : e.getMessage());
+          }
+        });
+  }
+
+  @SuppressWarnings("MissingPermission")
+  private void capture(WebSocket ws, int token) {
+    if (token != epoch) return;
+    if (stopRequested) {
+      ws.send("{\"type\":\"cancel\"}");
+      fail(token, "已停止，本次未开始录音");
       return;
     }
-    try {
-      recognizer =
-          offline
-              ? SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
-              : SpeechRecognizer.createSpeechRecognizer(context);
-      final int request = epoch;
-      recognizer.setRecognitionListener(
-          new RecognitionListener() {
-            boolean valid() {
-              return request == epoch && !cancelled;
-            }
+    recording = true;
+    new Thread(
+            () -> {
+              AudioRecord audio = null;
+              try {
+                int min =
+                    AudioRecord.getMinBufferSize(
+                        16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+                if (min <= 0) throw new IllegalStateException();
+                audio =
+                    new AudioRecord(
+                        MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                        16000,
+                        AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT,
+                        Math.max(min, 6400));
+                if (audio.getState() != AudioRecord.STATE_INITIALIZED)
+                  throw new IllegalStateException();
+                if (token != epoch) return;
+                recorder = audio;
+                audio.startRecording();
+                byte[] buffer = new byte[3200];
+                long started = System.currentTimeMillis();
+                while (recording
+                    && token == epoch
+                    && System.currentTimeMillis() - started < 90000) {
+                  int n = audio.read(buffer, 0, buffer.length);
+                  if (n <= 0) {
+                    if (!recording) break;
+                    throw new IllegalStateException();
+                  }
+                  if (ws.queueSize() > 128000) throw new java.io.IOException("网络较慢，请缩短语音");
+                  if (!ws.send(ByteString.of(buffer, 0, n))) throw new java.io.IOException("连接中断");
+                  double sum = 0;
+                  for (int i = 0; i + 1 < n; i += 2) {
+                    short sample = (short) ((buffer[i] & 255) | (buffer[i + 1] << 8));
+                    sum += (double) sample * sample;
+                  }
+                  float level =
+                      (float) (20 * Math.log10(Math.sqrt(sum / Math.max(1, n / 2)) + 1) - 40);
+                  post(token, () -> listener.level(level));
+                }
+                if (token == epoch && !finished) {
+                  post(
+                      token,
+                      () -> {
+                        listener.status("正在完成识别…");
+                        listener.processing();
+                      });
+                  ws.send("{\"type\":\"finish\"}");
+                }
+              } catch (Exception e) {
+                if (token == epoch && !finished) {
+                  ws.send("{\"type\":\"cancel\"}");
+                  fail(token, e.getMessage() == null ? "录音失败，请检查麦克风" : e.getMessage());
+                }
+              } finally {
+                if (token == epoch) recording = false;
+                if (audio != null) {
+                  try {
+                    audio.stop();
+                  } catch (Exception ignored) {
+                  }
+                  audio.release();
+                  if (recorder == audio) recorder = null;
+                }
+              }
+            },
+            "doudou-audio")
+        .start();
+  }
 
-            public void onReadyForSpeech(Bundle b) {
-              if (valid()) VoiceInput.this.onReadyForSpeech(b);
-            }
+  private void fail(int token, String value) {
+    if (token != epoch) return;
+    finished = true;
+    releaseRecorder();
+    post(token, () -> listener.error(value));
+  }
 
-            public void onBeginningOfSpeech() {
-              if (valid()) VoiceInput.this.onBeginningOfSpeech();
-            }
-
-            public void onRmsChanged(float f) {
-              if (valid()) VoiceInput.this.onRmsChanged(f);
-            }
-
-            public void onBufferReceived(byte[] a) {}
-
-            public void onEndOfSpeech() {
-              if (valid()) VoiceInput.this.onEndOfSpeech();
-            }
-
-            public void onError(int e) {
-              if (valid()) VoiceInput.this.onError(e);
-            }
-
-            public void onResults(Bundle b) {
-              if (valid()) VoiceInput.this.onResults(b);
-            }
-
-            public void onPartialResults(Bundle b) {
-              if (valid()) VoiceInput.this.onPartialResults(b);
-            }
-
-            public void onEvent(int t, Bundle b) {}
-          });
-      Intent intent =
-          new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-              .putExtra(
-                  RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-              .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN")
-              .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-              .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, offline);
-      l.status(offline ? "本机识别 · 正在听" : "系统在线识别 · 正在听");
-      recognizer.startListening(intent);
-    } catch (Exception e) {
-      cancel();
-      l.error("系统语音启动失败，请检查系统服务和权限");
-    }
+  private void releaseRecorder() {
+    recording = false;
+    AudioRecord r = recorder;
+    if (r != null)
+      try {
+        r.stop();
+      } catch (Exception ignored) {
+      }
   }
 
   public void stop() {
-    if (recognizer != null) recognizer.stopListening();
+    stopRequested = true;
+    releaseRecorder();
   }
 
   public void cancel() {
     epoch++;
-    cancelled = true;
-    if (recognizer != null) {
-      recognizer.cancel();
-      recognizer.destroy();
-      recognizer = null;
-    }
     listener = null;
-  }
-
-  private void result(Bundle b, boolean fin) {
-    if (cancelled || listener == null) return;
-    ArrayList<String> texts = b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-    if (texts != null && !texts.isEmpty()) listener.text(texts.get(0), fin);
-  }
-
-  @Override
-  public void onReadyForSpeech(Bundle b) {}
-
-  @Override
-  public void onBeginningOfSpeech() {
-    if (listener != null) listener.status("正在听，说完点停止");
-  }
-
-  @Override
-  public void onRmsChanged(float f) {
-    if (!cancelled && listener != null) listener.level(f);
-  }
-
-  @Override
-  public void onBufferReceived(byte[] a) {}
-
-  @Override
-  public void onEndOfSpeech() {
-    if (!cancelled && listener != null) {
-      listener.status("正在识别…");
-      listener.processing();
+    finished = true;
+    releaseRecorder();
+    WebSocket ws = socket;
+    socket = null;
+    if (ws != null) {
+      ws.send("{\"type\":\"cancel\"}");
+      ws.close(1000, "Cancelled");
     }
   }
-
-  @Override
-  public void onError(int e) {
-    if (!cancelled && listener != null)
-      listener.error(
-          e == SpeechRecognizer.ERROR_NO_MATCH || e == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
-              ? "没有听清，请再说一次"
-              : e == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
-                  ? "麦克风权限已撤销"
-                  : "系统语音暂不可用（" + e + "），可以重试");
-  }
-
-  @Override
-  public void onResults(Bundle b) {
-    result(b, true);
-  }
-
-  @Override
-  public void onPartialResults(Bundle b) {
-    result(b, false);
-  }
-
-  @Override
-  public void onEvent(int t, Bundle b) {}
 }

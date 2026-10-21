@@ -1,18 +1,41 @@
+name: doudou-keyboard-cloud
 services:
-  cloud:
+  api:
     build:
       context: ..
-    ports:
-      - "127.0.0.1:8088:8080"
+    env_file: cloud.env
+    ports: ["127.0.0.1:8088:8080"]
+    depends_on:
+      db:
+        condition: service_healthy
     read_only: true
-    tmpfs:
-      - /tmp:rw,noexec,nosuid,size=16m
+    volumes: ["sync:/data/sync"]
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=16m"]
     cap_drop: [ALL]
-    security_opt:
-      - no-new-privileges:true
-    pids_limit: 128
-    mem_limit: 256m
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 96
+    mem_limit: 192m
     restart: unless-stopped
-# 本文件只运行契约骨架，不创建商业数据库或公网服务。
-# 生产目标另加托管/独立 PostgreSQL、后台 worker、私有对象存储，
-# 由宿主机 HTTPS 反向代理转发；不占用同机其他项目的域或端口。
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "2"}
+  db:
+    image: postgres:17-alpine
+    env_file: database.env
+    command: ["postgres", "-c", "shared_buffers=16MB", "-c", "work_mem=2MB", "-c", "max_connections=20"]
+    volumes: ["database:/var/lib/postgresql/data"]
+    shm_size: 32m
+    mem_limit: 192m
+    pids_limit: 80
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keyboard -d keyboard"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "2"}
+volumes:
+  database:
+  sync:

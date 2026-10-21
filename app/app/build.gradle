@@ -8,13 +8,15 @@ android {
         applicationId 'app.doudou.ime'
         minSdk 30
         targetSdk 35
-        versionCode 3
-        versionName '0.3.0-alpha.1'
+        versionCode 4
+        versionName '0.4.0-alpha.1'
+        buildConfigField 'String', 'API_BASE_URL', '"https://106.14.73.99/keyboard-api"'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         ndk { abiFilters 'arm64-v8a', 'x86_64' }
         externalNativeBuild { cmake { arguments '-DANDROID_STL=c++_static' } }
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+    buildFeatures { buildConfig true }
     buildTypes { release { minifyEnabled false } }
     externalNativeBuild { cmake { path file('src/main/cpp/CMakeLists.txt'); version '3.22.1' } }
     testOptions { unitTests.returnDefaultValues = true; unitTests.all { jvmArgs '-Djava.library.path=' + rootProject.file('../.runtime/native-host').absolutePath } }
@@ -22,6 +24,8 @@ android {
 dependencies {
     // Bundled Chinese OCR: works locally, without downloading a model after installation.
     implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'androidx.work:work-runtime:2.9.1'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test:runner:1.6.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

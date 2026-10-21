@@ -102,11 +102,43 @@ public final class AdvisorController extends PanelController {
               return;
             }
             advisor.stage = AdvisorSession.Stage.READING;
+            if (app.prefs().getBoolean("advisorVision", false)) {
+              try {
+                int width = Math.min(1000, bitmap.getWidth());
+                int height =
+                    Math.max(1, (int) ((long) bitmap.getHeight() * width / bitmap.getWidth()));
+                Bitmap small = Bitmap.createScaledBitmap(bitmap, width, height, true);
+                java.io.ByteArrayOutputStream image = new java.io.ByteArrayOutputStream();
+                small.compress(Bitmap.CompressFormat.JPEG, 65, image);
+                if (small != bitmap) small.recycle();
+                if (image.size() <= 550000)
+                  advisor.image(
+                      "data:image/jpeg;base64,"
+                          + android.util.Base64.encodeToString(
+                              image.toByteArray(), android.util.Base64.NO_WRAP));
+                else {
+                  advisor.fail("当前截图过大，请关闭图文理解后重试");
+                  bitmap.recycle();
+                  advisorPanel();
+                  return;
+                }
+              } catch (Exception ex) {
+                advisor.fail("截图处理失败，请重试");
+                bitmap.recycle();
+                advisorPanel();
+                return;
+              }
+            }
             LocalOcr.read(
                 bitmap,
                 (text, why) -> {
                   if (!advisor.valid(token, host.generation()) || gen != host.generation()) return;
                   if (why != null || text == null || text.trim().isEmpty()) {
+                    if (!advisor.images().isEmpty()) {
+                      advisor.append("本地未识别到文字；本次使用图文理解读取截图。");
+                      advisorPanel();
+                      return;
+                    }
                     advisor.fail(why == null ? "当前屏没有识别到文字，可以补充或重新截屏" : why);
                     advisorPanel();
                     return;
@@ -204,7 +236,11 @@ public final class AdvisorController extends PanelController {
         TextView info =
             Ui.text(
                 this,
-                model.configured() ? "写下你想表达的立场，再生成三种说法。" : "文字模型尚未连接；本地读屏可用，配置后就能生成。",
+                model.configured()
+                    ? (!advisor.images().isEmpty()
+                        ? "本次截图与必要资料交给图文模型，生成三种说法。"
+                        : "本地 OCR 文字与必要资料交给模型，生成三种说法。")
+                    : "登录豆豆账户后即可生成；本地读屏可用。",
                 12,
                 Ui.SUB);
         content.addView(info);
@@ -228,10 +264,10 @@ public final class AdvisorController extends PanelController {
           content.addView(
               Ui.primary(
                   this,
-                  model.configured() ? "生成三条回复" : "去配置文字模型",
+                  model.configured() ? "生成三条回复" : "登录豆豆账户",
                   () -> {
                     if (model.configured()) generate("");
-                    else settings("settings");
+                    else settings("account");
                   }));
       } else {
         for (int index = 0; index < replyHistory.replies().size(); index++) {
@@ -358,6 +394,7 @@ public final class AdvisorController extends PanelController {
         advisor.context(),
         goal,
         style,
+        app.prefs().getBoolean("advisorVision", false) ? advisor.images() : Collections.emptyList(),
         (out, error) -> {
           if (!advisor.valid(token, host.generation()) || gen != host.generation()) return;
           if (error != null) {
@@ -367,6 +404,27 @@ public final class AdvisorController extends PanelController {
             } else advisor.fail(error);
             advisorPanel();
             return;
+          }
+          if (app.prefs().getBoolean("history", true)) {
+            try {
+              org.json.JSONObject record =
+                  new org.json.JSONObject()
+                      .put("ocr", advisor.context())
+                      .put("intent", goal)
+                      .put("suggestions", new org.json.JSONArray(out))
+                      .put("selectedStyle", style)
+                      .put("state", "suggested-not-sent");
+              app.store.save(
+                  0,
+                  0,
+                  "history",
+                  0,
+                  "军师记录",
+                  record.toString(),
+                  "suggested-not-sent",
+                  "advisor-context:" + person.globalId);
+            } catch (Exception ignored) {
+            }
           }
           replyHistory.accept(out, style, !style.isEmpty());
           advisor.stage = AdvisorSession.Stage.RESULTS;

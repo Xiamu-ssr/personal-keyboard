@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="api-base" content="__API_BASE__" />
+    <title>豆豆输入法 · 后台</title>
+    <link rel="stylesheet" href="__API_BASE__/admin/admin.css" />
+  </head>
+  <body>
+    <header>
+      <a href="./">豆豆输入法 <span>Cloud</span></a
+      ><button id="logout" hidden>退出</button>
+    </header>
+    <main>
+      <form id="login">
+        <p class="eyebrow">运营后台</p>
+        <h1>欢迎回来。</h1>
+        <label
+          >管理密码<input
+            id="password"
+            type="password"
+            autocomplete="current-password"
+            required
+            maxlength="160" /></label
+        ><button>登录</button>
+      </form>
+      <section id="workspace" hidden>
+        <nav id="tabs">
+          <button data-view="overview" class="selected">概览</button
+          ><button data-view="users">用户与权益</button
+          ><button data-view="plans">套餐</button
+          ><button data-view="jobs">任务</button
+          ><button data-view="audits">审计</button>
+        </nav>
+        <div id="content"></div>
+      </section>
+      <p id="notice" role="status"></p>
+    </main>
+    <dialog id="editor">
+      <form method="dialog">
+        <h2 id="editor-title"></h2>
+        <div id="editor-fields"></div>
+        <div class="actions">
+          <button value="cancel">取消</button
+          ><button id="save" value="default">保存</button>
+        </div>
+      </form>
+    </dialog>
+    <script src="__API_BASE__/admin/admin.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "@doudou/keyboard-cloud",
+  "private": true,
+  "version": "0.4.0-alpha.1",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "pg": "8.16.3",
+    "ws": "8.22.0"
+  }
+}

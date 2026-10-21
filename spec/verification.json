@@ -1,153 +1,108 @@
 {
-  "reviewedAt": "2026-10-21T07:44:42.893909+00:00",
-  "version": "0.3.0-alpha.1",
-  "status": "0.3 原生界面已验收；公开页面提供原生截图、两段实际操作录屏与 APK 下载，在线试用已取消；专用 ASR 和模型待联调。",
+  "reviewedAt": "2026-10-21T11:58:57.274146+00:00",
+  "version": "0.4.0-alpha.1",
+  "status": "App and PostgreSQL Cloud implemented and deployed; external services and payments pending.",
   "checks": [
     {
-      "name": "真实 JNI 解码与核心状态",
+      "name": "JVM and JNI state",
       "status": "passed",
-      "tests": 24,
-      "failures": 0,
-      "nativeBoundaryCases": 2014,
-      "sanitizers": [
-        "AddressSanitizer",
-        "UndefinedBehaviorSanitizer"
-      ],
-      "nativeBoundaryEvidence": "2014 sanitizer cases passed in 0.2; JNI unchanged, sanitizer not rerun this iteration."
+      "tests": 25,
+      "failures": 0
     },
     {
-      "name": "APK 构建、签名与 Android lint",
+      "name": "Android build, signing and lint",
       "status": "passed",
       "artifact": {
         "package": "app.doudou.ime",
-        "version": "0.3.0-alpha.1",
-        "sha256": "272d4f016315ea9209dd1a37e418efe3af78bd80c03653958060e0841fb492db",
-        "bytes": 36841381,
+        "version": "0.4.0-alpha.1",
+        "sha256": "2fdd58cf38c097ddac7be412edad0f148fc7640b01c6c7654b5943179c3c631b",
+        "bytes": 39523452,
         "buildType": "debug",
         "production": false,
         "modelsBundled": false
       },
-      "lintErrors": 0
+      "lintErrors": 0,
+      "sameSignerAsPrevious": true
     },
     {
-      "name": "独立 Android 15 / API 35 虚拟机",
+      "name": "Android 15 API 35 instrumentation",
       "status": "passed",
-      "tests": 12,
+      "tests": 18,
       "failures": 0,
       "realDevice": false,
       "realModel": false,
-      "displayPx": [
-        1080,
-        2340
-      ],
-      "keyboardContentDp": 284,
-      "captureContentDp": 76,
-      "flows": [
-        "真实拼音整句 / 简拼六六六 / 候选展开 / 退格换行",
-        "按需工具格 / 真实语音错误与返回",
-        "主动缩矮截屏 / 本地 OCR / 修正 / 取消 / 草稿保护",
-        "资料修订 / 检索 / 删除撤销 / 人物与管理页",
-        "SQLite 持久化 / 版本冲突 / 人物删除恢复 / 备份 / 历史保留"
-      ],
-      "screenshots": "仅本 App 练习区和可识别的测试资料，已人工检查无账号、密钥或私聊"
+      "normalPublicIpTlsVerified": true
     },
     {
-      "name": "本轮虚拟机收尾",
+      "name": "Cloud with isolated PostgreSQL and test providers",
       "status": "passed",
-      "processStopped": true,
-      "portsCleared": true,
-      "realPhoneTouched": false,
-      "memoryMb": 1536,
-      "cores": 2,
-      "installedArtifactSource": "Same APK source file installed for tests and published."
+      "tests": 5,
+      "failures": 0,
+      "realDatabase": true,
+      "realSuppliers": false
     },
     {
-      "name": "产品世界与本地宿主",
+      "name": "Domain graph and local host",
       "status": "passed",
-      "tests": 10,
-      "domains": 7,
-      "capabilities": 12,
-      "relations": 9,
-      "ownedObjects": 10,
-      "documents": 10
+      "tests": 5,
+      "graphs": 2,
+      "domains": 5,
+      "domainPairsPerGraph": 4,
+      "maxDirectedLinesPerPair": 2,
+      "mobileWidth": 390
     },
     {
-      "name": "公网 HTTPS 操作真实 APK · 历史验收",
+      "name": "Owned local resources cleanup",
       "status": "passed",
-      "android": "Android 15 / API 35",
-      "stream": "scrcpy 3.3.3 + Tango + WebCodecs",
-      "flows": [
-        "open native practice page",
-        "touch nihao and choose Chinese candidate",
-        "open native voice panel",
-        "stop emulator and verify ports 5580/5581/8561 cleared"
-      ],
-      "privacy": "All eight screenshots manually reviewed; only local practice and test data.",
-      "microphoneForwarding": false,
-      "dedicatedAsrConfigured": false,
-      "availability": "retired",
-      "retiredReason": "User rejected public access to the personal Mac. LaunchAgent disabled, reverse tunnel stopped, old public route returns 410."
-    },
-    {
-      "name": "真实云端 ASR、模型与自动记忆抽取",
-      "status": "pending",
-      "reason": "没有配置账号或购买额度；系统语音接口与模型适配器不等于准确率及个性化质量验收。"
-    },
-    {
-      "name": "本版 OPPO 与聊天 App 兼容性",
-      "status": "pending",
-      "reason": "User requested emulator; previous phone evidence does not verify current build."
-    },
-    {
-      "name": "关闭个人 Mac 公网演示",
-      "status": "passed",
-      "publicRouteHttp": 410,
-      "sessionRouteHttp": 410,
-      "launchAgentDisabled": true,
-      "macPortsClosed": [
-        5580,
-        5581,
-        8561,
-        8562
-      ],
-      "ecsTunnelPortClosed": 18562,
-      "staticSpecHttp": 200,
-      "apkChanged": false
-    },
-    {
-      "name": "公开 APK 截图与操作录屏",
-      "status": "passed",
-      "source": "Android 15 running the published 0.3.0-alpha.1 APK",
-      "recordings": [
-        {
-          "file": "keyboard-tour.mp4",
-          "seconds": 15.5,
-          "flows": [
-            "pinyin keys and Chinese candidate commit",
-            "tools grid",
-            "native voice panel"
-          ]
-        },
-        {
-          "file": "advisor-tour.mp4",
-          "seconds": 8.25,
-          "flows": [
-            "shrink and capture",
-            "local OCR text",
-            "return and preserve draft"
-          ]
-        }
-      ],
-      "privacy": "Fresh local practice only; recordings and contact sheets reviewed. No real accounts or private chats.",
-      "cloudAsrOrRepliesFabricated": false,
       "emulatorStopped": true,
-      "ownedPortsCleared": [
+      "emulatorPortsCleared": [
         5580,
-        5581,
-        8561,
-        8562
+        5581
       ],
-      "publicDeviceHost": false
+      "disposableDatabaseRemoved": true,
+      "realPhoneTouched": false
+    },
+    {
+      "name": "ECS production deployment",
+      "status": "passed",
+      "containers": [
+        "api",
+        "database"
+      ],
+      "tls": true,
+      "supplierCredentialsConfigured": false,
+      "smsConfigured": false,
+      "purchasesEnabled": false
+    },
+    {
+      "name": "Native media",
+      "status": "passed",
+      "screenshots": 9,
+      "recordings": {
+        "keyboard-tour.mp4": {
+          "sha256": "a3f83a69a66e03d6dab0004bbf8f84d772ca8da910048e648eb4fe4d4a8fbc0b",
+          "bytes": 176280,
+          "durationSeconds": 7.53,
+          "width": 720,
+          "height": 1560,
+          "codec": "h264"
+        },
+        "advisor-tour.mp4": {
+          "sha256": "bcf01f5f12ea004bf8922384ea0fcaf975cec0b6aa776add8bc09d521aa94101",
+          "bytes": 96258,
+          "durationSeconds": 2.388,
+          "width": 720,
+          "height": 1560,
+          "codec": "h264"
+        }
+      },
+      "containsPrivateChats": false,
+      "publicAndroidHost": false
+    },
+    {
+      "name": "Phone, actual suppliers and payments",
+      "status": "pending",
+      "reason": "Enterprise SMS qualification, supplier configuration, merchant setup and physical phone acceptance remain."
     }
   ]
 }

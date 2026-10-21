@@ -21,6 +21,7 @@ public final class MainActivity extends Activity implements Navigator {
   private MemoryScreen memory;
   private PeopleScreen people;
   private SettingsScreen settings;
+  private app.doudou.ime.account.AccountScreen account;
 
   @Override
   public void onCreate(Bundle state) {
@@ -32,6 +33,7 @@ public final class MainActivity extends Activity implements Navigator {
     memory = new MemoryScreen(this, app, this);
     people = new PeopleScreen(this, app, this);
     settings = new SettingsScreen(this, app, this);
+    account = new app.doudou.ime.account.AccountScreen(this, app, this);
     if (state != null) {
       page = state.getString("page", "home");
       person = state.getLong("person");
@@ -87,22 +89,24 @@ public final class MainActivity extends Activity implements Navigator {
     root.setBackgroundColor(Ui.BG);
     LinearLayout heading = Ui.row(this);
     Ui.pad(this, heading, 20, 10);
-    if (page.equals("person"))
+    if (page.equals("person") || page.equals("account"))
       heading.addView(
-          Ui.icon(this, "返回", () -> open("people", 0)),
+          Ui.icon(this, "返回", () -> open(page.equals("account") ? "settings" : "people", 0)),
           new LinearLayout.LayoutParams(Ui.dp(this, 36), Ui.dp(this, 48)));
     String title =
         page.equals("home")
             ? "豆豆输入法"
             : page.equals("memory")
                 ? "我的记忆"
-                : page.equals("people") ? "人物关系" : page.equals("person") ? "人物资料" : "设置";
+                : page.equals("people")
+                    ? "人物关系"
+                    : page.equals("person") ? "人物资料" : page.equals("account") ? "账户与权益" : "设置";
     TextView label = Ui.text(this, title, 28, Ui.INK);
     label.setTypeface(null, android.graphics.Typeface.BOLD);
     heading.addView(label, new LinearLayout.LayoutParams(0, Ui.dp(this, 54), 1));
     label.setGravity(Gravity.CENTER_VERTICAL);
     if (page.equals("home")) {
-      TextView mark = Ui.text(this, "0.3", 11, Ui.ACCENT);
+      TextView mark = Ui.text(this, "0.4", 11, Ui.ACCENT);
       Ui.pad(this, mark, 10, 6);
       mark.setBackground(Ui.bg(this, Ui.SELECTED, 20));
       heading.addView(mark);
@@ -120,7 +124,8 @@ public final class MainActivity extends Activity implements Navigator {
     else if (page.equals("people") || page.equals("person")) {
       people.person(person);
       people.render(body);
-    } else settings.render(body);
+    } else if (page.equals("account")) account.render(body);
+    else settings.render(body);
     notice = Ui.col(this);
     Ui.pad(this, notice, 20, 0);
     root.addView(notice);
@@ -133,7 +138,10 @@ public final class MainActivity extends Activity implements Navigator {
         routes = {"home", "memory", "people", "settings"};
     for (int i = 0; i < labels.length; i++) {
       final String route = routes[i];
-      boolean selected = page.equals(route) || (page.equals("person") && route.equals("people"));
+      boolean selected =
+          page.equals(route)
+              || (page.equals("person") && route.equals("people"))
+              || (page.equals("account") && route.equals("settings"));
       nav.addView(
           Ui.nav(this, labels[i], icons[i], selected, () -> open(route, 0)),
           new LinearLayout.LayoutParams(0, Ui.dp(this, 58), 1));

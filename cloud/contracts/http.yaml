@@ -1,123 +1,45 @@
-version: 1
-status: target-contract-not-live
+version: 2
+status: implemented-provider-configuration-pending
+base: https://106.14.73.99/keyboard-api
 identity:
   domestic: phone-sms-code
-  international: google-sign-in
+  international: deferred
   accountId: stable-product-user-id
-  binding: existing identity proof required; never merge by display name
-  tokens: short-lived access token; rotating refresh token stored hashed server-side
+  sessions: short-access-token-and-rotating-hashed-refresh
 entitlements:
-  welcome: once-per-account
   catalog: ../config/plans.json
-  workflow: authenticate -> reserve -> invoke -> settle-or-release -> return
-  retry: same user and idempotency key restores original job and result
-  persistence: PostgreSQL transaction, per-account balance lock, unique job and grant keys
-  capacity: bound duration and output before invoking; never expose more than reserved allowance
+  welcome: once-per-account
+  persistence: PostgreSQL-account-lock-and-unique-keys
+  retry: same-user-requestId-and-payload-reuses-job
 routes:
-  - {
-      method: POST,
-      path: /v1/auth/sms/challenges,
-      auth: rate-limit-and-risk-check,
-      purpose: send expiring code through configured provider,
-    }
-  - {
-      method: POST,
-      path: /v1/auth/sms/verify,
-      auth: single-use-code,
-      purpose: issue product session and idempotent welcome grant,
-    }
-  - {
-      method: POST,
-      path: /v1/auth/google,
-      auth: verify-id-token-signature-audience-issuer-and-nonce,
-      purpose: issue the same product user identity,
-    }
-  - {
-      method: GET,
-      path: /v1/me/entitlements,
-      auth: product-user,
-      purpose: current grants and available balance,
-    }
-  - {
-      method: GET,
-      path: /v1/catalog,
-      auth: public,
-      purpose: published offers only,
-    }
-  - {
-      method: WS,
-      path: /v1/asr/sessions,
-      auth: short-lived-user-session-ticket,
-      purpose: bounded ASR stream and final character settlement,
-    }
-  - {
-      method: POST,
-      path: /v1/voice/rewrite,
-      auth: product-user,
-      purpose: optional rewrite with task ownership and cost budget,
-    }
-  - {
-      method: POST,
-      path: /v1/advisor/jobs,
-      auth: product-user,
-      purpose: reserve one generation and return three styles,
-    }
-  - {
-      method: POST,
-      path: /v1/memory/jobs,
-      auth: product-user,
-      purpose: bounded incremental proposals with source revision,
-    }
-  - {
-      method: POST,
-      path: /v1/sync/batches,
-      auth: cloud-sync-entitlement,
-      purpose: private tenant-scoped encrypted bundles,
-    }
-  - {
-      method: GET,
-      path: /v1/sync/manifest,
-      auth: account-ownership-and-active-or-export-retention-window,
-      purpose: incremental restore and tombstones,
-    }
-  - {
-      method: POST,
-      path: /v1/orders,
-      auth: product-user,
-      purpose: server-priced order with product and policy version,
-    }
-  - {
-      method: POST,
-      path: /v1/payments/notifications,
-      auth: verified-provider-signature-and-transaction,
-      purpose: idempotent entitlement grant,
-    }
-  - {
-      method: GET,
-      path: /admin/users,
-      auth: operator-with-mfa,
-      purpose: masked account status and entitlement ledger,
-    }
-  - {
-      method: GET,
-      path: /admin/usage,
-      auth: operator-with-mfa,
-      purpose: user-visible units versus provider tokens audio seconds and cost,
-    }
-  - {
-      method: POST,
-      path: /admin/plans/versions,
-      auth: operator-with-mfa,
-      purpose: draft and explicitly publish immutable policy version with audit,
-    }
-  - {
-      method: POST,
-      path: /admin/prompts/versions,
-      auth: operator-with-mfa,
-      purpose: review publish and rollback task prompt version,
-    }
+  - {method: GET, path: /healthz, auth: public}
+  - {method: GET, path: /v1/catalog, auth: public}
+  - {method: POST, path: /v1/auth/challenges, auth: phone-ip-and-global-rate-limit}
+  - {method: POST, path: /v1/auth/verify, auth: single-use-code}
+  - {method: POST, path: /v1/auth/refresh, auth: rotating-refresh-token}
+  - {method: POST, path: /v1/auth/logout, auth: product-user}
+  - {method: GET, path: /v1/account, auth: product-user}
+  - {method: POST, path: /v1/account/delete, auth: recently-sms-verified-user-and-explicit-confirmation}
+  - {method: WS, path: /v1/asr, auth: authorization-bearer-header}
+  - {method: POST, path: /v1/jobs, kinds: [rewrite, advisor, memory], auth: product-user}
+  - {method: GET, path: /v1/jobs/{id}, auth: owning-user}
+  - {method: POST, path: /v1/jobs/{id}/cancel, auth: owning-user}
+  - {method: POST, path: /v1/sync/key, auth: paid-sync-and-recent-sms-verification}
+  - {method: GET, path: /v1/sync, auth: paid-sync-owning-user}
+  - {method: PUT, path: /v1/sync, auth: paid-sync-and-manifest-baseRevision}
+  - {method: DELETE, path: /v1/sync, auth: owning-user}
+  - {method: POST, path: /v1/orders, status: disabled-until-pricing-and-merchant-integration}
+  - {method: GET, path: /admin/, auth: independent-admin-login}
+  - {method: GET, path: /admin/api/overview, auth: admin-session}
+  - {method: GET, path: /admin/api/users, auth: admin-session}
+  - {method: POST, path: /admin/api/grants, auth: admin-session-csrf-and-audit-reason}
+  - {method: GET, path: /admin/api/plans, auth: admin-session}
+  - {method: POST, path: /admin/api/plans, auth: admin-session-csrf-draft-only}
+  - {method: POST, path: /admin/api/plans/publish, auth: admin-session-csrf}
+  - {method: GET, path: /admin/api/jobs, auth: admin-session}
+  - {method: GET, path: /admin/api/audits, auth: admin-session}
 privacy:
-  storage: local authoritative; paid managed encrypted sync; no screenshot archive
-  logs: request IDs and usage metadata; no default raw OCR transcripts codes or provider secrets
-  admin: no automatic access to private conversation content or encryption keys
-  deletedOrExpiredSubscription: local data remains; sync writes denied; export and retention policy explicit
+  imagesAndAudio: memory-only
+  transientJobText: encrypted-24h-recovery-cache
+  logs: metadata-no-private-text-or-credentials
+  sync: account-bound-encrypted-backups-not-end-to-end-encryption

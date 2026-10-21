@@ -1,21 +1,21 @@
 {
-  "version": "0.3.0-alpha.1",
-  "sourceApkSha256": "272d4f016315ea9209dd1a37e418efe3af78bd80c03653958060e0841fb492db",
-  "source": "Actual Android 15 APK screen recordings; local practice and test data only.",
+  "version": "0.4.0-alpha.1",
+  "sourceApkSha256": "2fdd58cf38c097ddac7be412edad0f148fc7640b01c6c7654b5943179c3c631b",
+  "source": "Actual Android 15 APK recordings of local practice; wait and launcher segments removed.",
   "cloudModelsConfigured": false,
   "files": {
     "keyboard-tour.mp4": {
-      "sha256": "4e51ff460fdb19a9de5fc764553ee39c4ecda705e41f3a48d426e8afc214ac0b",
-      "bytes": 162933,
-      "durationSeconds": 15.5,
+      "sha256": "a3f83a69a66e03d6dab0004bbf8f84d772ca8da910048e648eb4fe4d4a8fbc0b",
+      "bytes": 176280,
+      "durationSeconds": 7.53,
       "width": 720,
       "height": 1560,
       "codec": "h264"
     },
     "advisor-tour.mp4": {
-      "sha256": "8b118e9d974f511e1c1e65db078c1a93cf425f0e290c05e49d4968c698b6b43a",
-      "bytes": 100458,
-      "durationSeconds": 8.25,
+      "sha256": "bcf01f5f12ea004bf8922384ea0fcaf975cec0b6aa776add8bc09d521aa94101",
+      "bytes": 96258,
+      "durationSeconds": 2.388,
       "width": 720,
       "height": 1560,
       "codec": "h264"

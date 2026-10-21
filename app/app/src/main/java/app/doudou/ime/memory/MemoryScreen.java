@@ -96,7 +96,9 @@ public final class MemoryScreen extends Screen {
   private void fill() {
     results.removeAllViews();
     List<MemoryStore.Item> found = new ArrayList<>();
-    for (MemoryStore.Item item : app.store.list(tab, 0))
+    List<MemoryStore.Item> candidates = new ArrayList<>(app.store.list(tab, 0));
+    if (tab.equals("feedback")) candidates.addAll(app.store.list("proposal", 0));
+    for (MemoryStore.Item item : candidates)
       if ((item.title + item.body)
           .toLowerCase(Locale.ROOT)
           .contains(query.toLowerCase(Locale.ROOT))) found.add(item);
@@ -132,6 +134,36 @@ public final class MemoryScreen extends Screen {
   }
 
   private void open(MemoryStore.Item item) {
+    if (item.kind.equals("proposal")) {
+      try {
+        org.json.JSONObject p = new org.json.JSONObject(item.body);
+        new AlertDialog.Builder(activity)
+            .setTitle("确认学习建议")
+            .setMessage(p.getString("content") + "\n\n" + p.optString("reason") + "\n仅新增，不覆盖手动修订。")
+            .setPositiveButton(
+                "采纳",
+                (d, w) -> {
+                  try {
+                    app.store.acceptProposal(item);
+                    nav.refresh();
+                  } catch (Exception e) {
+                    Ui.toast(activity, e.getMessage());
+                  }
+                })
+            .setNeutralButton(
+                "忽略",
+                (d, w) -> {
+                  app.store.delete(item.id);
+                  nav.refresh();
+                })
+            .setNegativeButton("返回", null)
+            .show();
+      } catch (Exception e) {
+        Ui.toast(activity, "候选格式不正确，原资料保留");
+      }
+      return;
+    }
+
     if (tab.equals("word") || tab.equals("style")) {
       editor.edit(item, item.kind, item.owner);
       return;
@@ -145,7 +177,7 @@ public final class MemoryScreen extends Screen {
                     + MemoryEditor.sourceName(item.source)
                     + " · "
                     + Ui.when(item.updated));
-    if (tab.equals("feedback"))
+    if (tab.equals("feedback") && !item.source.startsWith("sync-conflict:"))
       d.setPositiveButton("确认为热词", (x, w) -> editor.edit(null, "word", 0, item.aux, ""));
     else
       d.setPositiveButton(

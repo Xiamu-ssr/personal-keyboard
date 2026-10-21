@@ -11,6 +11,12 @@
       }
     }
   },
-  "text": { "default": null, "routes": {} },
+  "text": {
+    "default": "qwen-flash",
+    "vision": "qwen3-vl-flash",
+    "transport": "openai-compatible",
+    "endpointRef": "BAILIAN_TEXT_BASE_URL",
+    "credentialRef": "BAILIAN_API_KEY"
+  },
   "note": "Fun-ASR 仅保留历史对照证据，不加入默认生产路由。商用不依赖个人 CPA 订阅额度。"
 }

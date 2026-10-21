@@ -11,6 +11,8 @@ import java.util.concurrent.*;
 public final class KeyboardApp extends Application {
   public static KeyboardApp instance;
   public MemoryStore store;
+  public app.doudou.ime.cloud.CloudClient cloud;
+  public app.doudou.ime.sync.ManagedSync sync;
   public final ExecutorService worker = Executors.newSingleThreadExecutor();
   public final ExecutorService network = Executors.newFixedThreadPool(2);
   public volatile PinyinEngine pinyin;
@@ -20,7 +22,21 @@ public final class KeyboardApp extends Application {
   public void onCreate() {
     super.onCreate();
     instance = this;
+    cloud = new app.doudou.ime.cloud.CloudClient(this);
     store = new MemoryStore(this);
+    sync = new app.doudou.ime.sync.ManagedSync(this);
+    if (prefs().getInt("productMigration", 0) < 4) {
+      getSharedPreferences("vault", MODE_PRIVATE).edit().clear().apply();
+      prefs()
+          .edit()
+          .remove("modelBase")
+          .remove("modelId")
+          .remove("modelAnthropic")
+          .remove("onlineVoice")
+          .putInt("productMigration", 4)
+          .apply();
+    }
+    app.doudou.ime.memory.LearningWorker.schedule(this);
     worker.execute(this::openDecoder);
     worker.execute(
         () -> {

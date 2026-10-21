@@ -55,7 +55,7 @@
       <section id="business-section" aria-label="业务图" hidden>
         <div class="business-heading">
           <div>
-            <p class="eyebrow">从操作到结果</p>
+            <p class="eyebrow">域与数据</p>
             <h1>业务图</h1>
           </div>
           <nav
@@ -71,36 +71,37 @@
           </div>
           <div id="domain-legend" class="domain-legend"></div>
         </div>
+        <div class="graph-tools">
+          <span>示意数据流 · 滚动卡片查看更早记录</span>
+          <div>
+            <button id="pause-streams">暂停动画</button
+            ><button id="zoom-out" aria-label="缩小">−</button
+            ><span id="zoom-level">100%</span
+            ><button id="zoom-in" aria-label="放大">＋</button
+            ><button id="zoom-fit">全图</button>
+          </div>
+        </div>
         <div
           id="graph-scroll"
           class="graph-scroll"
           tabindex="0"
-          aria-label="业务图画布，可横向滚动"
+          aria-label="域业务图画布，可双向滚动"
         >
-          <div id="graph-stage">
-            <div class="graph-band main-band">实时任务</div>
-            <div class="graph-band memory-band">
-              记忆更新
-              <span>按新增历史分批，约每 5 小时检查；无新增不调用。</span>
+          <div id="graph-size">
+            <div id="graph-stage">
+              <svg id="flow-wires" aria-label="域之间一来一回的数据关系"></svg>
+              <div id="flow-nodes"></div>
+              <div id="flow-streams"></div>
             </div>
-            <svg id="flow-wires" aria-label="有向业务关系"></svg>
-            <div id="flow-nodes"></div>
           </div>
         </div>
         <div class="graph-footer">
-          <span
-            ><i></i> 主流程　<span class="dash">┄</span> 可选步骤　<span
-              class="dot-line"
-              >┄</span
-            >
-            记忆更新</span
-          ><button data-doc="memory-and-sync">本地数据与付费云同步 ↗</button>
+          <span>大域内是能力；两域之间最多一来一回。</span
+          ><button data-doc="memory-and-sync">数据与记忆约定 ↗</button>
         </div>
       </section>
       <footer class="implementation-note">
-        <span
-          >当前 APK 为原生预览版；图中商业
-          Cloud、登录、支付与云同步尚未上线。</span
+        <span>0.4 开发版 · 短信资质、供应商凭据与商户支付仍需配置。</span
         ><button data-doc="implementation">查看当前实现 ↗</button>
       </footer>
     </main>
@@ -197,7 +198,9 @@
         ><button data-image="people.png" aria-pressed="false">
           <img src="./demo/people.png" alt="" /><span>人物</span></button
         ><button data-image="settings.png" aria-pressed="false">
-          <img src="./demo/settings.png" alt="" /><span>设置</span>
+          <img src="./demo/settings.png" alt="" /><span>设置</span></button
+        ><button data-image="account.png" aria-pressed="false">
+          <img src="./demo/account.png" alt="" /><span>账户与权益</span>
         </button>
       </nav>
     </dialog>

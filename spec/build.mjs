@@ -58,7 +58,7 @@ const output = template
   .replace(
     "<!-- SPEC_SCRIPT -->",
     "<script>" +
-      world.replaceAll("export function", "function") +
+      world.replaceAll("export function", "function").replaceAll("export class", "class") +
       "\n" +
       script +
       "\n" +
