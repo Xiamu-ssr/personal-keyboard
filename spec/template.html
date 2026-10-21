@@ -153,9 +153,8 @@
       </div>
       <p class="notice">
         先配两项：ASR + 一个共用文本模型。ZenMux 已有 Qwen ASR 转写接口；
-        边说边出字先测百炼原生实时接口。Paraformer 北京原价 ¥0.864 / 小时，
-        免费额度以账号为准。语音 20 元节省计划为 9.8 折，有效期 6 个月；
-        小用量先按量使用。<a href="#docs" data-doc="models-and-cost"
+        中文实时输入首选 Fun-ASR Realtime，北京原价 ¥1.188 / 小时。
+        10 小时试用有资格与期限，小用量先按量使用。<a href="#docs" data-doc="models-and-cost"
           >查看开通步骤与套餐比较 ↗</a
         >
       </p>
@@ -184,7 +183,7 @@
               <option value="paraformer">
                 Paraformer 实时 · ¥0.864 / 小时
               </option>
-              <option value="funasr">Fun-ASR 实时 · ¥1.188 / 小时</option>
+              <option value="funasr" selected>Fun-ASR 实时 · ¥1.188 / 小时</option>
             </select></label
           ><label
             >文本模型<select id="text-model">
@@ -196,13 +195,13 @@
               </option>
             </select></label
           ><label class="consent"
-            ><input id="free-hours" type="checkbox" />我的账户确有当月 10
-            小时语音免费额度</label
+            ><input id="free-hours" type="checkbox" />我的账户本次确有可用的 10
+            小时免费额度（有期限）</label
           >
         </div>
         <div class="cost-result">
           <div>每月估算 · 人民币</div>
-          <strong id="cost-total">¥17.27</strong>
+          <strong id="cost-total">¥22.13</strong>
           <dl id="cost-details"></dl>
           <p>
             按 30 天、每次军师输入 3,000 / 输出 600 token；另含每天 60
@@ -212,7 +211,7 @@
         </div>
       </div>
       <p class="source-line">
-        核验于 2026-10-20：<a
+        核验于 2026-10-21：<a
           href="https://help.aliyun.com/zh/model-studio/model-pricing"
           target="_blank"
           rel="noreferrer"

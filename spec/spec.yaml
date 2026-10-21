@@ -1,7 +1,7 @@
 meta:
   title: 豆豆输入法
   subtitle: 产品世界 · 业务与技术
-  version: 0.2.0-alpha.1
+  version: 0.3.0-alpha.1
   reviewedAt: 2026-10-21
   status: 原生自用预览版；模型配置待后续联调
 layout:
@@ -216,12 +216,12 @@ domains:
     chips:
       - id: models_asr
         name: 中文 ASR
-        desc: Qwen-ASR / 系统识别
+        desc: Fun-ASR / 系统识别
         business:
           - 转写，并补标点、规范数字等；热词辅助识别。
           - 按个人文风改写整句由后续文本模型完成。
         technical:
-          - 当前用系统识别；Qwen-ASR 为待接入基线，转写与个性整理分开。
+          - 当前用系统识别；Fun-ASR 实时为待接入首选，转写与个性整理分开。
         documents:
           - models-and-cost
       - id: models_text
@@ -237,7 +237,7 @@ domains:
           - reply-prompt
       - id: models_budget
         name: 采购与成本
-        desc: ¥17.27 / 月 · 默认用量估算
+        desc: ¥22.13 / 月 · 默认用量估算
         business:
           - 每天30分钟语音和100次军师；服务器、重试与税费另计。
           - 免费额度按账户资格，不能作为无限生产资源。

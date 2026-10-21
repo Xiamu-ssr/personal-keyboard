@@ -4,7 +4,7 @@ export function estimateCost({
   voiceEditsPerDay = 60,
   extractsPerDay = 100,
   days = 30,
-  asr = "paraformer",
+  asr = "funasr",
   model = "qwen3.7-flash",
   freeHours = 0,
 } = {}) {
