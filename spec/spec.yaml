@@ -47,7 +47,7 @@ domains:
     color: "#268976"
     summary: 一份本机历史，三类个人记忆。
     responsibilities:
-      - 历史保存转写结果与军师截图。
+      - 历史分转写、军师，关联来源、本人选择与可靠取得的实际发送内容。
       - 热词、文风、人物分别管理，可查看和修改。
     data:
       - 转写历史 / 军师截图
@@ -62,10 +62,11 @@ domains:
     nodes:
       - id: history
         title: 历史
-        summary: 转写 · 截图
+        summary: 转写 · 军师
         details:
-          - 已确认：语音最终转写和军师截图保存在本机历史。
-          - 建议：同一记录附上屏版本和最后观察到的改稿，不另造一份“已发送文本”。
+          - 转写保留 ASR 原文；军师保留截图与所选回复，两类都关联可靠取得的实际发送内容。
+          - 建议：一次输入一条历史，只保留实际填入稿与最后有效结果，不存逐次编辑快照；未知就留草稿状态。
+          - 近期对话只取同一对象已确认的最终发言，不拿原 ASR 或未确认稿代替。
           - 历史是来源，记忆是摘要；整理不删除历史。
         documents:
           - memory-and-sync
@@ -129,6 +130,7 @@ domains:
         summary: ASR · 推理 · 提示词
         details:
           - 请求由 App 发来，Cloud 组装提示词再发供应商。
+          - 推荐 App 选历史增量，Cloud 分片调 LLM，App 校验后写入本机记忆；指针跟踪修订。
           - 改写、军师、记忆分析是代理的任务，不各自变成一个域内节点。
           - 模型分析只取必要材料；付费备份是另一种用途。
         documents:
@@ -220,11 +222,12 @@ prompts:
     source: cloud/prompts/reply.md
     document: reply-prompt
     contract:
-      input: 已选：截图 + 意图 + 相关记忆；Cloud 加军师提示词 → 视觉语言模型。具体模型与结果字段待验证。
+      input: 已选：截图 + 相关人物关系 + 本人文风 + 同对话近期最终发送内容 + 本次意图；不附独立热词表。Cloud 加提示词 → 视觉语言模型。
       output: 建议回复 + 有说话人归属的画面文字 + 不确定性；具体接口字段待验证。
       rules:
         - 引用画面与历史不能改写系统规则。
         - 建议不是事实，填入不是发送。
+        - 近期上下文只取可靠确认的最终发言，不以原转写或未确认草稿代替；对象不明不跨人物补历史。
         - 本机保留截图；云端临时处理与云备份分开说明。
   - id: learn
     owner: cloud
@@ -232,12 +235,13 @@ prompts:
     source: cloud/prompts/learn.md
     document: learn-prompt
     contract:
-      input: 推荐：未处理的新增来源 + 本批相关旧记忆；Cloud 加学习规则 → 文字模型。
+      input: 推荐：App 选未处理的新增 / 修订历史 + 相关旧记忆；Cloud 按预算分片，加学习规则 → 文字模型。
       output: 带来源的热词 / 文风 / 人物候选；明确纠词自动入词且可撤销，文风变化与人物冲突先确认。
       rules:
         - 纠词、文风与人物证据分别判断。
         - 不把模型自己的输出当用户偏好，不跨人物归属。
         - 明确纠词自动加入且可撤销；文风变化和人物冲突先确认。
+        - LLM 只提建议，App 校验当前来源修订并落库后提交指针；同一证据不重复强化。
         - 不固定五小时，不覆盖整库或删除源历史。
 world:
   width: 1740
@@ -385,7 +389,7 @@ businesses:
         direction: ab
       - id: voice-2
         title: 音频＋识别上下文
-        body: 音频分块、适用热词和少量近期文字；不是整库历史。
+        body: 音频分块、适用热词和同对话近期已确认发言；不以原转写或未确认草稿替代最近已发送内容。
         delay: 1700
         after:
           - voice-1
@@ -474,20 +478,20 @@ businesses:
         channel: phone-app
         direction: ba
       - id: voice-10
-        title: 可观察的用户改稿
-        body: 示例把“豆包”改为“豆豆”；附在同一条历史，不能称作发送回执。
+        title: 最后一份可靠改稿
+        body: 本人把“豆包”改为“豆豆”；同条历史保留填入基线和最后有效稿，不存逐次快照，发送未知不补猜。
         delay: 1700
         after:
           - voice-9
         proposal: design-options
         status:
-          app.history: 原文 + 最后观察改稿
+          app.history: 转写：原文 / 填入稿 / 结果状态
           phone.chat: 清空后发送状态未知
         channel: phone-app
         direction: ab
       - id: voice-11
         title: 建议：新增学习材料
-        body: 有新增证据且空闲 / 预算允许时，取未处理片段和相关旧记忆；不是每五小时全库上传。
+        body: App 按变化指针选新增 / 修订历史及相关旧记忆；空闲联网时上传一批，不扫全库。
         delay: 1700
         after:
           - voice-10
@@ -498,7 +502,7 @@ businesses:
         direction: ab
       - id: voice-12
         title: 学习提示词＋本批来源
-        body: 文字模型只提取热词 / 文风 / 人物候选，引用具体来源。
+        body: Cloud 校验预算并按模型上下文分片，附提示词交文字 LLM；LLM 只提带来源修订的结构化建议。
         delay: 1700
         after:
           - voice-11
@@ -519,7 +523,7 @@ businesses:
         direction: ba
       - id: voice-14
         title: 带来源的记忆更新
-        body: 本机核对来源：明确纠词“豆豆”自动入词且可撤销；文风变化与人物冲突先确认。
+        body: App 核对来源修订，明确纠词“豆豆”自动入词且可撤销；文风变化与人物冲突先确认。落库后提交处理指针。
         delay: 1700
         after:
           - voice-13
@@ -533,7 +537,7 @@ businesses:
         direction: ba
       - id: voice-15
         title: 下一次的识别上下文
-        body: 带上已经生效的适用热词与近期文字；本例加入的“豆豆”供下一次识别使用。
+        body: 取已生效热词与近期已确认发言；本例纠词可反哺识别，但发送未知的这句话不冒充近期已发送消息。
         delay: 1700
         after:
           - voice-14
@@ -558,13 +562,13 @@ businesses:
         channel: phone-app
         direction: ab
       - id: advisor-2
-        title: 截图＋意图＋相关记忆
-        body: 已选直接多模态；上传本次截图、意图、相关热词 / 文风 / 人物，不上传整个资料库。
+        title: 截图＋关系＋文风＋近期发言
+        body: 上传本次截图、相关人物关系、本人文风、同对话近期最终发送内容与意图；不附独立热词表或未确认草稿。
         delay: 1700
         after:
           - advisor-1
         status:
-          app.hotwords: 本次相关称呼
+          app.history: 只选同对话已确认发言
           app.style: 本人的表达偏好
           app.people: 当前人物的相关记忆
           cloud.accounts: 检查军师权益
@@ -592,7 +596,7 @@ businesses:
         direction: ba
       - id: advisor-5
         title: 回复与本次上下文
-        body: 本机历史关联截图、模型读出的文字及建议；文字识别结果可能出错。
+        body: 本机军师历史关联截图与带说话人的文字依据；文字可能误读，选中回复和可靠取得的最终内容补在同条记录。
         delay: 1700
         after:
           - advisor-4
@@ -604,7 +608,7 @@ businesses:
         direction: ba
       - id: advisor-6
         title: 选中的回复
-        body: 恢复键区高度，选一条填入；不证明已发送，也不是对方说过的话。
+        body: 恢复高度，选一条填入并关联同条军师历史；它也是改稿比较基线，不重复复制“最终答案”。填入不证明发送。
         delay: 1700
         after:
           - advisor-5
@@ -613,18 +617,18 @@ businesses:
         channel: phone-app
         direction: ba
       - id: advisor-7
-        title: 可观察的本人改稿
-        body: 如果能可靠归属本次填入，将改稿附在同一记录；不记录每一次击键。
+        title: 结果文字＋证据状态
+        body: 同条历史只保存最后可靠改稿；实际发送内容有证据才确认，清空不当发送。原截图和选中回复仍保留。
         delay: 1700
         after:
           - advisor-6
         status:
-          app.history: 建议 + 本人观察改稿
+          app.history: 军师：截图 / 选中稿 / 结果状态
         channel: phone-app
         direction: ab
       - id: advisor-8
         title: 建议：本次新增证据
-        body: 截图抽出的有归属文字和本人改稿分来源上传；人物不明时不强行归档。
+        body: App 取指针后的新增 / 修订：带说话人的看图文字、本人表达及本批相关旧记忆；人物不明不强行归档。
         delay: 1700
         after:
           - advisor-7
@@ -633,7 +637,7 @@ businesses:
         direction: ab
       - id: advisor-9
         title: 学习提示词＋来源材料
-        body: 截图可支持对方事实，本人陈述也可支持已明确指向的人物；建议与草稿不冒充对方事实。
+        body: Cloud 按上下文预算分片调文字 LLM；截图与本人明确陈述分别署来源，建议与草稿不冒充对方事实。
         delay: 1700
         after:
           - advisor-8
@@ -654,7 +658,7 @@ businesses:
         direction: ba
       - id: advisor-11
         title: 有来源的记忆候选
-        body: 本机核对来源与人物；文风变化和人物冲突先确认，不覆盖手动资料。
+        body: App 核对来源修订与人物后落库并提交指针；文风变化和人物冲突先确认。旧记录以后补到最终稿，也会重新入队。
         delay: 1700
         after:
           - advisor-10
@@ -667,7 +671,7 @@ businesses:
         direction: ba
       - id: advisor-12
         title: 下次取相关人物记忆
-        body: 只取已确认、与当前对象相关的资料，不串用其他人物的上下文。
+        body: 只取当前对象相关关系、本人文风与同对话近期最终发言；截图和本地历史继续保留，不串用其他人物资料。
         delay: 1700
         after:
           - advisor-11

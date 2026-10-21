@@ -1,6 +1,6 @@
 # 对标与截图观察
 
-核验日期：2026-10-20。区分官方截图/产品说明、读过的代码和实际装机验证。第三方图片只用于观察，不作为自有产品截图发布。
+核验日期：2026-10-21。区分官方截图/产品说明、读过的代码和实际装机验证。第三方图片只用于观察，不作为自有产品截图发布。
 
 ## 交互参考
 
@@ -52,11 +52,19 @@ FlorisBoard 官方中文文档说明其音码算法不足，不推荐日常拼�
 | --- | --- | --- |
 | [Typeless 词典](https://www.typeless.com/help/quickstart/history-and-dictionary) | 听写后纠正词，偏好拼写自动加入词典；历史在设备上，可选保留期限 | 未披露底层监听算法；不能推成定期扫描全部历史 |
 | [Typeless 个性化](https://www.typeless.com/help/quickstart/personalization) | 声称逐渐学习措辞、正式程度、长短等抽象风格；可关闭学习 | 没公开更新周期、训练方式或五小时规则；说明不等于 Android 功能完全一致的实测 |
+| [Typeoff AI Enhancement](https://www.typeoff.ai/docs/guides/ai-enhancement) / [Features](https://www.typeoff.ai/docs/features) | 可选 ASR 后 AI 整理、按上下文 / 预设调整表达；纠词学习有 Ask / Auto / Off。云端流式，离线 Whisper 仅桌面 | 说话中的自我纠正与上屏后的纠词学习是两件事；未公开最终发送捕获机制或移动端全部细节 |
+| [豆包输入法隐私政策](https://lf3-cdn-tos.draftstatic.com/obj/ies-hotsoon-draft/wave_ime/ime_privacy_policy.html) / [官方 Android 商店说明](https://play.google.com/store/apps/details?id=com.bytedance.android.doubaoime) | 政策明确本地个人词库；云端语音可结合实体词、人名、部分输入 / 上屏文字与场景，登录后可跨端同步词库；Android 提供上下文联想、简拼与长句纠错 | 政策不是纠词算法源码，没有承诺所有 App 的最终发送文本可捕获；不能混同个性化与体验改进训练 |
 | [Wispr Flow 词典](https://docs.wisprflow.ai/articles/4052411709-Teach-Flow-your-words-with-the-dictionary) | 桌面端可选纠词学习，过滤普通词、URL、路径等；不是每个改字都入词典 | 平台有差异，不能把桌面监听能力套到安卓；词典偏好与字面替换是不同机制 |
 | [Wispr Flow Styles](https://docs.wisprflow.ai/articles/2368263928-how-to-setup-flow-styles) | 按应用场景选择格式风格 | 不是自动从全部历史学习完整人格的证据 |
 | [VoiceInk AutoLearnService](https://github.com/Beingpax/VoiceInk/blob/main/VoiceInk/Features/Dictionary/AutoLearn/AutoLearnService.swift) / [快照比较](https://github.com/Beingpax/VoiceInk/blob/main/VoiceInk/Features/Dictionary/AutoLearn/FinalSnapshotDiffEngine.swift) | 读取的源码包含插入范围 / 锚点、前后快照差异、候选队列与模型审核；候选入队后可触发审核，也支持手动 | 这套是桌面实现，不证明安卓能拿到所有发送前改稿 |
 
 推荐事件驱动与空闲合批，有工程先例：[LangMem 延迟处理](https://langchain-ai.github.io/langmem/guides/delayed_processing/)展示把连续活动合并后再反思；它的示例延迟不是我们产品的既定更新周期。
+
+这次补查的结论：词典、上下文识别、按场景整理与纠词学习已有多个产品实现，应作为基础能力。公开资料不足以还原这些闭源产品的完整算法；我们的最小历史、修订指针和 App / Cloud / LLM 分工是工程建议，不冒充竞品内部实现。VoiceInk 源码提供了本机候选队列 → 模型审核 → 本机词典应用的具体先例，不需要据此假设训练了个人模型。
+
+### 最终发送文本的边界
+
+[Android InputConnection](https://developer.android.com/reference/android/view/inputmethod/InputConnection#performEditorAction(int)) 的读取可能为空 / 截断，编辑动作返回值也不是聊天消息回执。因此不能声称跨 App 百分百抓到最终发送内容。我们的建议是保存一份最后有效改稿并保留证据状态，军师近期历史只选可确认的本人最终发言；原 ASR 仍是历史来源，不顶替已发送消息。对编辑的观察不等于为每次按键保存快照。
 
 ### OCR 与多模态
 
