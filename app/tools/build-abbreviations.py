@@ -20,7 +20,7 @@ for line in raw.splitlines():
  initials=''.join(x[0] for x in syllables)
  rows[(initials,word)]=(''.join(syllables),float(fields[1]))
 # Contemporary expressions are editable lexicon data, not special cases in the decoder.
-extra=ROOT/'android/app/src/main/assets/expressions.tsv'
+extra=ROOT/'app/app/src/main/assets/expressions.tsv'
 for line in extra.read_text().splitlines():
  if not line or line.startswith('#'):continue
  word,spelling,frequency=line.split('\t');syllables=spelling.split()
@@ -30,7 +30,7 @@ for (initials,word),(spelling,freq) in rows.items():groups.setdefault(initials,[
 lines=[]
 for code,entries in sorted(groups.items()):
  for word,spelling,freq in sorted(entries,key=lambda x:-x[2])[:48]:lines.append('\t'.join([code,word,spelling]))
-destination=ROOT/'android/app/src/main/assets/initials.tsv'
+destination=ROOT/'app/app/src/main/assets/initials.tsv'
 destination.write_text('\n'.join(lines)+'\n')
 meta={'entries':len(lines),'groups':len(groups),'bytes':destination.stat().st_size,'source_url':URL,'source_sha256':SHA,'index_sha256':hashlib.sha256(destination.read_bytes()).hexdigest(),'license':'Apache-2.0','max_candidates_per_initials':48}
 (destination.parent/'initials-info.json').write_text(json.dumps(meta,indent=2)+'\n')

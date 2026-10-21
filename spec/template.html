@@ -3,68 +3,128 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>豆豆输入法 · 产品世界</title>
+    <title>豆豆输入法 · 产品规格</title>
     <!-- SPEC_STYLE -->
   </head>
   <body>
     <header class="header">
-      <div class="brand">
-        <span class="brand-mark">豆</span>
-        <h1>豆豆输入法 <span>· Spec</span></h1>
-      </div>
+      <a class="brand" href="#domains"
+        ><span class="brand-mark">豆</span
+        ><strong>豆豆输入法 <span>产品规格</span></strong></a
+      >
       <div class="header-actions">
-        <button id="open-native" class="quiet">截图与动画</button
-        ><button id="open-library" class="quiet">约定与来源</button
-        ><span id="revision"></span>
+        <button id="open-native">截图与动画</button><span id="revision"></span>
       </div>
     </header>
-    <main id="world-main">
-      <div class="world-toolbar">
-        <div>
-          <span class="overline">产品世界</span>
-          <p>点域、能力或连线，查看业务与实现约定。</p>
-        </div>
-        <nav id="views" aria-label="世界图关系视角"></nav>
-      </div>
-      <section class="world-shell" aria-label="输入法产品与架构世界">
-        <div class="map-viewport" id="map-viewport">
-          <div id="stage-box">
-            <div id="world">
-              <svg id="wires" aria-label="域之间的关系"></svg>
-            </div>
+    <main id="spec-main">
+      <nav id="sections" class="section-tabs" aria-label="规格栏目">
+        <button data-section="domains" aria-selected="true" class="active">
+          基础域</button
+        ><button data-section="business" aria-selected="false">业务图</button>
+      </nav>
+      <section id="domains-section" aria-label="基础域">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">谁负责什么</p>
+            <h1>五个域，一套清晰的边界。</h1>
           </div>
+          <p class="section-intro">卡片与业务图采用相同颜色。</p>
         </div>
-        <div class="world-caption">
-          <div id="legend"></div>
-          <span id="world-count"></span>
+        <div id="domain-cards" class="domain-cards"></div>
+        <section class="offer-strip" aria-label="账户权益">
+          <div class="offer-label">
+            <span class="pill">免费账户</span>
+            <h2>新账号，一次性赠送。</h2>
+          </div>
+          <div class="offer-metric">
+            <strong id="free-characters"></strong><span>转写字符</span>
+          </div>
+          <div class="offer-metric">
+            <strong id="free-advisor"></strong><span>次军师生成</span>
+          </div>
+          <div class="offer-metric">
+            <strong>本地</strong><span>历史与个人记忆</span>
+          </div>
+          <button data-doc="commercial">权益与后台配置 ↗</button>
+        </section>
+        <div class="domain-footnote">
+          <span>付费套餐可含更多用量与产品云同步；价格和额度由后台配置。</span
+          ><button data-doc="architecture">App / Cloud / Spec 结构 ↗</button>
         </div>
       </section>
-      <div id="view-note" class="view-note" aria-live="polite"></div>
-      <div class="status-line">
-        <span><i></i>原生自用预览版 · 模型稍后配置</span
-        ><button data-doc="acceptance">查看实现边界 ↗</button>
-      </div>
+      <section id="business-section" aria-label="业务图" hidden>
+        <div class="business-heading">
+          <div>
+            <p class="eyebrow">从操作到结果</p>
+            <h1>业务图</h1>
+          </div>
+          <nav
+            id="workflow-tabs"
+            class="workflow-tabs"
+            aria-label="选择业务图"
+          ></nav>
+        </div>
+        <div class="workflow-intro">
+          <div>
+            <h2 id="workflow-title"></h2>
+            <p id="workflow-summary"></p>
+          </div>
+          <div id="domain-legend" class="domain-legend"></div>
+        </div>
+        <div
+          id="graph-scroll"
+          class="graph-scroll"
+          tabindex="0"
+          aria-label="业务图画布，可横向滚动"
+        >
+          <div id="graph-stage">
+            <div class="graph-band main-band">实时任务</div>
+            <div class="graph-band memory-band">
+              记忆更新
+              <span>按新增历史分批，约每 5 小时检查；无新增不调用。</span>
+            </div>
+            <svg id="flow-wires" aria-label="有向业务关系"></svg>
+            <div id="flow-nodes"></div>
+          </div>
+        </div>
+        <div class="graph-footer">
+          <span
+            ><i></i> 主流程　<span class="dash">┄</span> 可选步骤　<span
+              class="dot-line"
+              >┄</span
+            >
+            记忆更新</span
+          ><button data-doc="memory-and-sync">本地数据与付费云同步 ↗</button>
+        </div>
+      </section>
+      <footer class="implementation-note">
+        <span
+          >当前 APK 为原生预览版；图中商业
+          Cloud、登录、支付与云同步尚未上线。</span
+        ><button data-doc="implementation">查看当前实现 ↗</button>
+      </footer>
     </main>
     <div id="panel-shade" hidden></div>
-    <aside id="inspector" hidden role="dialog" aria-label="域与关系详情">
-      <div class="inspector-top">
+    <aside
+      id="inspector"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-label="步骤与域详情"
+    >
+      <header class="inspector-top">
         <span id="breadcrumb"></span
         ><button id="close-inspector" aria-label="关闭详情">×</button>
-      </div>
+      </header>
       <div id="inspector-heading"></div>
-      <nav id="inspector-tabs" aria-label="详情视角">
-        <button data-tab="business">业务</button
-        ><button data-tab="technical">实现</button
-        ><button data-tab="data">数据</button>
-      </nav>
       <div id="inspector-content"></div>
     </aside>
     <dialog id="native-dialog" class="modal">
       <header class="native-toolbar">
         <h2>豆豆输入法</h2>
-        <span id="demo-status" hidden></span>
-        <a href="./demo/doudou-keyboard.apk" download>下载 APK</a>
-        <button
+        <span id="demo-status" hidden></span
+        ><a href="./demo/doudou-keyboard.apk" download>下载 APK</a
+        ><button
           class="modal-close"
           data-close="native-dialog"
           aria-label="关闭 APK 预览"
@@ -77,12 +137,9 @@
           >演示设备<select id="device-select" aria-label="选择已授权的安卓设备">
             <option value="">检查设备…</option>
           </select></label
-        >
-        <button id="refresh-devices" type="button">刷新</button>
-        <button id="prepare-demo" type="button" class="primary">
-          安装并运行
-        </button>
-        <button id="stop-demo" type="button">停止并恢复</button>
+        ><button id="refresh-devices">刷新</button
+        ><button id="prepare-demo">安装并运行</button
+        ><button id="stop-demo">停止并恢复</button>
       </div>
       <label class="consent"
         ><input
@@ -93,139 +150,56 @@
       <div id="demo-message" role="status"></div>
       <div class="native-stage">
         <div id="native-placeholder">
-          <video id="native-video" controls loop muted playsinline preload="none" poster="./demo/typing.png" src="./demo/keyboard-tour.mp4" aria-label="真实 APK 录屏：拼音输入、工具与语音面板"></video>
-          <img id="native-image" src="./demo/home.png" alt="豆豆输入法首页" hidden />
+          <video
+            id="native-video"
+            controls
+            loop
+            muted
+            playsinline
+            preload="none"
+            poster="./demo/typing.png"
+            src="./demo/keyboard-tour.mp4"
+            aria-label="真实 APK 录屏：拼音输入、工具与语音面板"
+          ></video
+          ><img
+            id="native-image"
+            src="./demo/home.png"
+            alt="豆豆输入法首页"
+            hidden
+          />
         </div>
         <iframe
           id="android-frame"
-          title="实机演示"
+          title="本地设备画面"
           allow="fullscreen"
           hidden
         ></iframe>
       </div>
       <nav id="native-gallery" aria-label="APK 截图与操作录屏">
-        <button type="button" data-video="keyboard-tour.mp4" data-poster="typing.png" aria-pressed="true"><img src="./demo/typing.png" alt="" /><span>打字与语音</span><small>录屏</small></button>
-        <button type="button" data-video="advisor-tour.mp4" data-poster="advisor.png" aria-pressed="false"><img src="./demo/advisor.png" alt="" /><span>军师读屏</span><small>录屏</small></button>
-        <button type="button" data-image="home.png" aria-pressed="false"><img src="./demo/home.png" alt="" /><span>首页</span></button>
-        <button type="button" data-image="memory.png" aria-pressed="false"><img src="./demo/memory.png" alt="" /><span>个人记忆</span></button>
-        <button type="button" data-image="people.png" aria-pressed="false"><img src="./demo/people.png" alt="" /><span>人物</span></button>
-        <button type="button" data-image="settings.png" aria-pressed="false"><img src="./demo/settings.png" alt="" /><span>设置</span></button>
+        <button
+          data-video="keyboard-tour.mp4"
+          data-poster="typing.png"
+          aria-pressed="true"
+        >
+          <img src="./demo/typing.png" alt="" /><span>打字与语音</span
+          ><small>录屏</small></button
+        ><button
+          data-video="advisor-tour.mp4"
+          data-poster="advisor.png"
+          aria-pressed="false"
+        >
+          <img src="./demo/advisor.png" alt="" /><span>军师读屏</span
+          ><small>录屏</small></button
+        ><button data-image="home.png" aria-pressed="false">
+          <img src="./demo/home.png" alt="" /><span>首页</span></button
+        ><button data-image="memory.png" aria-pressed="false">
+          <img src="./demo/memory.png" alt="" /><span>个人记忆</span></button
+        ><button data-image="people.png" aria-pressed="false">
+          <img src="./demo/people.png" alt="" /><span>人物</span></button
+        ><button data-image="settings.png" aria-pressed="false">
+          <img src="./demo/settings.png" alt="" /><span>设置</span>
+        </button>
       </nav>
-    </dialog>
-    <dialog id="cost-dialog" class="modal">
-      <button
-        class="modal-close"
-        data-close="cost-dialog"
-        aria-label="关闭成本估算"
-      >
-        ×
-      </button>
-      <div class="eyebrow">CAPABILITIES / PROCUREMENT</div>
-      <h2>模型按能力选择，按日常用量估算。</h2>
-      <p class="section-copy">
-        自用可先用已有 CPA 的 Gemini。可售服务按官方 API 成本计算；OCR
-        在设备端，TTS 和生图不是首版必需。
-      </p>
-      <div class="model-grid">
-        <div>
-          <strong>语音 → 文字</strong>
-          <p>Qwen-Audio Message / Fun-ASR<br />中文、热词、流式短句对比</p>
-        </div>
-        <div>
-          <strong>润色与回复</strong>
-          <p>Gemini Flash / Qwen Flash<br />一次三种风格，各一条</p>
-        </div>
-        <div>
-          <strong>本地与记忆</strong>
-          <p>中文 OCR + SQLite<br />差异分类、异步整理</p>
-        </div>
-      </div>
-      <p class="notice">
-        先配两项：ASR + 一个共用文本模型。ZenMux 已有 Qwen ASR 转写接口；
-        中文实时输入优先试 Qwen-Audio 3.1 Message，Fun-ASR 作对照。
-        下方按 Fun-ASR ¥1.188 / 小时估算，小用量先按量使用。<a
-          href="#docs"
-          data-doc="models-and-cost"
-          >查看开通步骤与套餐比较 ↗</a
-        >
-      </p>
-      <div class="cost-layout">
-        <div class="cost-inputs">
-          <label
-            >每天语音 <output id="minutes-label">30 分钟</output
-            ><input
-              id="minutes"
-              type="range"
-              min="0"
-              max="180"
-              step="5"
-              value="30" /></label
-          ><label
-            >每天军师 <output id="replies-label">100 次</output
-            ><input
-              id="replies"
-              type="range"
-              min="0"
-              max="300"
-              step="10"
-              value="100" /></label
-          ><label
-            >ASR<select id="asr">
-              <option value="paraformer">
-                Paraformer 实时 · ¥0.864 / 小时
-              </option>
-              <option value="funasr" selected>
-                Fun-ASR 实时 · ¥1.188 / 小时
-              </option>
-            </select></label
-          ><label
-            >文本模型<select id="text-model">
-              <option value="qwen3.7-flash">
-                Qwen3.7 Flash · 输入0.2 / 输出0.8 元每百万token
-              </option>
-              <option value="qwen-flash">
-                Qwen Flash · 输入0.15 / 输出1.5 元每百万token
-              </option>
-            </select></label
-          ><label class="consent"
-            ><input id="free-hours" type="checkbox" />我的账户本次确有可用的 10
-            小时免费额度（有期限）</label
-          >
-        </div>
-        <div class="cost-result">
-          <div>每月估算 · 人民币</div>
-          <strong id="cost-total">¥22.13</strong>
-          <dl id="cost-details"></dl>
-          <p>
-            按 30 天、每次军师输入 3,000 / 输出 600 token；另含每天 60
-            次语音整理和 100 次抽取。无缓存、无额外思考
-            token。服务器与失败重试另计。
-          </p>
-        </div>
-      </div>
-      <p class="source-line">
-        核验于 2026-10-21：<a
-          href="https://help.aliyun.com/zh/model-studio/model-pricing"
-          target="_blank"
-          rel="noreferrer"
-          >阿里云价格</a
-        >
-        ·
-        <a
-          href="https://console.groq.com/docs/speech-to-text"
-          target="_blank"
-          rel="noreferrer"
-          >Groq 语音</a
-        >
-        ·
-        <a
-          href="https://developers.google.com/ml-kit/migration"
-          target="_blank"
-          rel="noreferrer"
-          >ML Kit</a
-        >
-        · <a href="#docs" data-doc="models-and-cost">购买与详细预算</a>
-      </p>
     </dialog>
     <!-- SPEC_DATA --><!-- SPEC_SCRIPT -->
   </body>

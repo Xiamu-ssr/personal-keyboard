@@ -1,787 +1,1006 @@
+schemaVersion: 2
 meta:
   title: 豆豆输入法
-  subtitle: 产品世界 · 业务与技术
+  subtitle: 产品与商业服务规格
   version: 0.3.0-alpha.1
   reviewedAt: 2026-10-21
-  status: 原生自用预览版；云 ASR 已独立验证，APK 待接入
-layout:
-  width: 1200
-  height: 800
-zones:
-  environment:
-    name: 聊天现场
-    color: "#8a77b8"
-  product:
-    name: 产品
-    color: "#289479"
-  local:
-    name: 本机运行与数据
-    color: "#517ec8"
-  service:
-    name: 外部服务
-    color: "#c78542"
-kinds:
-  action:
-    name: 动作
-    color: "#5c83c7"
-  data:
-    name: 数据
-    color: "#a68a52"
-  result:
-    name: 结果与反馈
-    color: "#388d78"
-  optional:
-    name: 可选同步
-    color: "#9672b2"
+  status: 商业服务目标规格；当前 APK 仍为原生预览版
 domains:
-  - id: host
-    name: 聊天现场
-    icon: chat
-    zone: environment
-    rect:
-      - 18
-      - 260
-      - 266
-      - 145
-    mobile:
-      - 2
-      - 35
-      - 26
-      - 24
-    role: 正在使用的微信、QQ 等应用。
-    business:
-      - 留在当前聊天中输入；建议填入后由用户发送。
-    technical:
-      - 宿主应用与输入法是不同进程，通过当前编辑器交互；切换对话使旧结果失效。
-    objects:
-      - editor
-      - contact
+  - id: phone
+    name: 用户手机
+    icon: phone
+    color: "#557fc3"
+    summary: 麦克风、当前聊天与系统权限。
+    responsibilities:
+      - 提供录音与当前可见聊天；普通打字不自动读屏。
+      - 截屏完成即本地 OCR，处理后释放图片。
+      - 用户决定填入和发送，模型不能点击发送。
+    data:
+      - 临时音频 / 截屏
+      - 当前输入框与选区
+    code:
+      - app/
     documents:
-      - product
       - interaction
-    chips: []
-    mobileHint: 当前应用
-  - id: keyboard
+  - id: app
     name: 输入法 App
     icon: keyboard
-    zone: product
-    rect:
-      - 376
-      - 244
-      - 340
-      - 292
-    mobile:
-      - 37
-      - 35
-      - 26
-      - 24
-    role: 打字、语音、军师；同一个 App。
-    business:
-      - 键盘共用一条候选 / 动作行；军师先缩矮，结果就绪再展开。
-      - 设置统一管理模型、个人记忆与授权，不占常驻键区。
-    technical:
-      - 一个 APK：IME 提供键盘，Activity 提供设置与资料页，辅助功能服务提供读屏。
-      - 请求绑定当前对话与编辑器；取消、切换或过期后不再回写。
-    objects:
-      - editor
-      - capture
-      - reply
-      - feedback
-      - sync
+    color: "#268976"
+    summary: 键盘、语音、军师和本地记忆。
+    responsibilities:
+      - 本地保存文字历史、热词、文风与人物资料。
+      - 只给 Cloud 当前任务所需资料；不持有供应商密钥。
+      - 免费账户只在本地保存；付费可开启产品云同步。
+    data:
+      - 转写 / OCR 历史
+      - 热词、文风、人物与证据
+      - 产品登录凭证
+    code:
+      - app/
     documents:
       - product
-      - interaction
-      - architecture
-    chips:
-      - id: keyboard_typing
-        name: 日常输入
-        desc: 候选行 · 成熟中文引擎
-        business:
-          - 输入引擎沿用成熟方案；键位、间距和候选体验单独打磨。
-          - 敏感输入不采集。
-        technical:
-          - 已集成 AOSP / libgooglepinyin 离线整句引擎；中文输入体验继续实用验证。
-        objects:
-          - editor
-          - vocabulary
-      - id: keyboard_voice
-        name: 个性语音
-        desc: 识别、整理 · 越用越像你
-        business:
-          - 结合热词与近期上下文识别；个人文风改写可开关，保留本意。
-          - 用户可信改词、改句反哺热词与文风，下次再用。
-        technical:
-          - ASR 转写与基础规整 → 可选个性改写 → 上屏 → 可信修改入历史。
-          - APK 当前使用系统 ASR；Message / Fun-ASR 已独立验证，尚未接入 APK。
-        objects:
-          - editor
-          - vocabulary
-          - style
-        documents:
-          - models-and-cost
-      - id: keyboard_advisor
-        name: 原地军师
-        desc: 缩矮 → 截屏 → 三条回复
-        business:
-          - 点军师自动缩矮并截当前屏；不够时由用户点“补前文”。
-          - 三种风格各一条；“更多”仅扩展选中风格，返回保留上一组。
-        technical:
-          - typing → capture-resizing → capturing → understanding → generating → suggestions；失败进入
-            recoverable-error。
-        objects:
-          - capture
-          - reply
-          - editor
-        preview: advisor
-      - id: keyboard_settings
-        name: 设置
-        desc: 模型 · 个人记忆
-        business:
-          - 管理模型、热词、文风、人物关系图与资料、授权。
-          - 查看历史和来源、修订记忆；个人改写、云备份与豆豆共享分别设置。
-        technical:
-          - App 管理页与键盘共用本机数据层；不是第二个 App。
-        objects:
-          - vocabulary
-          - style
-          - contact
-          - memory
-          - sync
-        documents:
-          - product
-          - architecture
-          - memory-and-sync
-  - id: sensing
-    name: 屏幕感知
-    icon: scan
-    zone: local
-    rect:
-      - 376
-      - 18
-      - 340
-      - 155
-    mobile:
-      - 37
-      - 3
-      - 26
-      - 24
-    role: 读当前屏幕，确认聊天对象。
-    business:
-      - 军师缩矮后读取当前屏；不够再补前文。
-    technical:
-      - 用户授权后，等宿主布局稳定再截屏；本地 OCR 提取文字；人物身份由本人确认。
-      - 截图临时保存并清理；受保护窗口按失败处理。
-    objects:
-      - capture
-      - message
-      - contact
+      - memory-and-sync
+      - implementation
+  - id: cloud
+    name: Cloud 服务
+    icon: cloud
+    color: "#8b6bc2"
+    summary: 账号、权益、模型代理与云同步。
+    responsibilities:
+      - 国内手机号验证码、海外 Google 登录，映射同一产品账号。
+      - 按任务预留权益；代理 ASR / LLM，成功结算，失败释放。
+      - 组装版本化提示词；管理付费私有同步与后台任务。
+    data:
+      - 用户与登录身份
+      - 套餐快照、权益、用量与订单
+      - 提示词 / 路由版本
+      - 付费用户的加密同步包
+    code:
+      - cloud/domains/
+      - cloud/contracts/
+      - cloud/config/
+      - cloud/prompts/
     documents:
       - architecture
-      - interaction
-    chips:
-      - id: sensing_ocr
-        name: OCR 与身份
-        desc: 本地识字 · 本人确认
-        business:
-          - 保留原文位置和置信度；不确定的信息不写成事实。
-        technical:
-          - ML Kit 中文 OCR，明确选择人物后检索；不声称已经识别气泡说话人。
-        objects:
-          - message
-          - contact
-  - id: models
-    name: 模型服务
+      - commercial
+      - memory-and-sync
+  - id: provider
+    name: 供应商
     icon: spark
-    zone: service
-    rect:
-      - 824
-      - 18
-      - 358
-      - 226
-    mobile:
-      - 72
-      - 3
-      - 26
-      - 24
-    role: 语音识别、文字整理与回复。
-    business:
-      - 自用先用已有 CPA 的 Gemini；语音单独采购。
-    technical:
-      - 短任务适配器区分 ASR / reply / rewrite / learn，可取消与超时。
-      - 稳定提示词前缀利于缓存；预算不假设缓存命中。
-    objects:
-      - reply
-      - feedback
+    color: "#c48b43"
+    summary: Qwen ASR、文字模型及基础服务。
+    responsibilities:
+      - 默认 ASR：Qwen Audio 3.1 Message。
+      - 文字模型、短信、支付与对象存储分别适配。
+      - 服务凭据只由 Cloud 使用；商用不依赖个人订阅额度。
+    data:
+      - 必要音频或文字
+      - 供应商用量与回执
+    code:
+      - cloud/config/providers.json
     documents:
       - models-and-cost
-    chips:
-      - id: models_asr
-        name: 中文 ASR
-        desc: 实时识别 · 上下文与热词
-        business:
-          - 转写，并补标点、规范数字等；热词辅助识别。
-          - 个人文风由可选后续文字模型处理，不把近期上下文当作文风训练。
-        technical:
-          - Message / Fun-ASR 实时接口已通过公共短音频验证；APK 接入与本人录音评测待完成。
-        documents:
-          - models-and-cost
-      - id: models_text
-        name: 回复与整理
-        desc: Gemini / Qwen Flash
-        business:
-          - 相同意图的三种表达；不替用户作承诺、编造事实。
-        technical:
-          - 自用走已有 CPA 的 Gemini；可采购替代用 Qwen Flash。
-        objects:
-          - reply
-        documents:
-          - reply-prompt
-      - id: models_budget
-        name: 采购与成本
-        desc: ¥22.13 / 月 · 默认用量估算
-        business:
-          - 每天30分钟语音和100次军师；服务器、重试与税费另计。
-          - 免费额度按账户资格，不能作为无限生产资源。
-        technical:
-          - 本地 OCR 不按请求收费；首版无需 TTS / 生图。
-        action: cost
-        documents:
-          - models-and-cost
-  - id: memory
-    name: 个人记忆
-    icon: layers
-    zone: local
-    rect:
-      - 824
-      - 350
-      - 358
-      - 224
-    mobile:
-      - 72
-      - 35
-      - 26
-      - 24
-    role: 热词与文风、人物与事件，持续积累。
-    business:
-      - 语音和打字的可信修改积累表达习惯；已知上下文积累人物与事件。
-      - 同一份记忆供语音、军师取用，可在设置里查看、修订与删除。
-    technical:
-      - 本机 SQLite，共用记忆层；按用户、场景与联系人限定范围。
-      - 历史按增量分批提取，校验来源与版本后合并；用户修订和删除优先。
-    objects:
-      - vocabulary
-      - style
-      - contact
-      - memory
-      - feedback
-      - history
-      - update
+      - commercial
+  - id: admin
+    name: 运营后台
+    icon: admin
+    color: "#bd718b"
+    summary: 查用户、管权益、看用量与故障。
+    responsibilities:
+      - 用户 / 权益、订单 / 用量、供应商 / 故障分别查看。
+      - 套餐与提示词先存草稿，再发布新版本；保留审计和回滚。
+      - 显示脱敏账号与成本元数据，不默认开放私人聊天内容。
+    data:
+      - 脱敏用户状态
+      - 权益账本和供应商成本
+      - 配置变更与操作审计
+    code:
+      - cloud/（目标后台模块）
     documents:
+      - commercial
       - architecture
-      - memory-and-sync
-    chips:
-      - id: memory_words
-        name: 热词与文风
-        desc: 语音 ↔ 热词与文风
-        business:
-          - 热词辅助识别，文风指导整理；可信改词、改句继续反哺。
-          - 日常打字的可信纠错也可积累，不限语音。
-        technical:
-          - 热词进 ASR 词表 / 上下文；文风进文字整理提示。
-          - 可信修改先记历史，再批量分类；未知最终文本不学习。
-        objects:
-          - vocabulary
-          - style
-          - feedback
-      - id: memory_people
-        name: 人物与事件
-        desc: 共同记忆 · 语音 / 军师取用
-        business:
-          - 共享的人物事实、关系和共同事件，不限军师。
-          - 来自已读聊天、主动补充，或身份明确的语音 / 输入候选；草稿不等于事实已发生。
-        technical:
-          - 按 Contact 检索 MemoryItem；保存来源、陈述方、时间和置信度。
-          - 本人明确补充的个人事件可形成候选；第三人身份不明时不归人。
-        objects:
-          - contact
-          - memory
-          - message
-  - id: rules
-    name: 业务约定与提示词
-    icon: rules
-    zone: local
-    rect:
-      - 18
-      - 642
-      - 698
-      - 140
-    mobile:
-      - 2
-      - 68
-      - 61
-      - 24
-    role: 回复与学习的业务约定。
-    business:
-      - 不自动发送、不跨人记忆、不从未知修改中学习。
-    technical:
-      - 身份、取消和数据范围由代码检查；提示词限定生成与分类。
-    documents:
-      - interaction
-      - acceptance
-    chips:
-      - id: rules_reply
-        name: 回复约定
-        desc: 同一意图 · 三种风格
-        documents:
-          - reply-prompt
-      - id: rules_learn
-        name: 学习约定
-        desc: 可信差异 · 候选与证据
-        documents:
-          - learn-prompt
-  - id: storage
-    name: 同步与恢复
-    icon: sync
-    zone: service
-    rect:
-      - 824
-      - 680
-      - 358
-      - 102
-    mobile:
-      - 72
-      - 68
-      - 26
-      - 24
-    role: 云端备份，换机恢复。
-    business:
-      - 自有 WebDAV 先行，不要求输入法账号；云备份默认关闭。
-      - 与豆豆共享是独立授权；断开、删除与修订冲突可见。
-    technical:
-      - 客户端加密增量包；全局 ID、版本与墓碑合并，不同步活动数据库文件。
-      - 新设备需恢复密钥；云同步与自动记忆整理尚未实现。
-    objects:
-      - memory
-      - sync
-    documents:
-      - architecture
-      - memory-and-sync
-    chips: []
-edges:
-  - id: e_editor
-    from: host
-    to: keyboard
-    name: 输入
-    short: 填入
-    kind: action
-    both: true
-    ports:
-      - right
-      - left
-    offset: 0.5
-    business: 在当前应用输入和填入建议，由用户发送。
-    trigger: 编辑、选择建议或撤销。
-    payload: EditorSession + 选中文字 / 目标草稿。
-    guard: 对话、编辑器代次、选区仍匹配；否则不回写。
-    technical: InputConnection；保留原草稿和 insertionId。
-    objects:
-      - editor
-      - feedback
-    capabilities:
-      - keyboard_typing
-      - keyboard_voice
-      - keyboard_advisor
-  - id: e_capture
-    from: keyboard
-    to: sensing
-    name: 读屏
-    short: 读屏
-    kind: action
-    ports:
-      - top
-      - bottom
-    business: 点军师后缩矮键区，再截当前屏。
-    trigger: 点击军师，或明确点补前文。
-    payload: CaptureJob（请求、联系人、编辑器、有效期）。
-    guard: 宿主布局稳定、截屏许可有效；取消即废弃任务。
-    technical: IME insets/layout → AccessibilityService → 裁图 → 本地 OCR。
-    objects:
-      - capture
-    capabilities:
-      - keyboard_advisor
-      - sensing_ocr
-  - id: e_screen
-    from: host
-    to: sensing
-    name: 当前屏消息
-    short: 可见内容
-    kind: data
-    ports:
-      - top
-      - left
-    business: 读取当前对话可见内容；需要时再补前文，不扫描完整历史。
-    trigger: 任务进入 capturing。
-    payload: 局部截图 → 带位置和说话人的 ChatMessage。
-    guard: 受保护窗口失败就停止；身份不明不入人物库；原图清理。
-    technical: OCR 留在本机；原图默认不发模型，也不发豆豆。
-    objects:
-      - capture
-      - message
-    capabilities:
-      - sensing_ocr
-  - id: e_identity
-    mobileVia:
-      - - 67.5
-        - 15
-      - - 67.5
-        - 31
-      - - 85
-        - 31
-    mobileLabelFraction: 0.35
-    via:
-      - - 770
-        - 95
-      - - 770
-        - 300
-      - - 1003
-        - 300
-    labelFraction: 0.5
-    from: sensing
-    to: memory
-    name: 聊天证据
-    short: 证据
-    kind: data
-    ports:
-      - right
-      - top
-    business: 先确认在和谁说话，再取该人物的资料。
-    trigger: OCR 完成且会话身份确认。
-    payload: Contact + ChatMessage + 来源范围。
-    guard: 同名不合并，推断与事实分开，低置信待确认。
-    technical: 解析 conversationKey，按 appAccountScope / contactId 查询。
-    objects:
-      - contact
-      - message
-      - memory
-    capabilities:
-      - sensing_ocr
-      - memory_people
-  - id: e_inference
-    from: keyboard
-    to: models
-    name: 识别 / 整理
-    short: 模型调用
-    kind: result
-    both: true
-    external: true
-    ports:
-      - right
-      - left
-    offset: 0.16
-    business: 识别语音、整理表达，或返回同意图的三条建议。
-    trigger: 录音开始流式上传；个人改写开启且转写完成；或军师上下文就绪。
-    payload: ASR 音频，或必要 OCR 文本 + 有关记忆 + 用户意图；返回文本 / ReplySet。
-    guard: 敏感输入不采集；结果须匹配原请求和编辑器。
-    technical: 能力适配器 → 已选供应商；超时可重试，取消不继续填入。
-    objects:
-      - reply
-      - editor
-    capabilities:
-      - keyboard_voice
-      - keyboard_advisor
-      - keyboard_settings
-      - models_asr
-      - models_text
-  - id: e_personalize
-    from: keyboard
-    to: memory
-    name: 语音个性化
-    short: 反哺
-    kind: data
-    both: true
-    ports:
-      - right
-      - left
-    offset: 0.35
-    business: 热词与文风帮助语音识别、整理；可信修改反哺记忆。
-    trigger: 语音识别 / 整理时取用；有新增历史时按批整理。
-    payload: 热词、适用文风 ↔ HistoryEvent / MemoryUpdate 候选。
-    guard: 范围匹配且修改证据可信；发送后丢失最终文本不学习。
-    technical: 按 token 预算组批；校验证据与 baseRevision 后事务合并，再推进游标。
-    objects:
-      - vocabulary
-      - style
-      - feedback
-      - history
-      - update
-    capabilities:
-      - keyboard_voice
-      - keyboard_typing
-      - memory_words
-  - id: e_people
-    from: keyboard
-    to: memory
-    name: 人物与事件
-    short: 关系
-    kind: result
-    both: true
-    ports:
-      - right
-      - left
-    offset: 0.8
-    business: 人物与事件供语音、军师共同使用，有可靠新信息时再更新。
-    trigger: 生成前按联系人取用；读到新聊天、主动补充或出现身份明确的输入候选。
-    payload: 联系人相关记忆 ↔ 有来源与陈述方的事实 / 事件候选。
-    guard: 草稿不等于已发送，意图不等于已发生；不将本人陈述冒充对方表态。
-    technical: 共用 Contact / MemoryItem；身份不明不归人，低置信候选不直接生效。
-    objects:
-      - contact
-      - memory
-      - message
-    capabilities:
-      - keyboard_typing
-      - keyboard_voice
-      - keyboard_advisor
-      - keyboard_settings
-      - memory_people
-  - id: e_rules
-    from: rules
-    to: keyboard
-    name: 业务约定
-    short: 约定
-    kind: action
-    ports:
-      - top
-      - bottom
-    business: 提示词说清表达与学习规则；代码保证不代发、不过期回写。
-    trigger: 准备 reply / rewrite / learn 请求。
-    payload: 任务提示词 + 业务参数。
-    guard: 对话内容是分析资料，不把其中的指令当系统规则。
-    technical: 稳定前缀与结构化输出；身份与记忆范围由程序校验。
-    objects:
-      - reply
-      - feedback
-    capabilities:
-      - keyboard_voice
-      - keyboard_advisor
-      - rules_reply
-      - rules_learn
-  - id: e_sync
-    from: memory
-    to: storage
-    name: 选择性同步
-    short: 可选同步
-    kind: optional
-    external: true
-    ports:
-      - bottom
-      - top
-    business: 加密备份并恢复选定历史与记忆；共享给豆豆需另行选择。
-    trigger: 用户开启对应范围的备份或共享；后续增量、修订、删除。
-    payload: 加密增量包、清单、全局 ID、revision、删除墓碑。
-    guard: 默认关闭；备份、模型推理与豆豆共享分别授权；无原始录音或截图。
-    technical: WebDAV / 对象存储适配器；幂等合并而非覆盖本机，尚未实现。
-    objects:
-      - memory
-      - sync
-    capabilities:
-      - memory_words
-      - memory_people
-views:
-  - id: all
-    name: 全景
-    edges: []
-  - id: advisor
-    name: 原地军师
-    edges:
-      - e_editor
-      - e_capture
-      - e_screen
-      - e_identity
-      - e_inference
-      - e_rules
-      - e_people
+prompts:
+  - id: rewrite
+    owner: cloud
+    name: 个人改写提示词
+    source: cloud/prompts/rewrite.md
+    document: rewrite-prompt
+  - id: reply
+    owner: cloud
+    name: 军师提示词
+    source: cloud/prompts/reply.md
+    document: reply-prompt
+  - id: learn
+    owner: cloud
+    name: 记忆学习提示词
+    source: cloud/prompts/learn.md
+    document: learn-prompt
+workflows:
   - id: voice
-    name: 个性语音
+    name: 语音转录
+    summary: 实时转写；个人改写可选，文字历史与记忆留在本机。
+    width: 1160
+    height: 910
+    nodes:
+      - id: v_record
+        domain: phone
+        title: 01 · 说话
+        summary: 麦克风录音，不长期保存原音频。
+        rect:
+          - 30
+          - 80
+          - 220
+          - 124
+        input: 用户主动开始录音
+        output: 短时单声道音频流
+        rules: []
+        prompts: []
+        documents: []
+      - id: v_context
+        domain: app
+        title: 02 · 取近期上下文
+        summary: 结合热词；个人改写有独立开关。
+        rect:
+          - 310
+          - 80
+          - 220
+          - 124
+        input: 录音、当前范围的近期文字与热词
+        output: 产品会话、音频与最少识别上下文
+        rules:
+          - 近期上下文辅助听懂，不代替文风。
+          - 录音与输出时长由 Cloud 限制。
+        prompts: []
+        documents: []
+      - id: v_gate
+        domain: cloud
+        title: 03 · 校验与代理
+        summary: 鉴权、预留字符预算、连接 ASR。
+        rect:
+          - 590
+          - 80
+          - 220
+          - 124
+        input: 产品登录会话、任务 ID、字符上限
+        output: 同一任务的供应商 ASR 流
+        rules:
+          - 预留和结算属于同一账本任务。
+          - 无额度不调用供应商；不把密钥给 App。
+        prompts: []
+        documents:
+          - commercial
+      - id: v_asr
+        domain: provider
+        title: 04 · Qwen Message
+        summary: 实时中间字、句末文字与基础规整。
+        rect:
+          - 870
+          - 80
+          - 220
+          - 124
+        input: Cloud 代理的音频、热词和近期上下文
+        output: 中间结果、句末结果与 usage
+        rules:
+          - 即时热词、上下文、原生润色按接口配置。
+        prompts: []
+        documents:
+          - models-and-cost
+      - id: v_final
+        domain: cloud
+        title: 05 · 回传与结算
+        summary: 中间字不累计；成功最终文字计量。
+        rect:
+          - 590
+          - 270
+          - 220
+          - 124
+        input: ASR 最终文本和供应商 usage
+        output: 转写结果＋已结算用量
+        rules:
+          - 最终非空白 Unicode 码点计字符。
+          - 失败 / 取消释放未完成预留。
+          - 同任务重试恢复原结果，不再扣字符。
+        prompts: []
+        documents: []
+      - id: v_preview
+        domain: app
+        title: 06 · 转写预览
+        summary: 可编辑；决定是否按个人口吻整理。
+        rect:
+          - 310
+          - 270
+          - 220
+          - 124
+        input: 已成功转写的最终文字
+        output: 原转写，或追加个人改写请求
+        rules:
+          - 改写失败仍保留已成功的原转写。
+          - 个人整理不重复扣转写字符。
+        prompts: []
+        documents: []
+      - id: v_insert
+        domain: app
+        title: 08 · 填入与本地保存
+        summary: 保留草稿；后续可信修改形成证据。
+        rect:
+          - 30
+          - 460
+          - 220
+          - 124
+        input: 原转写或个性改写文字
+        output: 编辑器中的可修改文字与本地历史
+        rules:
+          - 编辑器切换或取消后，旧结果不能覆盖。
+          - 发送由用户操作。
+        prompts: []
+        documents: []
+      - id: v_rewrite
+        domain: cloud
+        title: 07 · 个人改写提示词
+        summary: 最终转写＋适用热词与文风。
+        rect:
+          - 590
+          - 460
+          - 220
+          - 124
+        input: 产品任务 ID、原转写、适用文风
+        output: 文字模型请求；改写结果经 Cloud 回传
+        rules:
+          - 仅开关开启时执行；保留原意。
+          - 关联原语音任务和独立成本预算。
+        prompts:
+          - rewrite
+        documents: []
+      - id: v_text
+        domain: provider
+        title: 文字模型改写
+        summary: 按 Cloud 提示词输出结构化文字。
+        rect:
+          - 870
+          - 460
+          - 220
+          - 124
+        input: 改写提示词＋任务所需个人资料
+        output: text / changed / uncertainSpans
+        rules: []
+        prompts: []
+        documents: []
+      - id: voice_history
+        domain: app
+        title: 本地历史与修改
+        summary: 保存文字和来源，按新增事件组批。
+        rect:
+          - 30
+          - 740
+          - 188
+          - 124
+        input: 最终转写 / OCR、建议与可信修改
+        output: 有界增量批次＋相关旧记忆
+        rules:
+          - 不保存截图；选中不等于发送。
+          - 约每 5 小时检查；无新增不调用。
+        prompts: []
+        documents:
+          - memory-and-sync
+      - id: voice_learn
+        domain: cloud
+        title: 学习提示词
+        summary: 限定人物、来源与输出结构。
+        rect:
+          - 258
+          - 740
+          - 188
+          - 124
+        input: 增量批次、来源许可集、baseRevision
+        output: 带任务 / 提示词版本的学习请求
+        rules:
+          - 预算、身份与来源由代码检查。
+        prompts:
+          - learn
+        documents:
+          - memory-and-sync
+      - id: voice_model
+        domain: provider
+        title: 文字模型抽取
+        summary: 返回热词、文风和人物候选。
+        rect:
+          - 486
+          - 740
+          - 188
+          - 124
+        input: Cloud 组装的学习提示词＋材料
+        output: 结构化 proposals；引用 sourceIds
+        rules:
+          - 候选不是已经生效的本地记忆。
+        prompts: []
+        documents: []
+      - id: voice_patch
+        domain: cloud
+        title: 校验并回传
+        summary: 检查结构和来源，不覆盖设备。
+        rect:
+          - 714
+          - 740
+          - 188
+          - 124
+        input: 供应商候选与原任务版本
+        output: MemoryPatch＋证据和版本
+        rules:
+          - 不接受伪造证据、任意文件操作。
+          - 按任务去重，记供应商成本。
+        prompts: []
+        documents: []
+      - id: voice_apply
+        domain: app
+        title: 合并本地记忆
+        summary: 用户手改和删除优先，供下次用。
+        rect:
+          - 942
+          - 740
+          - 188
+          - 124
+        input: MemoryPatch＋本机最新 revision
+        output: 热词 / 文风 / 人物资料的新修订
+        rules:
+          - 版本冲突不强行覆盖。
+          - 事务成功后推进游标；重试不重复强化。
+        prompts: []
+        documents:
+          - memory-and-sync
     edges:
-      - e_editor
-      - e_inference
-      - e_personalize
-      - e_people
-  - id: learning
-    name: 学习与关系
+      - id: v1
+        from: v_record
+        to: v_context
+        label: 音频
+        kind: main
+        points:
+          - - 250
+            - 142
+          - - 310
+            - 142
+        note: 音频
+      - id: v2
+        from: v_context
+        to: v_gate
+        label: 音频＋热词 / 前文
+        kind: main
+        points:
+          - - 530
+            - 142
+          - - 590
+            - 142
+        note: 音频＋热词 / 前文
+      - id: v3
+        from: v_gate
+        to: v_asr
+        label: 原生实时接口
+        kind: main
+        points:
+          - - 810
+            - 142
+          - - 870
+            - 142
+        note: 原生实时接口
+      - id: v4
+        from: v_asr
+        to: v_final
+        label: 中间 / 最终结果
+        kind: main
+        points:
+          - - 980
+            - 204
+          - - 980
+            - 240
+          - - 700
+            - 240
+          - - 700
+            - 270
+        note: 中间 / 最终结果
+        labelAt:
+          - 845
+          - 240
+      - id: v5
+        from: v_final
+        to: v_preview
+        label: 转写文字
+        kind: main
+        points:
+          - - 590
+            - 332
+          - - 530
+            - 332
+        note: 转写文字
+      - id: v6
+        from: v_preview
+        to: v_insert
+        label: 关闭个人改写
+        kind: main
+        points:
+          - - 310
+            - 332
+          - - 140
+            - 332
+          - - 140
+            - 460
+        note: 关闭个人改写
+        labelAt:
+          - 166
+          - 361
+      - id: v7
+        from: v_preview
+        to: v_rewrite
+        label: 开启个人改写
+        kind: optional
+        points:
+          - - 420
+            - 394
+          - - 420
+            - 422
+          - - 700
+            - 422
+          - - 700
+            - 460
+        note: 开启个人改写
+        labelAt:
+          - 536
+          - 422
+      - id: v8
+        from: v_rewrite
+        to: v_text
+        label: 改写提示词＋文字
+        kind: optional
+        points:
+          - - 810
+            - 504
+          - - 870
+            - 504
+        note: 改写提示词＋文字
+        labelAt:
+          - 840
+          - 444
+      - id: v9
+        from: v_text
+        to: v_rewrite
+        label: 改写结果
+        kind: optional
+        points:
+          - - 980
+            - 584
+          - - 980
+            - 614
+          - - 700
+            - 614
+          - - 700
+            - 584
+        note: 改写结果
+        labelAt:
+          - 844
+          - 614
+      - id: v10
+        from: v_rewrite
+        to: v_insert
+        label: Cloud 回传改写
+        kind: optional
+        points:
+          - - 590
+            - 550
+          - - 250
+            - 550
+        note: Cloud 回传改写
+        labelAt:
+          - 420
+          - 550
+      - id: voice_save
+        from: v_insert
+        to: voice_history
+        label: 文字历史＋可信修改
+        kind: learning
+        points:
+          - - 140
+            - 584
+          - - 140
+            - 640
+          - - 124
+            - 640
+          - - 124
+            - 740
+        note: 文字历史＋可信修改
+        labelAt:
+          - 170
+          - 651
+      - id: voice_learn_0
+        from: voice_history
+        to: voice_learn
+        label: 新增批次
+        kind: learning
+        points:
+          - - 218
+            - 802
+          - - 258
+            - 802
+        note: 新增批次
+      - id: voice_learn_1
+        from: voice_learn
+        to: voice_model
+        label: 提示词＋材料
+        kind: learning
+        points:
+          - - 446
+            - 802
+          - - 486
+            - 802
+        note: 提示词＋材料
+      - id: voice_learn_2
+        from: voice_model
+        to: voice_patch
+        label: 候选
+        kind: learning
+        points:
+          - - 674
+            - 802
+          - - 714
+            - 802
+        note: 候选
+      - id: voice_learn_3
+        from: voice_patch
+        to: voice_apply
+        label: 来源＋版本
+        kind: learning
+        points:
+          - - 902
+            - 802
+          - - 942
+            - 802
+        note: 来源＋版本
+      - id: voice_next
+        from: voice_apply
+        to: v_context
+        label: 供下一次使用
+        kind: learning
+        points:
+          - - 1130
+            - 802
+          - - 1146
+            - 802
+          - - 1146
+            - 28
+          - - 420
+            - 28
+          - - 420
+            - 80
+        note: 供下一次使用
+        labelAt:
+          - 806
+          - 28
+  - id: advisor
+    name: 军师模式
+    summary: 缩矮 → 本地 OCR → 带人物上下文生成 → 三种建议 → 用户填入。
+    width: 1160
+    height: 910
+    nodes:
+      - id: a_screen
+        domain: phone
+        title: 01 · 当前聊天
+        summary: 保持现有聊天和未发送草稿。
+        rect:
+          - 30
+          - 80
+          - 220
+          - 124
+        input: 用户主动点击军师
+        output: 当前屏幕与编辑器状态
+        rules: []
+        prompts: []
+        documents: []
+      - id: a_capture
+        domain: app
+        title: 02 · 缩矮并读屏
+        summary: 布局稳定后截屏；本机 OCR。
+        rect:
+          - 310
+          - 80
+          - 220
+          - 124
+        input: 当前可见聊天、用户许可
+        output: 带位置 / 置信度的 OCR 文字
+        rules:
+          - 截图不保存到长期历史。
+          - 保护窗口失败可恢复；不假装读到内容。
+        prompts: []
+        documents:
+          - interaction
+      - id: a_context
+        domain: app
+        title: 03 · 确认人物与意图
+        summary: 取相关热词、文风和人物记忆。
+        rect:
+          - 590
+          - 80
+          - 220
+          - 124
+        input: OCR、联系人、用户意图与本地资料
+        output: 限定人物范围的任务上下文
+        rules:
+          - 身份不明不写人物事实。
+          - 用户陈述不冒充对方原话。
+        prompts: []
+        documents: []
+      - id: a_gate
+        domain: cloud
+        title: 04 · 预留军师次数
+        summary: 鉴权与任务去重，预留 1 次。
+        rect:
+          - 870
+          - 80
+          - 220
+          - 124
+        input: 产品会话、requestId、OCR 和意图
+        output: 可以执行的一次军师任务
+        rules:
+          - 更多使用新任务 ID；原任务重试不重扣。
+        prompts: []
+        documents:
+          - commercial
+      - id: a_prompt
+        domain: cloud
+        title: 05 · 军师提示词
+        summary: 三种风格，同一意图，不替用户承诺。
+        rect:
+          - 870
+          - 270
+          - 220
+          - 124
+        input: 用户意图、OCR、热词 / 文风、人物记忆
+        output: 版本化提示词＋结构化模型请求
+        rules:
+          - Cloud 持有系统提示词；聊天只作资料。
+        prompts:
+          - reply
+        documents: []
+      - id: a_model
+        domain: provider
+        title: 06 · 文字模型
+        summary: 一次返回三个风格，各一条。
+        rect:
+          - 590
+          - 270
+          - 220
+          - 124
+        input: Cloud 组装的军师请求
+        output: 结构化 ReplySet＋usage
+        rules: []
+        prompts: []
+        documents: []
+      - id: a_result
+        domain: cloud
+        title: 07 · 校验与结算
+        summary: 成功扣 1 次；失败释放预留。
+        rect:
+          - 310
+          - 270
+          - 220
+          - 124
+        input: 完整 ReplySet、任务 ID 与 usage
+        output: 一组可呈现的建议＋账本结果
+        rules:
+          - 结构错误和失败不冒充成功。
+          - 重试原任务复用结果与用量。
+        prompts: []
+        documents: []
+      - id: a_suggestions
+        domain: app
+        title: 08 · 展开建议并填入
+        summary: 更多走新请求；返回读本次缓存。
+        rect:
+          - 30
+          - 460
+          - 220
+          - 124
+        input: 与原编辑器仍匹配的三条建议
+        output: 用户选中的可编辑草稿、本地历史
+        rules:
+          - 只填入，不自动发送。
+          - 更多的新成功结果再扣 1 次。
+          - 保留用户已有编辑。
+        prompts: []
+        documents:
+          - interaction
+      - id: advisor_history
+        domain: app
+        title: 本地历史与修改
+        summary: 保存文字和来源，按新增事件组批。
+        rect:
+          - 30
+          - 740
+          - 188
+          - 124
+        input: 最终转写 / OCR、建议与可信修改
+        output: 有界增量批次＋相关旧记忆
+        rules:
+          - 不保存截图；选中不等于发送。
+          - 约每 5 小时检查；无新增不调用。
+        prompts: []
+        documents:
+          - memory-and-sync
+      - id: advisor_learn
+        domain: cloud
+        title: 学习提示词
+        summary: 限定人物、来源与输出结构。
+        rect:
+          - 258
+          - 740
+          - 188
+          - 124
+        input: 增量批次、来源许可集、baseRevision
+        output: 带任务 / 提示词版本的学习请求
+        rules:
+          - 预算、身份与来源由代码检查。
+        prompts:
+          - learn
+        documents:
+          - memory-and-sync
+      - id: advisor_model
+        domain: provider
+        title: 文字模型抽取
+        summary: 返回热词、文风和人物候选。
+        rect:
+          - 486
+          - 740
+          - 188
+          - 124
+        input: Cloud 组装的学习提示词＋材料
+        output: 结构化 proposals；引用 sourceIds
+        rules:
+          - 候选不是已经生效的本地记忆。
+        prompts: []
+        documents: []
+      - id: advisor_patch
+        domain: cloud
+        title: 校验并回传
+        summary: 检查结构和来源，不覆盖设备。
+        rect:
+          - 714
+          - 740
+          - 188
+          - 124
+        input: 供应商候选与原任务版本
+        output: MemoryPatch＋证据和版本
+        rules:
+          - 不接受伪造证据、任意文件操作。
+          - 按任务去重，记供应商成本。
+        prompts: []
+        documents: []
+      - id: advisor_apply
+        domain: app
+        title: 合并本地记忆
+        summary: 用户手改和删除优先，供下次用。
+        rect:
+          - 942
+          - 740
+          - 188
+          - 124
+        input: MemoryPatch＋本机最新 revision
+        output: 热词 / 文风 / 人物资料的新修订
+        rules:
+          - 版本冲突不强行覆盖。
+          - 事务成功后推进游标；重试不重复强化。
+        prompts: []
+        documents:
+          - memory-and-sync
     edges:
-      - e_editor
-      - e_identity
-      - e_sync
-      - e_personalize
-      - e_people
-  - id: boundary
-    name: 数据出端
-    edges:
-      - e_inference
-      - e_sync
-objects:
-  editor:
-    name: EditorSession · 当前输入
-    owner: keyboard
-    fields:
-      packageName: 宿主应用
-      conversationKey: 当前对话
-      editorGeneration: 编辑器代次
-      draft: 草稿与选区
-      insertionId: 本次填入
-    invariant: 切换联系人或编辑器后，旧任务不再拥有写入权。
-  capture:
-    name: CaptureJob · 一次读屏
-    owner: sensing
-    fields:
-      requestId: 请求
-      conversationKey: 对话范围
-      editorGeneration: 所属编辑器
-      stage: 缩矮 / 截屏 / 识别 / 生成
-      expiresAt: 有效期
-    invariant: 缩矮不等于截屏成功；没有截图就没有 OCR 证据。
-  message:
-    name: ChatMessage · 可溯源消息
-    owner: sensing
-    fields:
-      speakerId: 谁说的
-      text: OCR 文字
-      bubbleBounds: 气泡位置
-      sourceCaptureId: 截图来源
-      confidence: 识别置信度
-    invariant: 说话人不确定，不把这句话写成某人的事实。
-  reply:
-    name: ReplySet · 一组三种表达
-    owner: keyboard
-    fields:
-      requestId: 本次任务
-      conversationKey: 联系人范围
-      intent: 相同意图
-      styles: 三种风格各一条
-      basedOnMemoryIds: 引用记忆
-      contextVersion: 依据版本
-    invariant: “更多”只扩展所选风格；选中只填入，不发送。
-  feedback:
-    name: Feedback · 可信修改
-    owner: keyboard
-    fields:
-      insertionId: 原填入
-      contactId: 联系人
-      suggestedText: 原建议
-      latestObservedText: 最新可信文字
-      finality: known / unknown
-      confidence: 对齐可信度
-    invariant: finality=unknown 不学习；未选建议不算负反馈。
-  contact:
-    name: Contact · 人物身份
-    owner: memory
-    fields:
-      localId: 本机人物标识
-      appAccountScope: 应用与账号范围
-      conversationIdentifiers: 对话标识集合
-      displayName: 展示名称
-    invariant: 同名不等于同一个人，未确认身份不跨人合并。
-  vocabulary:
-    name: Vocabulary · 我的热词
-    owner: memory
-    fields:
-      term: 词或专名
-      scope: 适用范围
-      sourceIds: 改词证据
-      confidence: 置信度
-      revision: 可撤销版本
-    invariant: 专名、纠错与语气分开保存。
-  style:
-    name: StylePreference · 表达偏好
-    owner: memory
-    fields:
-      scope: 全局 / 场景 / 联系人
-      content: 表达习惯
-      sourceIds: 来源
-      observedAt: 时间
-      revision: 版本
-    invariant: 针对某人的聊天方式，不自动升级为全局人格。
-  memory:
-    name: MemoryItem · 事实与偏好
-    owner: memory
-    fields:
-      id: 记忆标识
-      contactId: 所属人物；本人事件可不填
-      kind: 事实 / 偏好 / 推断
-      content: 内容
-      sourceIds: 原消息或修改证据
-      observedAt: 时间
-      validUntil: 有效期
-      confidence: 置信度
-      revision: 修订与删除状态
-      subjectScope: 本人 / 明确的联系人
-    invariant: 推断不冒充事实；每条可查来源、修正、删除。
-  sync:
-    name: SyncPolicy · 可选同步
-    owner: keyboard
-    fields:
-      enabled: 默认关闭
-      categories: 已选类别
-      contactIds: 已选人物
-      destination: 自有存储 / 单独授权的豆豆
-      encryptedBundle: 云备份加密增量包与清单
-      revisions: 同步位置
-      tombstones: 删除记录
-    invariant: 本机学习不等于同意上传；撤销和删除也传播。
-  history:
-    name: HistoryEvent · 本地证据
-    owner: memory
-    fields:
-      id: deviceId + 递增事件序号
-      kind: 语音 / 军师 / 可信修改
-      scope: 应用、人物与陈述方
-      text: 转写、OCR、意图与建议分开存储
-      finality: 草稿 / 已选 / 可信最终观察
-      revisions: 相关记忆与模型设置版本
-    invariant: 不保存截图；建议不冒充事实，已选不等于发送。
-  update:
-    name: MemoryUpdate · 增量整理
-    owner: memory
-    fields:
-      jobId: 幂等任务标识
-      cursor: 本批起止位置
-      baseRevision: 整理依据版本
-      proposals: 分类、范围、内容与 sourceIds
-      status: 待处理 / 校验 / 已提交 / 冲突
-    invariant: 成功合并才推进游标；不覆盖用户修订、不复活删除项。
+      - id: a1
+        from: a_screen
+        to: a_capture
+        label: 主动触发
+        kind: main
+        points:
+          - - 250
+            - 142
+          - - 310
+            - 142
+        note: 主动触发
+      - id: a2
+        from: a_capture
+        to: a_context
+        label: OCR 文字
+        kind: main
+        points:
+          - - 530
+            - 142
+          - - 590
+            - 142
+        note: OCR 文字
+      - id: a3
+        from: a_context
+        to: a_gate
+        label: 必要上下文
+        kind: main
+        points:
+          - - 810
+            - 142
+          - - 870
+            - 142
+        note: 必要上下文
+      - id: a4
+        from: a_gate
+        to: a_prompt
+        label: 任务＋上下文
+        kind: main
+        points:
+          - - 980
+            - 204
+          - - 980
+            - 270
+        note: 任务＋上下文
+      - id: a5
+        from: a_prompt
+        to: a_model
+        label: 军师提示词＋材料
+        kind: main
+        points:
+          - - 870
+            - 332
+          - - 810
+            - 332
+        note: 军师提示词＋材料
+        labelAt:
+          - 840
+          - 252
+      - id: a6
+        from: a_model
+        to: a_result
+        label: 三条候选
+        kind: main
+        points:
+          - - 590
+            - 332
+          - - 530
+            - 332
+        note: 三条候选
+      - id: a7
+        from: a_result
+        to: a_suggestions
+        label: 结果＋结算
+        kind: main
+        points:
+          - - 420
+            - 394
+          - - 420
+            - 425
+          - - 140
+            - 425
+          - - 140
+            - 460
+        note: 结果＋结算
+        labelAt:
+          - 280
+          - 425
+      - id: a8
+        from: a_suggestions
+        to: a_gate
+        label: 更多：新任务
+        kind: optional
+        points:
+          - - 250
+            - 524
+          - - 1110
+            - 524
+          - - 1110
+            - 226
+          - - 1030
+            - 226
+          - - 1030
+            - 204
+        note: 更多：新任务
+        labelAt:
+          - 790
+          - 524
+      - id: advisor_save
+        from: a_suggestions
+        to: advisor_history
+        label: 文字历史＋可信修改
+        kind: learning
+        points:
+          - - 140
+            - 584
+          - - 140
+            - 740
+        note: 文字历史＋可信修改
+        labelAt:
+          - 170
+          - 651
+      - id: advisor_learn_0
+        from: advisor_history
+        to: advisor_learn
+        label: 新增批次
+        kind: learning
+        points:
+          - - 218
+            - 802
+          - - 258
+            - 802
+        note: 新增批次
+      - id: advisor_learn_1
+        from: advisor_learn
+        to: advisor_model
+        label: 提示词＋材料
+        kind: learning
+        points:
+          - - 446
+            - 802
+          - - 486
+            - 802
+        note: 提示词＋材料
+      - id: advisor_learn_2
+        from: advisor_model
+        to: advisor_patch
+        label: 候选
+        kind: learning
+        points:
+          - - 674
+            - 802
+          - - 714
+            - 802
+        note: 候选
+      - id: advisor_learn_3
+        from: advisor_patch
+        to: advisor_apply
+        label: 来源＋版本
+        kind: learning
+        points:
+          - - 902
+            - 802
+          - - 942
+            - 802
+        note: 来源＋版本
+      - id: advisor_next
+        from: advisor_apply
+        to: a_capture
+        label: 供下一次使用
+        kind: learning
+        points:
+          - - 1130
+            - 802
+          - - 1146
+            - 802
+          - - 1146
+            - 28
+          - - 420
+            - 28
+          - - 420
+            - 80
+        note: 供下一次使用
+        labelAt:
+          - 806
+          - 28
 documents:
-  - id: implementation
-    title: 当前原生实现
-    file: implementation.md
   - id: product
-    title: 产品与业务
+    title: 产品与权益
     file: product.md
   - id: interaction
-    title: 交互与状态
+    title: 键盘交互
     file: interaction.md
   - id: architecture
-    title: 架构与数据
+    title: App / Cloud 架构
     file: architecture.md
+  - id: commercial
+    title: 账号、权益与部署
+    file: commercial.md
   - id: memory-and-sync
-    title: 历史、记忆与同步
+    title: 历史与记忆更新
     file: memory-and-sync.md
   - id: models-and-cost
-    title: 模型与采购
+    title: ASR 选型与成本
     file: models-and-cost.md
-  - id: demo
-    title: 真实 APK 演示
-    file: demo.md
-  - id: research
-    title: 对标与截图观察
-    file: research.md
-  - id: acceptance
-    title: 验收与边界
-    file: acceptance.md
+  - id: implementation
+    title: 当前实现与边界
+    file: implementation.md
+  - id: rewrite-prompt
+    title: 个人改写提示词
+    file: ../cloud/prompts/rewrite.md
   - id: reply-prompt
-    title: 回复提示词
-    file: prompts/reply.md
+    title: 军师提示词
+    file: ../cloud/prompts/reply.md
   - id: learn-prompt
-    title: 学习提示词
-    file: prompts/learn.md
+    title: 记忆学习提示词
+    file: ../cloud/prompts/learn.md

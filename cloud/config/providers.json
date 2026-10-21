@@ -1,0 +1,16 @@
+{
+  "asr": {
+    "default": "qwen-message",
+    "routes": {
+      "qwen-message": {
+        "provider": "aliyun-bailian",
+        "model": "qwen-audio-3.1-asr-flash-message",
+        "transport": "websocket",
+        "credentialRef": "BAILIAN_API_KEY",
+        "workspaceRef": "BAILIAN_WORKSPACE_ID"
+      }
+    }
+  },
+  "text": { "default": null, "routes": {} },
+  "note": "Fun-ASR 仅保留历史对照证据，不加入默认生产路由。商用不依赖个人 CPA 订阅额度。"
+}

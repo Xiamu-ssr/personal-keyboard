@@ -1,0 +1,18 @@
+services:
+  cloud:
+    build:
+      context: ..
+    ports:
+      - "127.0.0.1:8088:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 256m
+    restart: unless-stopped
+# 本文件只运行契约骨架，不创建商业数据库或公网服务。
+# 生产目标另加托管/独立 PostgreSQL、后台 worker、私有对象存储，
+# 由宿主机 HTTPS 反向代理转发；不占用同机其他项目的域或端口。

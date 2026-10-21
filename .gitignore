@@ -3,11 +3,11 @@ node_modules/
 .env
 .env.*
 !.env.example
-android/build/
-android/.gradle/
-android/app/build/
-android/local.properties
-android/app/.cxx/
+app/build/
+app/.gradle/
+app/app/build/
+app/local.properties
+app/app/.cxx/
 hs_err_pid*.log
 *.keystore
 *.jks

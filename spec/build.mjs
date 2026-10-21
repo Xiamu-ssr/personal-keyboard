@@ -6,6 +6,7 @@ import { marked, Renderer } from "marked";
 import { validateWorld } from "./world.mjs";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
+const promptRoot = path.resolve(dir, "../cloud/prompts") + path.sep;
 const spec = YAML.parse(await fs.readFile(path.join(dir, "spec.yaml"), "utf8"));
 const counts = validateWorld(spec);
 const ids = new Set();
@@ -14,7 +15,11 @@ for (const doc of spec.documents) {
   if (ids.has(doc.id)) throw Error("Duplicate document");
   ids.add(doc.id);
   const resolved = await fs.realpath(path.resolve(dir, doc.file));
-  if (!resolved.startsWith(dir + path.sep) || !doc.file.endsWith(".md"))
+  if (
+    (!resolved.startsWith(dir + path.sep) &&
+      !resolved.startsWith(promptRoot)) ||
+    !doc.file.endsWith(".md")
+  )
     throw Error("Document escaped spec directory");
   const source = await fs.readFile(resolved, "utf8");
   const renderer = new Renderer();
@@ -29,18 +34,23 @@ try {
     await fs.readFile(path.join(dir, "verification.json"), "utf8"),
   );
 } catch {}
-const [template,css,script,cost,world,panels] = await Promise.all(
-  ["template.html","style.css","runtime.js","cost.mjs","world.mjs","panels.js"].map(f=>fs.readFile(path.join(dir,f),"utf8")),
-);
-const json = JSON.stringify({ ...spec, sources: documents, verification })
+const [template, css, script, world, panels, catalog] = await Promise.all([
+  ...["template.html", "style.css", "runtime.js", "world.mjs", "panels.js"].map(
+    (f) => fs.readFile(path.join(dir, f), "utf8"),
+  ),
+  fs.readFile(path.resolve(dir, "../cloud/config/plans.json"), "utf8"),
+]);
+const json = JSON.stringify({
+  ...spec,
+  catalog: JSON.parse(catalog),
+  sources: documents,
+  verification,
+})
   .replace(/</g, "\\u003c")
   .replace(/\u2028/g, "\\u2028")
   .replace(/\u2029/g, "\\u2029");
 const output = template
-  .replace(
-    "<!-- SPEC_STYLE -->",
-    "<style>" + css + "</style>",
-  )
+  .replace("<!-- SPEC_STYLE -->", "<style>" + css + "</style>")
   .replace(
     "<!-- SPEC_DATA -->",
     '<script id="spec-data" type="application/json">' + json + "</script>",
@@ -48,8 +58,6 @@ const output = template
   .replace(
     "<!-- SPEC_SCRIPT -->",
     "<script>" +
-      cost.replace("export function", "function") +
-      "\n" +
       world.replaceAll("export function", "function") +
       "\n" +
       script +
@@ -62,8 +70,8 @@ console.log(
   "Built spec/index.html: " +
     spec.domains.length +
     " domains, " +
-    counts.capabilities +
-    " capabilities, " +
+    counts.workflows +
+    " workflows, " +
     counts.relations +
     " relations, " +
     ids.size +

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "activeWelcomePlan": "welcome-v1",
+  "metering": {
+    "asr_characters": "ASR 最终成功文本经 NFC 规范化后的非空白 Unicode 码点数；中间结果不累计，个人改写不重复扣字符。",
+    "advisor_generations": "每次成功生成一组结果扣 1 次；更多是新任务，重试同一任务不重复扣。",
+    "failures": "失败、取消以及未形成成功最终结果的预留均释放；已结算任务按原结果恢复。"
+  },
+  "plans": [
+    {
+      "id": "welcome-v1",
+      "name": "免费账户",
+      "version": 1,
+      "status": "published",
+      "grantMode": "once_per_account",
+      "limits": { "asr_characters": 10000, "advisor_generations": 20 },
+      "features": { "cloud_sync": false },
+      "price": { "amountMinor": 0, "currency": "CNY" }
+    },
+    {
+      "id": "paid-v1-draft",
+      "name": "付费套餐",
+      "version": 1,
+      "status": "draft",
+      "grantMode": "verified_purchase",
+      "limits": null,
+      "features": { "cloud_sync": true },
+      "price": null
+    }
+  ]
+}

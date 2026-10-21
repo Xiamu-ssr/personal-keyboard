@@ -1,125 +1,130 @@
 export function validateWorld(spec) {
-  const fail = (message) => {
-    throw new Error(message);
+  const require = (condition, message) => {
+    if (!condition) throw Error(message);
   };
-  if (
-    !spec.meta?.title ||
-    !spec.layout?.width ||
-    !spec.layout?.height ||
-    !spec.domains?.length
-  )
-    fail("Missing world metadata");
+  require(spec.schemaVersion === 2 &&
+    spec.meta?.title, "Unsupported product schema");
   const domains = new Map(),
-    chips = new Map(),
-    edges = new Set();
-  const documents = new Set(spec.documents?.map((d) => d.id));
-  if (documents.size !== spec.documents?.length) fail("Duplicate document");
-  function references(item) {
+    colors = new Set(),
+    documents = new Set(spec.documents?.map((d) => d.id));
+  require(documents.size === spec.documents?.length, "Duplicate document");
+  const refs = (item) => {
     for (const id of item.documents || [])
-      if (!documents.has(id)) fail("Unknown document: " + id);
-    for (const id of item.objects || [])
-      if (!spec.objects?.[id]) fail("Unknown object: " + id);
+      require(documents.has(id), "Unknown document: " + id);
+  };
+  for (const d of spec.domains || []) {
+    require(d.id && !domains.has(d.id), "Duplicate or missing domain");
+    require(/^#[0-9a-f]{6}$/i.test(d.color) &&
+      !colors.has(d.color), "Domain colors must be fixed and distinct");
+    require(d.name &&
+      d.summary &&
+      d.responsibilities?.length &&
+      d.data?.length &&
+      d.code?.length, "Incomplete domain");
+    domains.set(d.id, d);
+    colors.add(d.color);
+    refs(d);
   }
-  for (const domain of spec.domains) {
-    if (!domain.id || domains.has(domain.id))
-      fail("Duplicate or missing domain");
-    domains.set(domain.id, domain);
-    if (!spec.zones?.[domain.zone]) fail("Unknown zone: " + domain.zone);
-    for (const [key, width, height] of [
-      ["rect", spec.layout.width, spec.layout.height],
-      ["mobile", 100, 100],
-    ]) {
-      const rect = domain[key];
-      if (
-        !Array.isArray(rect) ||
-        rect.length !== 4 ||
-        rect.some((n) => !Number.isFinite(n) || n < 0) ||
-        rect[2] <= 0 ||
-        rect[3] <= 0 ||
-        rect[0] + rect[2] > width ||
-        rect[1] + rect[3] > height
-      )
-        fail("Invalid domain bounds: " + domain.id);
+  require(domains.has("app") &&
+    domains.has("cloud") &&
+    domains.has("provider"), "Missing service boundary");
+  const prompts = new Map();
+  for (const p of spec.prompts || []) {
+    require(p.id &&
+      !prompts.has(p.id) &&
+      p.owner === "cloud" &&
+      documents.has(p.document), "Invalid prompt owner or document");
+    require(/^cloud\/prompts\/[a-z-]+\.md$/.test(
+      p.source,
+    ), "Invalid prompt source");
+    prompts.set(p.id, p);
+  }
+  require(spec.workflows?.length === 2 &&
+    spec.workflows.some((f) => f.id === "voice") &&
+    spec.workflows.some(
+      (f) => f.id === "advisor",
+    ), "Exactly two business workflows required");
+  let nodeCount = 0,
+    edgeCount = 0;
+  const workflowIds = new Set(),
+    consumers = new Set();
+  for (const flow of spec.workflows) {
+    require(!workflowIds.has(flow.id) &&
+      flow.name &&
+      flow.summary &&
+      flow.width > 0 &&
+      flow.height > 0, "Invalid workflow");
+    workflowIds.add(flow.id);
+    const nodes = new Map(),
+      edges = new Set();
+    for (const n of flow.nodes || []) {
+      require(n.id &&
+        !nodes.has(n.id) &&
+        domains.has(n.domain), "Invalid step owner or identity");
+      require(n.title &&
+        n.summary &&
+        n.input &&
+        n.output &&
+        Array.isArray(n.rules), "Incomplete step contract");
+      const r = n.rect;
+      require(Array.isArray(r) &&
+        r.length === 4 &&
+        r.every((x) => Number.isFinite(x) && x >= 0) &&
+        r[2] > 0 &&
+        r[3] > 0 &&
+        r[0] + r[2] <= flow.width &&
+        r[1] + r[3] <= flow.height, "Step outside graph");
+      for (const id of n.prompts || []) {
+        require(prompts.has(id) &&
+          n.domain === "cloud", "Prompt must be assembled in Cloud");
+        consumers.add(id);
+      }
+      refs(n);
+      nodes.set(n.id, n);
+      nodeCount++;
     }
-    if (
-      !domain.role ||
-      !domain.business?.length ||
-      !domain.technical?.length ||
-      !Array.isArray(domain.chips)
-    )
-      fail("Incomplete domain: " + domain.id);
-    references(domain);
-    for (const chip of domain.chips) {
-      if (!chip.id || chips.has(chip.id) || !chip.name)
-        fail("Duplicate or missing capability");
-      chips.set(chip.id, domain.id);
-      references(chip);
+    for (const e of flow.edges || []) {
+      require(e.id &&
+        !edges.has(e.id) &&
+        nodes.has(e.from) &&
+        nodes.has(e.to), "Dangling or duplicate relation");
+      require(e.label &&
+        e.note &&
+        ["main", "optional", "learning"].includes(
+          e.kind,
+        ), "Incomplete relation");
+      require(e.points?.length >= 2 &&
+        e.points.every(
+          (p) => p.length === 2 && p.every(Number.isFinite),
+        ), "Missing relation path");
+      const from = nodes.get(e.from),
+        to = nodes.get(e.to);
+      if (from.domain === "provider" || to.domain === "provider")
+        require((from.domain === "cloud" && to.domain === "provider") ||
+          (from.domain === "provider" &&
+            to.domain ===
+              "cloud"), "App must never bypass Cloud to a supplier");
+      edges.add(e.id);
+      edgeCount++;
+    }
+    for (const n of nodes.values()) {
+      require(flow.edges.some(
+        (e) => e.from === n.id || e.to === n.id,
+      ), "Orphan business step");
+      if (n.prompts?.length)
+        require(flow.edges.some(
+          (e) => e.from === n.id && nodes.get(e.to).domain === "provider",
+        ), "Prompt has no model destination");
     }
   }
-  for (const edge of spec.edges || []) {
-    if (!edge.id || edges.has(edge.id)) fail("Duplicate or missing edge");
-    edges.add(edge.id);
-    if (!domains.has(edge.from) || !domains.has(edge.to))
-      fail("Unknown edge endpoint: " + edge.id);
-    if (!spec.kinds?.[edge.kind]) fail("Unknown relation kind");
-    for (const field of [
-      "business",
-      "trigger",
-      "payload",
-      "guard",
-      "technical",
-    ])
-      if (typeof edge[field] !== "string" || !edge[field].trim())
-        fail("Incomplete relation " + edge.id + ": " + field);
-    if (
-      !Array.isArray(edge.ports) ||
-      edge.ports.length !== 2 ||
-      edge.ports.some((p) => !["top", "right", "bottom", "left"].includes(p))
-    )
-      fail("Invalid ports");
-    if (domains.get(edge.to).zone === "service" && !edge.external)
-      fail("Unmarked service boundary: " + edge.id);
-    for (const capability of edge.capabilities || []) {
-      const owner = chips.get(capability);
-      if (!owner || ![edge.from, edge.to].includes(owner))
-        fail("Unknown or unrelated capability: " + capability);
-    }
-    references(edge);
-  }
-  const views = new Set();
-  for (const view of spec.views || []) {
-    if (!view.id || views.has(view.id) || !Array.isArray(view.edges))
-      fail("Invalid view");
-    views.add(view.id);
-    for (const id of view.edges)
-      if (!edges.has(id)) fail("Unknown view relation: " + id);
-  }
-  for (const object of Object.values(spec.objects || {})) {
-    if (
-      !domains.has(object.owner) ||
-      !object.name ||
-      !object.invariant ||
-      !Object.keys(object.fields || {}).length
-    )
-      fail("Incomplete owned object");
-  }
+  require([...prompts.keys()].every((id) =>
+    consumers.has(id),
+  ), "Orphan prompt");
   return {
     domains: domains.size,
-    capabilities: chips.size,
-    relations: edges.size,
-    objects: Object.keys(spec.objects || {}).length,
-  };
-}
-
-export function relationsForView(spec, viewId) {
-  const view = spec.views.find((v) => v.id === viewId);
-  if (!view) throw new Error("Unknown view");
-  const edges =
-    viewId === "all"
-      ? spec.edges
-      : spec.edges.filter((e) => view.edges.includes(e.id));
-  return {
-    edges: edges.map((e) => e.id),
-    domains: [...new Set(edges.flatMap((e) => [e.from, e.to]))],
+    workflows: workflowIds.size,
+    steps: nodeCount,
+    relations: edgeCount,
+    prompts: prompts.size,
   };
 }

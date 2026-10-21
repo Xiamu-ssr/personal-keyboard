@@ -5,5 +5,5 @@
   "dictionary_sha256": "dc1663160a5312c49300a8149d71e44a305c97a86383eb124e8b2faea4606c90",
   "source": "https://deb.debian.org/debian/pool/main/libg/libgooglepinyin/libgooglepinyin_0.1.2.orig.tar.bz2",
   "source_sha256": "1a339ae45721a60b9fadd15e43c34b9bb27af3bb999c00ed0d88b4084cfd0637",
-  "rebuild": "python3 android/tools/native-host.py --rebuild-dictionary"
+  "rebuild": "python3 app/tools/native-host.py --rebuild-dictionary"
 }

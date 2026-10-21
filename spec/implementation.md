@@ -17,7 +17,7 @@
 
 ## 代码归属
 
-源码根目录为 `android/app/src/main/java/app/doudou/ime/`。
+源码根目录为 `app/app/src/main/java/app/doudou/ime/`。
 
 | 目录 | 职责 |
 | --- | --- |
@@ -32,7 +32,7 @@
 
 各面板通过 `EditorHost` 使用当前编辑器；不持有 InputConnection，不拥有发送消息的能力。原先集中在两个巨型页面 / Service 的业务已迁出，旧类和旧组件入口已删除，没有并存的兼容分支。数据库文件、资料结构与 Keystore 标识不变；升级后需在系统重新选择新输入法组件，并重新开启主动截屏。
 
-简拼索引由 `android/tools/build-abbreviations.py` 从同一份校验固定的 AOSP 源词表生成；现代词条在 `expressions.tsv`，摘要和哈希在 `initials-info.json`。算法里没有逐个词特判。
+简拼索引由 `app/tools/build-abbreviations.py` 从同一份校验固定的 AOSP 源词表生成；现代词条在 `expressions.tsv`，摘要和哈希在 `initials-info.json`。算法里没有逐个词特判。
 
 语音和军师上屏后的修改只在范围可对应时进入待学习。输入框清空可能是发送，不是删除证据。自动分类 / 人物记忆抽取、付费 ASR、豆豆同步仍待后续模型联调。
 

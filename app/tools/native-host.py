@@ -10,7 +10,7 @@ import tarfile
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
-VENDOR = ROOT / 'android/app/src/main/cpp/vendor/aosp-pinyin'
+VENDOR = ROOT / 'app/app/src/main/cpp/vendor/aosp-pinyin'
 OUT = ROOT / '.runtime/native-host'
 ARCHIVE_URL = 'https://deb.debian.org/debian/pool/main/libg/libgooglepinyin/libgooglepinyin_0.1.2.orig.tar.bz2'
 ARCHIVE_SHA = '1a339ae45721a60b9fadd15e43c34b9bb27af3bb999c00ed0d88b4084cfd0637'
@@ -42,7 +42,7 @@ if args.rebuild_dictionary:
                 data = data.replace(b'"../include/dicttrie.h"', b'"dicttrie.h"')
             (OUT / Path(name).name).write_bytes(data)
     run(common+[str(OUT/'pinyinime_dictbuilder.cpp')]+sources+['-o',str(OUT/'dictbuilder')], 'dictionary-build')
-    destination = ROOT / 'android/app/src/main/assets/dict_pinyin.dat'
+    destination = ROOT / 'app/app/src/main/assets/dict_pinyin.dat'
     run([str(OUT/'dictbuilder'), str(OUT/'rawdict_utf16_65105_freq.txt'), str(OUT/'valid_utf16.txt'), str(destination)], 'dictionary')
     print('Rebuilt little-endian 64-bit dictionary:', hashlib.sha256(destination.read_bytes()).hexdigest())
 
@@ -55,9 +55,9 @@ elif system == 'Linux':
     library, jni_os = 'libdoudou_decoder.so', 'linux'
 else:
     raise SystemExit('Host tests support macOS/Linux; use connectedAndroidTest on other hosts.')
-run(common+['-shared','-fPIC','-I'+str(java/'include'),'-I'+str(java/'include'/jni_os),str(ROOT/'android/app/src/main/cpp/decoder_jni.cpp')]+sources+['-o',str(OUT/library)], 'jni-build')
+run(common+['-shared','-fPIC','-I'+str(java/'include'),'-I'+str(java/'include'/jni_os),str(ROOT/'app/app/src/main/cpp/decoder_jni.cpp')]+sources+['-o',str(OUT/library)], 'jni-build')
 print('Host JNI decoder ready')
 if args.sanitize:
-    run(common+['-O1','-g','-fsanitize=address,undefined','-fno-sanitize-recover=all','-fno-omit-frame-pointer',str(ROOT/'android/app/src/test/native/decoder-boundaries.cpp')]+sources+['-o',str(OUT/'decoder-boundaries')], 'sanitizer-build')
-    run([str(OUT/'decoder-boundaries'),str(ROOT/'android/app/src/main/assets/dict_pinyin.dat'),str(OUT/'sanitizer.user')], 'sanitizer')
+    run(common+['-O1','-g','-fsanitize=address,undefined','-fno-sanitize-recover=all','-fno-omit-frame-pointer',str(ROOT/'app/app/src/test/native/decoder-boundaries.cpp')]+sources+['-o',str(OUT/'decoder-boundaries')], 'sanitizer-build')
+    run([str(OUT/'decoder-boundaries'),str(ROOT/'app/app/src/main/assets/dict_pinyin.dat'),str(OUT/'sanitizer.user')], 'sanitizer')
     print('Decoder boundaries passed AddressSanitizer and UndefinedBehaviorSanitizer')

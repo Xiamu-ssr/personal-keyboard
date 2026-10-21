@@ -73,7 +73,7 @@ export class DemoSession {
       throw Error("设备目前锁屏，请本人解锁后再开始。不会自动解锁。");
     const apk = path.join(
       root,
-      "android/app/build/outputs/apk/debug/app-debug.apk",
+      "app/app/build/outputs/apk/debug/app-debug.apk",
     );
     try {
       await fs.access(apk);

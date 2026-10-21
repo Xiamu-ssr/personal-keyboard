@@ -6,35 +6,6 @@
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/"/g, "&quot;");
-  function cost() {
-    const minutes = Number(el("minutes").value),
-      replies = Number(el("replies").value);
-    el("minutes-label").textContent = minutes + " 分钟";
-    el("replies-label").textContent = replies + " 次";
-    const r = estimateCost({
-      minutesPerDay: minutes,
-      repliesPerDay: replies,
-      asr: el("asr").value,
-      model: el("text-model").value,
-      freeHours: el("free-hours").checked ? 10 : 0,
-    });
-    el("cost-total").textContent = "¥" + r.total.toFixed(2);
-    el("cost-details").innerHTML = [
-      ["语音识别 · " + r.hours.toFixed(1) + " 小时", r.speech],
-      ["军师回复", r.replies],
-      ["语音整理", r.voice],
-      ["异步分类与记忆", r.extraction],
-    ]
-      .map(
-        ([label, value]) =>
-          "<dt>" + label + "</dt><dd>¥" + value.toFixed(2) + "</dd>",
-      )
-      .join("");
-  }
-  ["minutes", "replies", "asr", "text-model", "free-hours"].forEach((id) =>
-    el(id).addEventListener("input", cost),
-  );
-  cost();
   let token = "",
     current = null;
   const local =
