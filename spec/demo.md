@@ -8,7 +8,7 @@
 
 后续在线试用的目标是独立云端 Android：安装本仓库发布的同一 APK，网页只传画面和触控，会话结束清空测试数据。GitHub Pages 负责静态页面，不连接家庭电脑或个人手机。
 
-选择托管平台时，必须实测系统输入法启用、JNI 中文候选、辅助功能截图 / OCR。语音还需要浏览器麦克风传入 Android；仅支持设备音频播放不等于支持录音。当前没有部署新的云端试用服务。
+选择托管平台时，必须实测系统输入法启用、JNI 中文候选、辅助功能截图 / OCR。语音还需要浏览器麦克风传入 Android；Appetize 官方明确不支持麦克风输入，不能用于完整语音体验。当前没有部署新的云端试用服务。
 
 `demo/remote/` 保留实验性设备生命周期与会话边界代码及测试，未作为公网服务启动；Nginx 示例保留关闭旧地址的配置。
 
@@ -17,7 +17,8 @@
 2026-10-21 核查 nanoMuse 源码：官网使用 [MobileGym](https://github.com/nano-muse/nanoMuse/tree/main/demo/mobilegym)，由 React 模拟手机和应用，并不是运行 Android APK。[MobileGym 本体](https://github.com/Purewhiter/mobilegym)适合展示聊天与 Agent 操作；不能用来验收 Android 输入法服务、JNI 拼音或系统截屏。
 
 - [NekoDroid 支持范围](https://github.com/nishal21/NekoDroid/blob/main/docs/SUPPORTED_APKS.md)：目前是有限的单 DEX 测试 APK 执行器，不支持 JNI、完整 Android 系统服务或一般应用。补到可运行本输入法，相当于补 Android 运行环境，不适合作为演示基础。
-- [Appetize](https://docs.appetize.io/platform/embedding-apps)：上传 APK，在其云端运行并嵌入网页。官方价格页目前免费档每月 30 分钟、单次 3 分钟；先用有限额度验证输入法兼容性，不承诺免费长期公开试用。[定价](https://appetize.io/pricing)
+- [Cuttlefish](https://source.android.com/docs/devices/cuttlefish/get-started)：Android 官方完整虚拟设备，自带网页控制界面，需要 KVM；[WebRTC 文档](https://source.android.com/docs/devices/cuttlefish/webrtc)列出麦克风等传输扩展。作为独立云主机上的完整 APK 试用首选候选，部署后仍需验证本输入法及麦克风端到端流程。
+- [Appetize](https://docs.appetize.io/platform/embedding-apps)：上传 APK，在其云端运行并嵌入网页。官方价格页目前免费档每月 30 分钟、单次 3 分钟，适合先验证界面和输入法兼容性；[官方限制](https://support.appetize.io/does-appetize.io-support-audio-including-sound-or-microphone)明确不支持麦克风输入，无法完整演示语音。[定价](https://appetize.io/pricing)
 - [Google Android Emulator 容器脚本](https://github.com/google/android-emulator-container-scripts)：完整 Android + WebRTC，服务器需要 KVM，项目标记为实验性。
 - [redroid](https://github.com/remote-android/redroid-doc)：Linux 容器运行 Android，依赖 Binder 等内核能力，可配网页投屏；公开演示应放在独立云主机，不与个人数据和正式业务混用。
 
