@@ -312,7 +312,7 @@
         ? "↺ 重播"
         : "▶ 播放";
   }
-  function animateEdge(event) {
+  function animateTransfer(event) {
     stopMotion();
     if (state.running)
       for (const id of world.activeStreams)
@@ -347,7 +347,7 @@
       return;
     }
     updateState();
-    animateEdge(e);
+    animateTransfer(e);
     for (const c of data.world.channels) renderStream(c);
     if (world.done) {
       clearTimeout(timer);
@@ -372,6 +372,7 @@
     state.running = true;
     updateState();
     if (!world.cursor) step();
+    else animateTransfer(world.current);
     schedule();
   }
   function openPanel(title, summary, body, breadcrumb = "节点与数据") {
