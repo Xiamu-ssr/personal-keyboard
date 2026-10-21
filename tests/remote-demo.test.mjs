@@ -4,9 +4,8 @@ import { once } from "node:events";
 import net from "node:net";
 import { createRemoteDemo } from "../demo/remote/server.mjs";
 import { DedicatedEmulator } from "../demo/remote/emulator.mjs";
-test("remote Android requires private authentication and same origin; never accepts a device selector", async (t) => {
-  const key = "only-test-key-01234567890123456789",
-    origin = "https://demo.example";
+test("remote Android opens without a password but retains same-origin sessions and fixed device scope", async (t) => {
+  const origin = "https://demo.example";
   let calls = 0;
   const emulator = {
     phase: "stopped",
@@ -24,7 +23,7 @@ test("remote Android requires private authentication and same origin; never acce
     async expire() {},
     touch() {},
   };
-  const app = createRemoteDemo({ key, origin, emulator });
+  const app = createRemoteDemo({ origin, emulator });
   app.server.listen(0, "127.0.0.1");
   await once(app.server, "listening");
   t.after(() => app.close());
@@ -40,10 +39,10 @@ test("remote Android requires private authentication and same origin; never acce
     ).status,
     401,
   );
-  const login = await fetch(base + "api/login", {
+  const login = await fetch(base + "api/session", {
     method: "POST",
     headers: { Origin: origin },
-    body: JSON.stringify({ key }),
+    body: "{}",
   });
   assert.equal(login.status, 200);
   const { session } = await login.json();
@@ -96,6 +95,54 @@ test("remote Android requires private authentication and same origin; never acce
     });
     assert.match(response, /^HTTP\/1.1 403 Forbidden/);
   }
+  const another = await (
+    await fetch(base + "api/session", {
+      method: "POST",
+      headers: { Origin: origin },
+      body: "{}",
+    })
+  ).json();
+  const outsider = { Origin: origin, "X-Demo-Session": another.session };
+  assert.equal(
+    (await (await fetch(base + "api/status", { headers: outsider })).json())
+      .phase,
+    "occupied",
+  );
+  assert.equal(
+    (
+      await fetch(base + "api/start", {
+        method: "POST",
+        headers: outsider,
+        body: "{}",
+      })
+    ).status,
+    409,
+  );
+  assert.equal(
+    (
+      await fetch(base + "api/stop", {
+        method: "POST",
+        headers: outsider,
+        body: "{}",
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await fetch(base + "session/" + another.session + "/viewer/", {
+        headers: outsider,
+      })
+    ).status,
+    403,
+  );
+  assert.equal(calls, 1);
+  assert.equal(
+    (await fetch(base + "api/start", { method: "POST", headers, body: "{}" }))
+      .status,
+    200,
+  );
+  assert.equal(calls, 1);
   assert.equal((await fetch(base + "api/anything", { headers })).status, 404);
   assert.equal((await fetch(base + "api/status", { headers })).status, 200);
   assert.equal(
@@ -103,10 +150,9 @@ test("remote Android requires private authentication and same origin; never acce
     200,
   );
 });
-test("remote demo login is rate limited", async (t) => {
+test("public demo session creation is rate limited", async (t) => {
   const emulator = { async expire() {}, async stop() {} };
   const app = createRemoteDemo({
-    key: "test-key-longer-than-twenty-characters",
     origin: "https://demo.example",
     emulator,
   });
@@ -116,17 +162,17 @@ test("remote demo login is rate limited", async (t) => {
   const url =
     "http://127.0.0.1:" +
     app.server.address().port +
-    "/keyboard-spec/live/api/login";
+    "/keyboard-spec/live/api/session";
   for (let n = 0; n < 9; n++)
     assert.equal(
       (
         await fetch(url, {
           method: "POST",
           headers: { Origin: "https://demo.example" },
-          body: '{"key":"bad"}',
+          body: "{}",
         })
       ).status,
-      n === 8 ? 429 : 403,
+      n === 8 ? 429 : 200,
     );
 });
 test("idle and absolute lifetime reclaim the emulator even while the page is closed", async () => {
@@ -151,4 +197,52 @@ test("idle and absolute lifetime reclaim the emulator even while the page is clo
   demo.stop = async () => stopped++;
   await demo.expire(3000);
   assert.equal(stopped, 0);
+});
+test("closing while Android boots stops the newly created emulator", async (t) => {
+  let finish,
+    stops = 0;
+  const emulator = {
+    phase: "stopped",
+    status() {
+      return { phase: this.phase };
+    },
+    async start() {
+      this.phase = "starting";
+      await new Promise((r) => (finish = r));
+      this.phase = "running";
+    },
+    async stop() {
+      stops++;
+      this.phase = "stopped";
+    },
+    async expire() {},
+    touch() {},
+  };
+  const origin = "https://demo.example",
+    app = createRemoteDemo({ origin, emulator });
+  app.server.listen(0, "127.0.0.1");
+  await once(app.server, "listening");
+  t.after(() => app.close());
+  const base = `http://127.0.0.1:${app.server.address().port}/keyboard-spec/live/api/`;
+  const login = await (
+    await fetch(base + "session", {
+      method: "POST",
+      headers: { Origin: origin },
+      body: "{}",
+    })
+  ).json();
+  const options = {
+    method: "POST",
+    headers: { Origin: origin, "X-Demo-Session": login.session },
+    body: "{}",
+  };
+  const start = fetch(base + "start", options);
+  while (!finish) await new Promise((r) => setImmediate(r));
+  const stop = fetch(base + "stop", options);
+  await new Promise((r) => setTimeout(r, 10));
+  finish();
+  assert.equal((await start).status, 200);
+  assert.equal((await stop).status, 200);
+  assert.equal(stops, 1);
+  assert.equal(emulator.phase, "stopped");
 });

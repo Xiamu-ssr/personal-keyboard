@@ -1,5 +1,5 @@
 {
-  "reviewedAt": "2026-10-21T05:51:21.434Z",
+  "reviewedAt": "2026-10-21T06:16:21.107Z",
   "version": "0.3.0-alpha.1",
   "status": "0.3 主题、语音面板与真实 APK 网页演示已验收；专用 ASR、真实模型质量和本版真机兼容性待联调。",
   "checks": [
@@ -64,7 +64,7 @@
     {
       "name": "产品世界与本地宿主",
       "status": "passed",
-      "tests": 9,
+      "tests": 10,
       "domains": 7,
       "capabilities": 12,
       "relations": 9,

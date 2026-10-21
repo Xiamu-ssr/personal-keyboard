@@ -4,13 +4,19 @@
 
 ## 在线演示
 
-Spec 的“真实 APK”嵌入 `/keyboard-spec/live/`。先输入私人演示口令，再点“启动 Android”：Mac 按需创建独立 Android 15 会话，1536 MB 内存、2 核、独立测试资料；不会连接其他手机。首次启动约一分钟。离开两分钟或运行满十五分钟，自动关闭模拟器与投屏进程；下一次清空本次测试虚拟机的数据重新开始。轻量 Node 服务与 SSH 通道保持在线，Mac 需开机联网。
+点开 Spec 的“真实 APK”即可启动，不需要口令或第二次点击；也可直接打开 `/#demo`。普通 Spec 页面不启动模拟器。Mac 创建独立 Android 15 会话，1536 MB 内存、2 核，只含测试资料；不会连接其他手机。首次启动约一分钟。关闭演示回收资源；离开两分钟或运行满十五分钟也会关闭，下次清空测试设备数据重新开始。Mac 需开机联网。
 
-ECS 只提供 HTTPS 转发，SSH 反向端口仅监听 ECS 回环；ADB、模拟器控制台和原始投屏端口均不公开。随机口令换取短期演示能力标识，API 使用请求头授权，画面仅通过带能力标识的命名路径提供且不记录访问日志；不依赖第三方 Cookie，支持 Pages 内嵌。同源检查、登录限速；只提供视频、触控和有限键码；浏览器不能选择设备、目标地址或 ADB 命令，没有 shell、文件浏览或任意网络代理。源码与示例配置中没有实际口令。
+ECS 只提供 HTTPS 转发，SSH 反向端口仅监听 ECS 回环；ADB、模拟器控制台和原始投屏端口均不公开。浏览器自动取得短期会话，API 使用请求头、视频使用专用路径，不依赖第三方 Cookie。一次只允许一位访客使用设备，其他访客不能查看、接管或结束这次体验。同源检查、会话限速与生命周期上限保留；只提供视频、触控和有限键码，没有 shell、文件浏览或任意网络代理。
 
 测试 App 里可以练习拼音、简拼、浏览 / 编辑测试资料、查看语音面板和主动截屏 OCR。不要输入真实账号、密钥、私人聊天。浏览器麦克风不会自动传入远端 Android，专用 ASR 与模型仍待配置；演示不伪造转写或回复。
 
-部署入口 `demo/remote/host.mjs`，独立虚拟机生命周期 `emulator.mjs`，访问与视频边界 `server.mjs`。私有配置为忽略目录 `.runtime/remote-demo/config.json`，包含 `origin`、至少 20 字符的随机 `key` 和已有 `sshHost`。`nginx-location.example.inc` 仅用于现有 TLS server 中的命名路径。宿主停止时先结束模拟器，再关闭本次隧道；不操作其他服务。
+部署入口 `demo/remote/host.mjs`，独立虚拟机生命周期 `emulator.mjs`，访问与视频边界 `server.mjs`。忽略目录 `.runtime/remote-demo/config.json` 只需 `origin` 和已有 `sshHost`；不再配置演示口令。`nginx-location.example.inc` 仅用于现有 TLS server 的命名路径。宿主停止时先结束模拟器，再关闭本次隧道；不操作其他服务。
+
+## 网页安卓方案区别
+
+2026-10-21 核查 nanoMuse 源码：官网使用 [MobileGym](https://github.com/nano-muse/nanoMuse/tree/main/demo/mobilegym)，由 React 模拟手机和应用，并不是运行 Android APK。[MobileGym 本体](https://github.com/Purewhiter/mobilegym)适合展示聊天与 Agent 操作；不能用来验收 Android 输入法服务、JNI 拼音或系统截屏。
+
+[NekoDroid](https://github.com/nishal21/NekoDroid)尝试用 WebAssembly 在浏览器执行 APK，但当前明确不支持 JNI 和完整 Android 用户空间。[Google 的网页安卓方案](https://github.com/google/android-emulator-container-scripts)则在服务器运行完整 Android，再把画面传入浏览器，宿主需要 KVM。我们目前的真实 APK 演示同属远端 Android 画面传输，宿主是 Mac；ECS 没有 KVM，当前也未提供 Binder 设备，未在这台共用服务器改内核或加载模块。
 
 ## 本机设备演示
 

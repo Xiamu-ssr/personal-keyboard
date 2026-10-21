@@ -534,6 +534,7 @@
   function openModal(id) {
     closePanel(false);
     el(id).showModal();
+    el(id).dispatchEvent(new Event("spec:open"));
   }
   document.addEventListener("click", (event) => {
     const target = event.target.closest("button,[data-doc],[data-relation]");

@@ -1,20 +1,239 @@
-<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>豆豆输入法 · 真实 APK</title>
-<style>*{box-sizing:border-box}body{margin:0;background:#222;color:#f1f0ee;font:15px system-ui}main{max-width:900px;margin:auto;padding:18px}header,form,.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}h1{font-size:20px;margin:0 auto 0 0}button,input{font:inherit;border:1px solid #555;border-radius:18px;padding:10px 16px}input{background:#333;color:#fff;max-width:260px}button{background:#eee;color:#222;cursor:pointer}button:disabled{opacity:.45;cursor:default}p{color:#aaa;line-height:1.6}#state{font-size:13px}iframe{width:100%;height:min(760px,76vh);border:0;background:#171717;border-radius:20px}#message{min-height:26px;color:#ddd}a{color:#eee}body.embed main{padding:10px}.actions{margin:10px 0}[hidden]{display:none!important}</style>
-<main><header><h1>豆豆输入法 · 真正运行 APK</h1><span id="state">按需启动</span></header><p>专用 Android 15 虚拟机，只含练习资料。2 分钟无人使用或运行满 15 分钟会关闭；Mac 需在线。请勿填入账号、密钥或私人聊天。</p>
-<form id="login"><input id="key" type="password" autocomplete="off" placeholder="演示口令" aria-label="演示口令"><button>连接演示</button></form>
-<div class="actions" id="controls" hidden><button id="start">启动 Android</button><button id="stop">结束演示</button><a href="../demo/doudou-keyboard.apk">下载同版 APK</a></div>
-<div id="message" role="status">不会自动启动虚拟机。语音模型待配置；浏览器麦克风不会自动传入 Android。</div><iframe id="screen" title="Android 实际画面与触控" hidden allow="clipboard-read; clipboard-write; fullscreen"></iframe></main>
-<script>
-const by=id=>document.getElementById(id);let busy=false,session="";
-try{session=sessionStorage.getItem("keyboard-demo-session")||"";}catch{}
-if(window!==parent)document.body.classList.add('embed');
-async function api(name,body){const requestedSession=session;const r=await fetch('api/'+name,{method:body?'POST':'GET',headers:{'Content-Type':'application/json','X-Demo-Session':requestedSession},body:body?JSON.stringify(body):undefined});if(!(r.headers.get('content-type')||'').includes('application/json'))throw Error('演示暂时离线，确认 Mac 在线后重试');const d=await r.json();if(!r.ok){if(r.status===401&&requestedSession===session){by('login').hidden=false;by('controls').hidden=true;}throw Error(d.error||'演示离线');}return d;}
-function connectView(d){by('login').hidden=true;by('controls').hidden=false;view(d);if(d.viewer){by('screen').src=d.viewer;by('screen').hidden=false;by('message').textContent='已重新连接当前 Android 会话。';}}
-function view(d){by('state').textContent=({stopped:'已停止',starting:'启动中…',running:'Android 在线',stopping:'正在回收资源…'})[d.phase]||d.phase;}
-by('login').onsubmit=async e=>{e.preventDefault();try{const logged=await api('login',{key:by('key').value});session=logged.session;try{sessionStorage.setItem('keyboard-demo-session',session);}catch{}by('key').value='';const d=await api('status');connectView(d);if(!d.viewer)by('message').textContent='已连接。点“启动 Android”后，可以直接点按真实 App。';}catch(e){by('message').textContent=e.message;}};
-async function act(name){if(busy)return;busy=true;by('start').disabled=by('stop').disabled=true;by('message').textContent=name==='start'?'正在启动专用 Android，首次约需一分钟…':'正在结束演示并回收资源…';try{const d=await api(name,{});view(d);by('screen').hidden=!d.viewer;if(d.viewer){by('screen').src=d.viewer;by('message').textContent='这是 APK 的实际画面；点“试试豆豆”可使用输入法。';}else{by('screen').removeAttribute('src');by('message').textContent='本次模拟器已关闭。';}}catch(e){by('message').textContent=e.message;}finally{busy=false;by('start').disabled=by('stop').disabled=false;}}
-by('start').onclick=()=>act('start');by('stop').onclick=()=>act('stop');
-setInterval(async()=>{if(by('controls').hidden||busy||document.hidden)return;try{const d=await api('ping',{});view(d);if(d.phase==='stopped'){by('screen').hidden=true;by('screen').removeAttribute('src');}}catch(e){by('message').textContent=e.message;}},20_000);
-api('status').then(connectView).catch(()=>{});
-const supplied=location.hash.slice(1);if(supplied){by('key').value=supplied;history.replaceState(null,'',location.pathname);by('login').requestSubmit();}
-</script></html>
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>豆豆输入法 · 实机演示</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    html,
+    body,
+    main {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      background: #171717;
+      color: #eee;
+      font: 16px system-ui;
+    }
+    main {
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+    #waiting {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      text-align: center;
+      padding: 24px;
+    }
+    #message {
+      line-height: 1.6;
+    }
+    #spinner {
+      width: 28px;
+      height: 28px;
+      border: 2px solid #555;
+      border-top-color: #eee;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #171717;
+    }
+    button {
+      font: inherit;
+      border: 1px solid #555;
+      background: #333;
+      color: #eee;
+      border-radius: 22px;
+      padding: 10px 22px;
+      cursor: pointer;
+    }
+    #stop {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      z-index: 2;
+      font-size: 13px;
+      padding: 8px 14px;
+    }
+    body.embed #stop {
+      display: none;
+    }
+    [hidden] {
+      display: none !important;
+    }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #spinner {
+        animation: none;
+      }
+    }
+  </style>
+  <main>
+    <div id="waiting">
+      <span id="spinner" aria-hidden="true"></span>
+      <div id="message" role="status">正在启动 Android…</div>
+      <button id="retry" hidden>重试</button>
+    </div>
+    <iframe id="screen" title="安卓实机" hidden allow="fullscreen"></iframe>
+    <button id="stop" hidden>结束演示</button>
+  </main>
+  <script>
+    const by = (id) => document.getElementById(id);
+    let session = "",
+      busy = false,
+      closed = false,
+      shutdownRequest = null;
+    try {
+      session = sessionStorage.getItem("keyboard-demo-session") || "";
+    } catch {}
+    if (window !== parent) document.body.classList.add("embed");
+    if (location.hash)
+      history.replaceState(null, "", location.pathname + location.search);
+    const report = (phase) =>
+      parent !== window &&
+      parent.postMessage({ type: "keyboard-demo:state", phase }, "*");
+    async function api(name, body, keepalive = false) {
+      const r = await fetch("api/" + name, {
+        method: body ? "POST" : "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Demo-Session": session,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        keepalive,
+      });
+      if (!(r.headers.get("content-type") || "").includes("application/json"))
+        throw Error("演示暂时离线");
+      const d = await r.json();
+      if (!r.ok) {
+        const e = Error(d.error || "演示暂时离线");
+        e.status = r.status;
+        throw e;
+      }
+      return d;
+    }
+    function waiting(message, retry = false) {
+      by("waiting").hidden = false;
+      by("message").textContent = message;
+      by("spinner").hidden = retry;
+      by("retry").hidden = !retry;
+      report(retry ? "error" : "starting");
+    }
+    async function boot() {
+      if (busy) return;
+      busy = true;
+      closed = false;
+      shutdownRequest = null;
+      by("screen").hidden = true;
+      by("stop").hidden = true;
+      waiting("正在启动 Android…");
+      try {
+        let state;
+        if (session) {
+          try {
+            state = await api("status");
+          } catch (e) {
+            if (e.status !== 401) throw e;
+            session = "";
+          }
+        }
+        if (!session) {
+          const d = await api("session", {});
+          session = d.session;
+          try {
+            sessionStorage.setItem("keyboard-demo-session", session);
+          } catch {}
+        }
+        if (closed) return;
+        state = state || (await api("status"));
+        if (state.phase === "occupied") throw Error("有人正在体验，请稍后重试");
+        if (state.phase !== "running") state = await api("start", {});
+        if (closed) return;
+        if (!state.viewer) throw Error("演示已结束，请重试");
+        by("screen").src = state.viewer;
+        by("screen").hidden = false;
+        by("stop").hidden = false;
+      } catch (e) {
+        if (!closed) {
+          by("screen").hidden = true;
+          waiting(e.message, true);
+        }
+      } finally {
+        busy = false;
+      }
+    }
+    function shutdown() {
+      if (shutdownRequest) return shutdownRequest;
+      closed = true;
+      report("stopping");
+      by("screen").hidden = true;
+      by("screen").removeAttribute("src");
+      by("stop").hidden = true;
+      shutdownRequest = session
+        ? api("stop", {}, true).catch(() => {})
+        : Promise.resolve();
+      if (window !== parent)
+        parent.postMessage({ type: "keyboard-demo:closing" }, "*");
+      shutdownRequest.then(() => {
+        by("waiting").hidden = false;
+        by("message").textContent = "演示已结束";
+        by("spinner").hidden = true;
+        by("retry").hidden = false;
+        report("stopped");
+      });
+      return shutdownRequest;
+    }
+    window.addEventListener("message", (e) => {
+      if (
+        e.source === by("screen").contentWindow &&
+        e.origin === location.origin &&
+        e.data?.type === "keyboard-demo:video-ready"
+      ) {
+        by("waiting").hidden = true;
+        report("running");
+        return;
+      }
+      if (
+        e.source !== parent ||
+        ![location.origin, "https://xiamu-ssr.github.io"].includes(e.origin)
+      )
+        return;
+      if (e.data?.type === "keyboard-demo:stop") shutdown();
+    });
+    by("retry").onclick = boot;
+    by("stop").onclick = shutdown;
+    window.addEventListener("pagehide", shutdown);
+    setInterval(async () => {
+      if (closed || busy || document.hidden || !session) return;
+      try {
+        const d = await api("ping", {});
+        if (d.phase === "stopped") {
+          by("screen").hidden = true;
+          by("screen").removeAttribute("src");
+          waiting("演示已结束", true);
+        }
+      } catch {}
+    }, 20_000);
+    boot();
+  </script>
+</html>

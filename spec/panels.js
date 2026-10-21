@@ -35,14 +35,6 @@
     el(id).addEventListener("input", cost),
   );
   cost();
-  el("verification").innerHTML =
-    "<p>" +
-    text(data.verification.status || "pending") +
-    "</p><ul>" +
-    (data.verification.checks || [])
-      .map((c) => "<li>" + text(c.name) + "：" + text(c.status) + "</li>")
-      .join("") +
-    "</ul>";
   let token = "",
     current = null;
   const local =
@@ -70,11 +62,10 @@
   }
   async function refresh() {
     if (!local) {
-      status("真实 Android · 按需启动");
+      status("准备就绪");
       el("device-select").closest(".demo-controls").hidden = true;
       el("enable-capture").closest(".consent").hidden = true;
-      el("demo-message").textContent = "输入演示口令后可启动专用 Android；画面和触控来自本仓库 APK。Mac 需在线，闲置自动关闭。";
-      showFrame("https://106.14.73.99/keyboard-spec/live/");
+      el("demo-message").hidden = true;
       return;
     }
     try {
@@ -133,10 +124,26 @@
   el("prepare-demo").addEventListener("click", () => action("start"));
   el("stop-demo").addEventListener("click", () => action("stop"));
   refresh();
-  const privateDemo = location.hash.match(/^#demo\/([A-Za-z0-9_-]{32})$/);
-  if (privateDemo && !local) {
-    history.replaceState(null, "", location.pathname + location.search);
+  function openOnlineDemo() {
+    if (!local) showFrame("https://106.14.73.99/keyboard-spec/live/");
+  }
+  el("native-dialog").addEventListener("spec:open", openOnlineDemo);
+  el("native-dialog").addEventListener("close", () => {
+    if (!local) showFrame(null);
+    if (location.hash === "#demo")
+      history.replaceState(null, "", location.pathname + location.search);
+  });
+  window.addEventListener("message", (event) => {
+    if (
+      event.source !== el("android-frame").contentWindow ||
+      event.origin !== "https://106.14.73.99"
+    )
+      return;
+    if (event.data?.type === "keyboard-demo:state")
+      el("native-dialog").dataset.phase = event.data.phase;
+  });
+  if (location.hash === "#demo" && !local) {
     el("native-dialog").showModal();
-    showFrame("https://106.14.73.99/keyboard-spec/live/#" + privateDemo[1]);
+    openOnlineDemo();
   }
 })();

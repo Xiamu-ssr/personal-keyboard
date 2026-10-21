@@ -15,6 +15,7 @@ let writer,
   width = 1,
   height = 1;
 let frames = Promise.resolve();
+let ready = false;
 ws.onmessage = (event) => {
   if (typeof event.data === "string") {
     const data = JSON.parse(event.data);
@@ -29,9 +30,23 @@ ws.onmessage = (event) => {
         status.textContent = "当前浏览器不支持视频解码，请用新版 Chrome / Edge";
         return;
       }
+      const renderer = new BitmapVideoFrameRenderer(canvas);
       decoder = new WebCodecsVideoDecoder({
         codec: data.codec,
-        renderer: new BitmapVideoFrameRenderer(canvas),
+        renderer: {
+          setSize: (w, h) => renderer.setSize(w, h),
+          async draw(frame) {
+            await renderer.draw(frame);
+            if (!ready) {
+              ready = true;
+              status.textContent = "";
+              parent.postMessage(
+                { type: "keyboard-demo:video-ready" },
+                location.origin,
+              );
+            }
+          },
+        },
       });
       decoder.sizeChanged(({ width: w, height: h }) => {
         width = w;
@@ -57,10 +72,6 @@ ws.onmessage = (event) => {
           };
   frames = frames
     .then(() => writer.write(packet))
-    .then(() => {
-      if (decoder.framesRendered > 0)
-        status.textContent = "Android 实际画面 · 点按操作";
-    })
     .catch(() => {
       status.textContent = "视频解码中断，可重新连接";
     });

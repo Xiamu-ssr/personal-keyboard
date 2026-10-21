@@ -2,22 +2,23 @@ import http from "node:http";
 import net from "node:net";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { DedicatedEmulator } from "./emulator.mjs";
-const digest = (value) => createHash("sha256").update(value).digest();
 export function createRemoteDemo({
   origin,
-  key,
   emulator = new DedicatedEmulator({ origin }),
   prefix = "/keyboard-spec/live/",
 } = {}) {
-  if (!origin || !key || key.length < 20)
-    throw Error(
-      "Remote demo needs an explicit origin and a private access key",
-    );
+  if (!origin) throw Error("Remote demo needs an explicit origin");
   const sessions = new Map(),
     attempts = new Map(),
     sockets = new Set();
+  let owner = null,
+    starting = null,
+    stopping = null;
+  const releaseStopped = () => {
+    if (emulator.phase === "stopped" && !starting && !stopping) owner = null;
+  };
   const json = (res, code, value, headers = {}) => {
     res.writeHead(code, {
       "Content-Type": "application/json",
@@ -53,6 +54,8 @@ export function createRemoteDemo({
     return entry.count > 8;
   };
   const current = (sid) => {
+    releaseStopped();
+    if (owner && owner !== sid) return { phase: "occupied" };
     const state = emulator.status();
     if (state.phase !== "running") return state;
     return { ...state, viewer: prefix + "session/" + sid + "/viewer/" };
@@ -73,7 +76,7 @@ export function createRemoteDemo({
           await fs.readFile(new URL("./viewer.html", import.meta.url)),
         );
       }
-      if (url.pathname === prefix + "api/login" && req.method === "POST") {
+      if (url.pathname === prefix + "api/session" && req.method === "POST") {
         if (limited(req))
           return json(res, 429, { error: "尝试过多，请一分钟后重试" });
         let raw = "";
@@ -82,22 +85,15 @@ export function createRemoteDemo({
           if (raw.length > 512)
             return json(res, 413, { error: "Body too large" });
         }
-        let supplied;
-        try {
-          supplied = JSON.parse(raw).key;
-        } catch {}
-        if (
-          typeof supplied !== "string" ||
-          !timingSafeEqual(digest(supplied), digest(key))
-        )
-          return json(res, 403, { error: "演示口令不正确" });
+        if (raw.trim() && raw.trim() !== "{}")
+          return json(res, 400, { error: "Invalid session request" });
         const sid = randomBytes(24).toString("hex");
         for (const [s, t] of sessions) if (t < Date.now()) sessions.delete(s);
         sessions.set(sid, Date.now() + 60 * 60_000);
         return json(res, 200, { session: sid });
       }
       const sid = sessionFor(req);
-      if (!sid) return json(res, 401, { error: "请先输入演示口令" });
+      if (!sid) return json(res, 401, { error: "请重新连接演示" });
       const sessionPrefix = prefix + "session/" + sid + "/";
       const route = url.pathname.startsWith(sessionPrefix)
         ? url.pathname.slice(sessionPrefix.length)
@@ -105,21 +101,46 @@ export function createRemoteDemo({
       if (req.method === "GET" && route === "api/status")
         return json(res, 200, current(sid));
       if (req.method === "POST" && route === "api/start") {
-        await emulator.start();
+        releaseStopped();
+        if ((owner && owner !== sid) || stopping)
+          return json(res, 409, { error: "演示正在使用中，请稍后重试" });
+        if (emulator.phase === "running") return json(res, 200, current(sid));
+        if (!starting) {
+          owner = sid;
+          starting = Promise.resolve().then(() => emulator.start());
+        }
+        try {
+          await starting;
+        } finally {
+          starting = null;
+          releaseStopped();
+        }
         return json(res, 200, current(sid));
       }
       if (req.method === "POST" && route === "api/stop") {
-        if (emulator.phase === "starting")
-          return json(res, 409, { error: "Android 正在启动，完成后可停止" });
+        releaseStopped();
+        if (owner && owner !== sid)
+          return json(res, 403, { error: "这不是你的演示" });
         for (const s of sockets) s.destroy();
-        await emulator.stop();
+        if (!stopping)
+          stopping = (async () => {
+            if (starting) await starting.catch(() => {});
+            await emulator.stop();
+          })();
+        try {
+          await stopping;
+        } finally {
+          stopping = null;
+          owner = null;
+        }
         return json(res, 200, current(sid));
       }
       if (req.method === "POST" && route === "api/ping") {
-        emulator.touch();
+        if (owner === sid) emulator.touch();
         return json(res, 200, current(sid));
       }
       if (req.method === "GET" && route.startsWith("viewer/")) {
+        if (owner !== sid) return json(res, 403, { error: "这不是你的演示" });
         if (emulator.phase !== "running")
           return json(res, 409, { error: "请先启动 Android" });
         const upstream = http.request(
@@ -155,6 +176,7 @@ export function createRemoteDemo({
     const sid = sessionFor(req);
     if (
       !sid ||
+      owner !== sid ||
       !validOrigin(req) ||
       emulator.phase !== "running" ||
       url.pathname !== prefix + "session/" + sid + "/viewer/" ||

@@ -60,68 +60,46 @@
       <div id="inspector-content"></div>
     </aside>
     <dialog id="native-dialog" class="modal">
-      <button
-        class="modal-close"
-        data-close="native-dialog"
-        aria-label="关闭真实APK"
-      >
-        ×
-      </button>
-      <div class="section-heading">
-        <div>
-          <div class="eyebrow">NATIVE ANDROID</div>
-          <h2>真正运行 APK，再看键盘。</h2>
-        </div>
-        <span class="status" id="demo-status">检查本地服务…</span>
-      </div>
-      <p class="section-copy">
-        嵌入开源 scrcpy / Tango；画面和触摸来自实际 Android 设备。不会在打开 Spec
-        时自动启动模拟器。
-      </p>
-      <p class="section-copy"><a href="./demo/doudou-keyboard.apk" download>下载豆豆输入法 APK</a> · Android 11+ · 自用预览版</p>
+      <header class="native-toolbar">
+        <h2>实机演示</h2>
+        <span id="demo-status" hidden></span>
+        <a href="./demo/doudou-keyboard.apk" download>下载 APK</a>
+        <button
+          class="modal-close"
+          data-close="native-dialog"
+          aria-label="关闭实机演示"
+        >
+          ×
+        </button>
+      </header>
       <div class="demo-controls">
         <label
           >演示设备<select id="device-select" aria-label="选择已授权的安卓设备">
             <option value="">检查设备…</option>
           </select></label
-        ><button id="refresh-devices" type="button">刷新设备</button
-        ><button id="prepare-demo" type="button" class="primary">
-          安装并运行演示 APK</button
-        ><button id="stop-demo" type="button">停止并恢复</button>
+        >
+        <button id="refresh-devices" type="button">刷新</button>
+        <button id="prepare-demo" type="button" class="primary">
+          安装并运行
+        </button>
+        <button id="stop-demo" type="button">停止并恢复</button>
       </div>
       <label class="consent"
         ><input
           id="enable-capture"
           type="checkbox"
-        />在选定设备临时启用豆豆输入法和主动截屏；停止时恢复。</label
+        />临时启用输入法和截屏，停止时恢复。</label
       >
-      <div id="demo-message" class="notice" aria-live="polite">
-        真实拼音、资料管理与本地 OCR 已接入；付费 ASR、文字模型账号稍后配置。
-      </div>
+      <div id="demo-message" role="status"></div>
       <div class="native-stage">
-        <div id="native-placeholder">
-          <span class="device-outline">APK</span>
-          <h3>没有 Android 画面时，就显示离线。</h3>
-          <p>
-            先运行 npm run demo:build 与 npm run demo:setup，然后 npm run
-            spec:serve。
-          </p>
-          <a href="#docs" data-doc="demo">查看运行与设备边界</a>
-        </div>
+        <div id="native-placeholder"><h3>连接安卓设备</h3></div>
         <iframe
           id="android-frame"
-          title="真实 Android APK 演示"
-          allow="clipboard-read; clipboard-write; fullscreen"
+          title="实机演示"
+          allow="fullscreen"
           hidden
         ></iframe>
       </div>
-      <details id="native-gallery"><summary>查看同版 APK 的实机截图</summary>      <p class="muted">0.3.0-alpha.1 · Android 15 虚拟机实际截图；练习区与测试资料，无预写模型回复。点图查看原尺寸。</p><div class="native-shots"><figure><a href="./demo/home.png" target="_blank" rel="noopener"><img src="./demo/home.png" alt="首页与个人资料，Android 虚拟机截图" loading="lazy"></a><figcaption>首页与个人资料</figcaption></figure><figure><a href="./demo/typing.png" target="_blank" rel="noopener"><img src="./demo/typing.png" alt="真实拼音上屏，Android 虚拟机截图" loading="lazy"></a><figcaption>真实拼音上屏</figcaption></figure><figure><a href="./demo/tools.png" target="_blank" rel="noopener"><img src="./demo/tools.png" alt="按需工具格，Android 虚拟机截图" loading="lazy"></a><figcaption>按需工具格</figcaption></figure><figure><a href="./demo/voice.png" target="_blank" rel="noopener"><img src="./demo/voice.png" alt="语音面板 · 专用 ASR 待配，Android 虚拟机截图" loading="lazy"></a><figcaption>语音面板 · 专用 ASR 待配</figcaption></figure><figure><a href="./demo/memory.png" target="_blank" rel="noopener"><img src="./demo/memory.png" alt="热词与记忆 · 测试资料，Android 虚拟机截图" loading="lazy"></a><figcaption>热词与记忆 · 测试资料</figcaption></figure><figure><a href="./demo/people.png" target="_blank" rel="noopener"><img src="./demo/people.png" alt="人物关系 · 测试资料，Android 虚拟机截图" loading="lazy"></a><figcaption>人物关系 · 测试资料</figcaption></figure><figure><a href="./demo/advisor.png" target="_blank" rel="noopener"><img src="./demo/advisor.png" alt="主动截屏与本地 OCR，Android 虚拟机截图" loading="lazy"></a><figcaption>主动截屏与本地 OCR</figcaption></figure><figure><a href="./demo/settings.png" target="_blank" rel="noopener"><img src="./demo/settings.png" alt="权限与设置，Android 虚拟机截图" loading="lazy"></a><figcaption>权限与设置</figcaption></figure></div>
-</details>
-      <details>
-        <summary>已验证什么 / 尚未实现什么</summary>
-        <div id="verification"></div>
-        <p>原生交互验证不等于微信适配、真实模型质量或完整中文输入法验收。</p>
-      </details>
     </dialog>
     <dialog id="cost-dialog" class="modal">
       <button
@@ -153,8 +131,10 @@
       </div>
       <p class="notice">
         先配两项：ASR + 一个共用文本模型。ZenMux 已有 Qwen ASR 转写接口；
-        中文实时输入首选 Fun-ASR Realtime，北京原价 ¥1.188 / 小时。
-        10 小时试用有资格与期限，小用量先按量使用。<a href="#docs" data-doc="models-and-cost"
+        中文实时输入首选 Fun-ASR Realtime，北京原价 ¥1.188 / 小时。 10
+        小时试用有资格与期限，小用量先按量使用。<a
+          href="#docs"
+          data-doc="models-and-cost"
           >查看开通步骤与套餐比较 ↗</a
         >
       </p>
@@ -183,7 +163,9 @@
               <option value="paraformer">
                 Paraformer 实时 · ¥0.864 / 小时
               </option>
-              <option value="funasr" selected>Fun-ASR 实时 · ¥1.188 / 小时</option>
+              <option value="funasr" selected>
+                Fun-ASR 实时 · ¥1.188 / 小时
+              </option>
             </select></label
           ><label
             >文本模型<select id="text-model">
