@@ -1300,4 +1300,7 @@ main {
 .native-toolbar .modal-close{position:static;float:none;border-radius:12px;width:36px;height:36px;padding:0}
 #native-dialog .native-stage{flex:1;min-height:0;margin:0;border:0;overflow:hidden;background:#171717}
 #native-dialog #android-frame{width:100%;height:100%;max-height:none;border:0}
+#native-dialog #native-placeholder{width:100%;height:100%;padding:0;min-height:0;display:flex;justify-content:center}
+#native-dialog #native-placeholder[hidden]{display:none}
+#native-placeholder img{display:block;max-width:100%;height:100%;object-fit:contain}
 body[data-spec-mode="static"] #native-dialog .demo-controls,body[data-spec-mode="static"] #native-dialog .consent,body[data-spec-mode="static"] #demo-message{display:none}

@@ -13,7 +13,7 @@
         <h1>豆豆输入法 <span>· Spec</span></h1>
       </div>
       <div class="header-actions">
-        <button id="open-native" class="quiet">真实 APK</button
+        <button id="open-native" class="quiet">APK 预览</button
         ><button id="open-library" class="quiet">约定与来源</button
         ><span id="revision"></span>
       </div>
@@ -61,13 +61,13 @@
     </aside>
     <dialog id="native-dialog" class="modal">
       <header class="native-toolbar">
-        <h2>实机演示</h2>
+        <h2>实机截图</h2>
         <span id="demo-status" hidden></span>
         <a href="./demo/doudou-keyboard.apk" download>下载 APK</a>
         <button
           class="modal-close"
           data-close="native-dialog"
-          aria-label="关闭实机演示"
+          aria-label="关闭 APK 预览"
         >
           ×
         </button>
@@ -92,7 +92,9 @@
       >
       <div id="demo-message" role="status"></div>
       <div class="native-stage">
-        <div id="native-placeholder"><h3>连接安卓设备</h3></div>
+        <div id="native-placeholder">
+          <img src="./demo/voice.png" alt="豆豆输入法 Android 15 原生语音界面截图" />
+        </div>
         <iframe
           id="android-frame"
           title="实机演示"

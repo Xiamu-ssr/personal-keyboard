@@ -41,7 +41,7 @@ npm run demo:setup
 npm run spec:serve
 ```
 
-打开 `http://127.0.0.1:8560`。Spec 直接表达域、能力、数据归属和关系契约，详细文档从图中展开。本地模式只控制选定设备，临时验收后恢复设置；在线模式点开实机演示即启动独立 Android 15 虚拟机，画面和触控嵌入 Spec，闲置或超时自动关闭。两种方式都运行本仓库构建的 APK。Mac 需在线；ECS 负责 HTTPS 转发。GitHub Pages 发布工作流会校验已验收的 Release APK 并构建静态 Spec；Pages 与 ECS 使用同一份签名 APK；远端 Android 仍由独立宿主按需运行。
+打开 `http://127.0.0.1:8560`。Spec 直接表达域、能力、数据归属和关系契约，详细文档从图中展开。本地可选择已授权设备运行同一 APK，停止后恢复临时设置。公开 Spec 仅提供原生截图与 APK 下载；连接个人 Mac 的公网演示已关闭，后续在线试用须使用独立云端 Android。GitHub Pages 与 ECS 校验并发布同一份已验收的 Release APK。
 
 - [产品](spec/product.md) · [交互](spec/interaction.md) · [架构](spec/architecture.md)
 - [模型、购买与成本](spec/models-and-cost.md) · [研究来源](spec/research.md)

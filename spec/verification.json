@@ -1,7 +1,7 @@
 {
-  "reviewedAt": "2026-10-21T06:16:21.107Z",
+  "reviewedAt": "2026-10-21T06:41:13.689511+00:00",
   "version": "0.3.0-alpha.1",
-  "status": "0.3 主题、语音面板与真实 APK 网页演示已验收；专用 ASR、真实模型质量和本版真机兼容性待联调。",
+  "status": "0.3 主题与原生语音面板已验收；连接个人 Mac 的公网演示已退役，公开页仅预览与下载；专用 ASR、模型质量和真机兼容性待联调。",
   "checks": [
     {
       "name": "真实 JNI 解码与核心状态",
@@ -72,7 +72,7 @@
       "documents": 10
     },
     {
-      "name": "公网 HTTPS 操作真实 APK",
+      "name": "公网 HTTPS 操作真实 APK · 历史验收",
       "status": "passed",
       "android": "Android 15 / API 35",
       "stream": "scrcpy 3.3.3 + Tango + WebCodecs",
@@ -84,7 +84,9 @@
       ],
       "privacy": "All eight screenshots manually reviewed; only local practice and test data.",
       "microphoneForwarding": false,
-      "dedicatedAsrConfigured": false
+      "dedicatedAsrConfigured": false,
+      "availability": "retired",
+      "retiredReason": "User rejected public access to the personal Mac. LaunchAgent disabled, reverse tunnel stopped, old public route returns 410."
     },
     {
       "name": "真实云端 ASR、模型与自动记忆抽取",
@@ -95,6 +97,22 @@
       "name": "本版 OPPO 与聊天 App 兼容性",
       "status": "pending",
       "reason": "User requested emulator; previous phone evidence does not verify current build."
+    },
+    {
+      "name": "关闭个人 Mac 公网演示",
+      "status": "passed",
+      "publicRouteHttp": 410,
+      "sessionRouteHttp": 410,
+      "launchAgentDisabled": true,
+      "macPortsClosed": [
+        5580,
+        5581,
+        8561,
+        8562
+      ],
+      "ecsTunnelPortClosed": 18562,
+      "staticSpecHttp": 200,
+      "apkChanged": false
     }
   ]
 }

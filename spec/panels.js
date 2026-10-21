@@ -62,7 +62,7 @@
   }
   async function refresh() {
     if (!local) {
-      status("准备就绪");
+      status("实机截图");
       el("device-select").closest(".demo-controls").hidden = true;
       el("enable-capture").closest(".consent").hidden = true;
       el("demo-message").hidden = true;
@@ -124,26 +124,11 @@
   el("prepare-demo").addEventListener("click", () => action("start"));
   el("stop-demo").addEventListener("click", () => action("stop"));
   refresh();
-  function openOnlineDemo() {
-    if (!local) showFrame("https://106.14.73.99/keyboard-spec/live/");
-  }
-  el("native-dialog").addEventListener("spec:open", openOnlineDemo);
   el("native-dialog").addEventListener("close", () => {
-    if (!local) showFrame(null);
     if (location.hash === "#demo")
       history.replaceState(null, "", location.pathname + location.search);
   });
-  window.addEventListener("message", (event) => {
-    if (
-      event.source !== el("android-frame").contentWindow ||
-      event.origin !== "https://106.14.73.99"
-    )
-      return;
-    if (event.data?.type === "keyboard-demo:state")
-      el("native-dialog").dataset.phase = event.data.phase;
-  });
   if (location.hash === "#demo" && !local) {
     el("native-dialog").showModal();
-    openOnlineDemo();
   }
 })();
