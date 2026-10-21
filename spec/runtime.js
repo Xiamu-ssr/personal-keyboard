@@ -49,7 +49,7 @@
       )
       .join("") +
     `<button class="domain-card offer-card" data-doc="commercial" style="--domain:#5b807c"><span class="card-heading"><strong>新账号赠送</strong><span>一次性</span></span><div class="offer-number"><strong>${welcome.limits.asr_characters.toLocaleString("en-US")}</strong><span>转写字符</span></div><div class="offer-number"><strong>${welcome.limits.advisor_generations}</strong><span>次军师生成</span></div><p>免费资料留本机 · 价格与权益由后台配置</p><span class="card-more">账户权益 ↗</span></button>`;
-  el("workflow-tabs").innerHTML = data.workflows
+  el("workflow-tabs").innerHTML = data.businesses
     .map(
       (f) =>
         `<button data-flow="${f.id}" aria-pressed="false">${esc(f.name)}</button>`,
@@ -70,7 +70,8 @@
     wirePaths = new Map(),
     initialized = false,
     resizeFrame;
-  const flowData = () => data.workflows.find((f) => f.id === state.flow);
+  const flowData = () => data.businesses.find((f) => f.id === state.flow);
+  const nodes = nodeIndex(data);
   function stopMotion() {
     cancelAnimationFrame(frame);
     el("flow-wires")
@@ -92,7 +93,7 @@
   }
   function scaleGraph(value, anchor) {
     const host = el("graph-scroll"),
-      f = flowData(),
+      f = data.world,
       old = state.scale;
     const center = anchor || [host.clientWidth / 2, host.clientHeight / 2];
     const focus = [
@@ -105,13 +106,15 @@
       h = f.height * state.scale;
     el("graph-size").style.width = w + "px";
     el("graph-size").style.height = h + "px";
+    el("graph-size").style.marginTop =
+      Math.max(0, (host.clientHeight - h) / 2) + "px";
     host.scrollLeft = focus[0] * state.scale - center[0];
     host.scrollTop = focus[1] * state.scale - center[1];
     el("zoom-level").textContent = Math.round(state.scale * 100) + "%";
   }
   function fitGraph(initial = false) {
     const host = el("graph-scroll"),
-      f = flowData();
+      f = data.world;
     if (!host.clientWidth) return;
     const scale = Math.min(
       (host.clientWidth - 24) / f.width,
@@ -129,9 +132,9 @@
     return h
       .visible()
       .map((p) => {
-        const from = domains.get(p.from.split(".")[0]),
-          to = domains.get(p.to.split(".")[0]);
-        return `<button class="packet-card" data-packet="${c.id}:${p.sequence}" tabindex="${p.offset === 0 ? 0 : -1}" aria-hidden="${p.offset !== 0}" style="--offset:${p.offset};--distance:${Math.abs(p.offset)};--packet-color:${from.color}"><span>${esc(from.name)} → ${esc(to.name)}<i>${p.sequence}</i></span><strong>${esc(p.title)}</strong><p>${esc(p.body)}</p></button>`;
+        const from = domains.get(p.from),
+          to = domains.get(p.to);
+        return `<button class="packet-card" data-packet="${c.id}:${p.sequence}" tabindex="${p.offset === 0 ? 0 : -1}" aria-hidden="${p.offset !== 0}" style="--offset:${p.offset};--distance:${Math.abs(p.offset)};--packet-color:${from.color}"><span>${esc(from.shortName)} → ${esc(to.shortName)}<i>${p.proposal ? "待选 · " : ""}${p.sequence}</i></span><strong>${esc(p.title)}</strong><p>${esc(p.body)}</p></button>`;
       })
       .join("");
   }
@@ -180,15 +183,15 @@
   }
   function drawWorld() {
     pause();
-    const f = flowData();
-    world = new ProductWorld(f);
+    const f = data.world;
+    world = new ProductWorld(f, flowData());
     wirePaths = new Map();
     const w = el("flow-wires");
     w.innerHTML = "";
     w.setAttribute("viewBox", `0 0 ${f.width} ${f.height}`);
     const defs = svg("defs", {}, w);
     for (const d of data.domains) {
-      const m = svg(
+      const marker = svg(
         "marker",
         {
           id: "arrow-" + d.id,
@@ -201,90 +204,40 @@
         },
         defs,
       );
-      svg("path", { d: "M0 0 10 5 0 10z", fill: d.color }, m);
+      svg("path", { d: "M0 0 10 5 0 10z", fill: d.color }, marker);
     }
     el("graph-stage").style.width = f.width + "px";
     el("graph-stage").style.height = f.height + "px";
-    // A domain pair shares two physical bus lanes. Node branches remain real edges.
     for (const c of f.channels)
       for (const direction of ["ab", "ba"]) {
         const from = domains.get(direction === "ab" ? c.a : c.b);
-        svg(
+        const path = svg(
           "path",
           {
-            d: pathData(c.paths[direction]),
-            class: "domain-bus",
+            d: pathData(laneRoute(f, c, direction)),
+            class: "domain-lane",
             stroke: from.color,
             "marker-end": `url(#arrow-${from.id})`,
-            "data-bus": c.id,
+            "data-channel": c.id,
             "data-direction": direction,
           },
           w,
         );
+        wirePaths.set(c.id + ":" + direction, path);
       }
-    for (const e of f.edges) {
-      const color = domains.get(e.from.split(".")[0]).color,
-        pts = edgeRoute(f, e);
-      if (e.channel) {
-        const c = f.channels.find((c) => c.id === e.channel);
-        const lane = c.paths[e.from.startsWith(c.a + ".") ? "ab" : "ba"];
-        const first = pts.findIndex(
-          (p) => p[0] === lane[0][0] && p[1] === lane[0][1],
-        );
-        const last = pts.findLastIndex(
-          (p) => p[0] === lane.at(-1)[0] && p[1] === lane.at(-1)[1],
-        );
-        svg(
-          "path",
-          {
-            d: pathData(pts.slice(0, first + 1)),
-            class: "node-branch",
-            stroke: color,
-          },
-          w,
-        );
-        svg(
-          "path",
-          {
-            d: pathData(pts.slice(last)),
-            class: "node-branch",
-            stroke: color,
-            "marker-end": `url(#arrow-${e.from.split(".")[0]})`,
-          },
-          w,
-        );
-      }
-      const p = svg(
-        "path",
-        {
-          d: pathData(pts),
-          class: "node-wire" + (e.channel ? " external" : ""),
-          stroke: color,
-          "marker-end": `url(#arrow-${e.from.split(".")[0]})`,
-          "data-node-edge": e.id,
-          "data-from": e.from,
-          "data-to": e.to,
-        },
-        w,
-      );
-      wirePaths.set(e.id, p);
-    }
     el("flow-nodes").innerHTML = f.groups
       .map((g) => {
         const d = domains.get(g.domain);
         return `<section class="domain-group" data-group="${d.id}" aria-label="${esc(d.name)}" style="--domain:${d.color};left:${g.rect[0]}px;top:${g.rect[1]}px;width:${g.rect[2]}px;height:${g.rect[3]}px"><button class="group-heading" data-domain="${d.id}">${icon(d)}<strong>${esc(d.name)}</strong><span>↗</span></button>${g.nodes
-          .map((n) => {
-            const id = g.domain + "." + n.id;
-            return `<div class="world-node" data-node="${id}" style="left:${n.rect[0]}px;top:${n.rect[1]}px;width:${n.rect[2]}px;height:${n.rect[3]}px"><button class="node-body" data-open-node="${id}"><strong>${esc(n.title)}</strong><span>${esc(n.summary)}</span><em data-status="${id}"></em>${n.prompts?.length ? '<small class="prompt-mark">提示词 ↗</small>' : ""}</button>${n.ports
-              .map((p) => {
-                const a = portAt(f, id + "." + p.id),
-                  x = a.x - g.rect[0] - n.rect[0],
-                  y = a.y - g.rect[1] - n.rect[1];
-                return `<button class="port ${p.dir} ${p.side}" data-open-node="${id}" data-port="${id}.${p.id}" title="${p.dir === "in" ? "输入" : "输出"} · ${esc(p.type)}" aria-label="${esc(n.title)} ${p.dir === "in" ? "输入" : "输出"} ${esc(p.type)}" style="left:${x}px;top:${y}px"></button>`;
-              })
-              .join("")}</div>`;
+          .map((placed) => {
+            const id = g.domain + "." + placed.id,
+              n = nodes.get(id),
+              r = placed.rect;
+            return `<div class="world-node" data-node="${id}" style="left:${r[0]}px;top:${r[1]}px;width:${r[2]}px;height:${r[3]}px"><button class="node-body" data-open-node="${id}">${n.eyebrow ? `<small>${esc(n.eyebrow)}</small>` : ""}<strong>${esc(n.title)}</strong><span>${esc(n.summary)}</span><em data-status="${id}"></em></button></div>`;
           })
-          .join("")}</section>`;
+          .join(
+            "",
+          )}<span class="group-footer">${esc(g.footer)}</span></section>`;
       })
       .join("");
     el("flow-streams").innerHTML = f.channels
@@ -344,8 +297,7 @@
           "current",
           !!world.current &&
             (world.current.node === n.dataset.node ||
-              world.current.from?.startsWith(n.dataset.node + ".") ||
-              world.current.to?.startsWith(n.dataset.node + ".")),
+              Object.hasOwn(world.current.status || {}, n.dataset.node)),
         );
       });
     el("world-event").textContent =
@@ -353,14 +305,7 @@
     el("world-event").title = world.current?.body || flowData().summary;
     el("event-count").textContent =
       `${world.cursor} / ${flowData().events.length}`;
-    el("phase-tabs")
-      .querySelectorAll("[data-phase]")
-      .forEach((n) =>
-        n.classList.toggle(
-          "active",
-          n.dataset.phase === (world.current?.phase || "input"),
-        ),
-      );
+    el("proposal-status").hidden = !world.current?.proposal;
     el("pause-streams").textContent = state.running
       ? "Ⅱ 暂停"
       : world.done
@@ -372,12 +317,11 @@
     if (state.running)
       for (const id of world.activeStreams)
         wirePaths.get(id)?.classList.add("streaming");
-    const p = wirePaths.get(event.edge);
+    const p = wirePaths.get(event.channel + ":" + event.direction);
     if (!p) return;
     p.classList.add("active");
     if (motion.matches) return;
-    const edge = flowData().edges.find((e) => e.id === event.edge),
-      color = domains.get(edge.from.split(".")[0]).color;
+    const color = domains.get(event.from).color;
     const particle = svg(
       "circle",
       { r: 4.5, fill: color, class: "traveler" },
@@ -404,7 +348,7 @@
     }
     updateState();
     animateEdge(e);
-    for (const c of flowData().channels) renderStream(c);
+    for (const c of data.world.channels) renderStream(c);
     if (world.done) {
       clearTimeout(timer);
       state.running = false;
@@ -463,54 +407,28 @@
     );
   }
   function openNode(id) {
-    const f = flowData(),
-      n = nodeIndex(f).get(id);
+    const n = nodes.get(id);
     if (!n) return;
-    const connections = f.edges.filter(
-      (e) => e.from.startsWith(id + ".") || e.to.startsWith(id + "."),
-    );
-    const io = connections
-      .map((e) => {
-        const out = e.from.startsWith(id + "."),
-          peer = nodeIndex(f).get(
-            (out ? e.to : e.from).split(".").slice(0, 2).join("."),
-          );
-        return `<li><strong>${out ? "输出 →" : "输入 ←"} ${esc(peer.title)}</strong><br>${esc(e.title)}<br><span class="muted">${esc(e.detail)}</span></li>`;
-      })
-      .join("");
-    const facts = Object.entries(world.facts)
-      .map(
-        ([k, v]) =>
-          `<div><code>${esc(k)}</code><span>${esc(typeof v === "string" ? v : JSON.stringify(v))}</span></div>`,
-      )
-      .join("");
     openPanel(
       n.title,
       n.summary,
-      section("输入与输出", `<ul class="io-list">${io}</ul>`) +
+      section("职责与数据", list(n.details)) +
         (world.status[id]
-          ? section("此刻状态", `<p>${esc(world.status[id])}</p>`)
+          ? section("本次示例", `<p>${esc(world.status[id])}</p>`)
           : "") +
         (n.prompts?.length
           ? section(
-              "Cloud 组装 → 供应商模型",
+              "代理持有的提示词",
               n.prompts
                 .map(
                   (p) =>
                     `<button class="prompt-link" data-prompt="${p}">${esc(prompts.get(p).name)} ↗</button>`,
                 )
-                .join(""),
+                .join(" "),
             )
           : "") +
-        ((id === "app.history" ||
-          id === "app.memory" ||
-          id === "app.difference" ||
-          id === "cloud.learn") &&
-        facts
-          ? section("本次模拟记录", `<div class="fact-list">${facts}</div>`)
-          : "") +
-        docs([...(n.documents || []), "implementation"]),
-      domains.get(n.domain).name + " / 子节点",
+        docs(n.documents),
+      domains.get(n.domain).name + " / " + (n.eyebrow || "子节点"),
     );
   }
   function openPacket(key) {
@@ -519,19 +437,26 @@
         .get(cid)
         ?.items.find((p) => p.sequence === Number(seq));
     if (!p) return;
-    const edge = flowData().edges.find((e) => e.id === p.edge);
     openPanel(
       p.title,
       p.body,
       section(
-        "实际端点",
-        `<code>${esc(p.from)}</code><p>↓ ${esc(portAt(flowData(), p.from).type)}</p><code>${esc(p.to)}</code>`,
+        "域之间的数据",
+        `<p>${esc(domains.get(p.from).name)} → ${esc(domains.get(p.to).name)}</p>`,
       ) +
-        section("数据约定", `<p>${esc(edge.detail)}</p>`) +
-        section(
-          "因果",
-          `<p>事件 ${esc(p.id)}；前置 ${esc(p.after?.join(", ") || "用户动作")}。</p>`,
-        ),
+        (p.proposal
+          ? section(
+              "推荐方案 · 尚未确认",
+              `<p>这是方案演示，不代表已经确定或完成实现。</p>` +
+                docs([p.proposal]),
+            )
+          : "") +
+        (p.prompt
+          ? section(
+              "随请求传递",
+              `<button class="prompt-link" data-prompt="${p.prompt}">${esc(prompts.get(p.prompt).name)} ↗</button>`,
+            )
+          : ""),
       "数据卡片 / #" + p.sequence,
     );
   }
@@ -551,13 +476,13 @@
     if (!p) return;
     openPanel(
       p.name,
-      "提示词由 Cloud 持有，组装到模型请求中。",
+      "提示词由 Cloud 持有；具体方案状态见输入约定。",
       section("输入 → Cloud 组装 → 供应商", `<p>${esc(p.contract.input)}</p>`) +
         section("约束", list(p.contract.rules)) +
         section("模型必须返回", `<p>${esc(p.contract.output)}</p>`) +
         section(
           "实现对照",
-          `<p class="muted">以上是目标契约。已发布 0.4 源码与迁移边界单列：</p><code>${esc(p.source)}</code>` +
+          `<p class="muted">以上区分推荐和既定约定；已发布 0.4 源码另列：</p><code>${esc(p.source)}</code>` +
             docs([p.document, "implementation"]),
         ),
       "Cloud → 模型",
@@ -609,11 +534,11 @@
     else if (b.dataset.prompt) openPrompt(b.dataset.prompt);
     else if (b.dataset.packet) openPacket(b.dataset.packet);
     else if (b.dataset.history) {
-      const c = flowData().channels.find((c) => c.id === b.dataset.history);
+      const c = data.world.channels.find((c) => c.id === b.dataset.history);
       world.channels.get(c.id).scroll(Number(b.dataset.delta));
       renderStream(c);
     } else if (b.dataset.live) {
-      const c = flowData().channels.find((c) => c.id === b.dataset.live);
+      const c = data.world.channels.find((c) => c.id === b.dataset.live);
       world.channels.get(c.id).latest();
       renderStream(c);
     } else if (b.dataset.close) el(b.dataset.close).close();

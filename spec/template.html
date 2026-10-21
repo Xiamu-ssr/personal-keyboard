@@ -25,7 +25,7 @@
       ></nav>
       <div class="header-actions">
         <button id="open-native">截图与动画</button
-        ><button data-doc="decisions" title="方案与实现边界">约定 ↗</button>
+        ><button data-doc="design-options" title="已选方案与待定项">方案 ↗</button>
       </div>
     </header>
     <main id="spec-main">
@@ -43,28 +43,23 @@
           ><button id="zoom-in" aria-label="放大">＋</button
           ><button id="zoom-fit">全图</button>
         </div>
-        <div class="simulation-label">目标规格 · 模拟数据</div>
+        <div class="simulation-label">业务示例 · 非运行记录</div>
         <div
           id="graph-scroll"
           class="graph-scroll"
           tabindex="0"
-          aria-label="节点世界画布，可拖动、缩放；双击节点查看数据约定"
+          aria-label="域与实体画布，可拖动和缩放；点击节点查看详情"
         >
           <div id="graph-size">
             <div id="graph-stage">
-              <svg id="flow-wires" aria-label="节点之间的输入输出"></svg>
+              <svg id="flow-wires" aria-label="域之间一来一回的数据通道"></svg>
               <div id="flow-nodes"></div>
               <div id="flow-streams"></div>
             </div>
           </div>
         </div>
         <div class="world-progress">
-          <div id="phase-tabs" aria-label="当前模拟阶段">
-            <span data-phase="input">输入</span><i></i
-            ><span data-phase="history">留存与改稿</span><i></i
-            ><span data-phase="learning">约 5 小时后</span><i></i
-            ><span data-phase="reuse">下次输入</span>
-          </div>
+          <button id="proposal-status" data-doc="design-options" hidden>推荐方案 · 待选 ↗</button>
           <span id="world-event" role="status">点播放，看数据怎么走</span
           ><span id="event-count"></span>
         </div>
@@ -76,7 +71,7 @@
       hidden
       role="dialog"
       aria-modal="true"
-      aria-label="步骤与域详情"
+      aria-label="域、实体与数据详情"
     >
       <header class="inspector-top">
         <span id="breadcrumb"></span

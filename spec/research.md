@@ -43,3 +43,25 @@ FlorisBoard 官方中文文档说明其音码算法不足，不推荐日常拼�
 [Appetize](https://docs.appetize.io/platform/embedding-apps) 可云端运行 APK 并嵌入网页，但[官方明确不支持麦克风输入](https://support.appetize.io/does-appetize.io-support-audio-including-sound-or-microphone)；系统输入法和截屏仍须实测。浏览器原生 Android 项目并非都能运行任意 APK：[NekoDroid](https://github.com/nishal21/NekoDroid/blob/main/docs/SUPPORTED_APKS.md) 目前只支持有限测试程序，尚不支持 JNI 与完整 Android 用户空间。本项目有 JNI 输入引擎和系统 IME，不能拿它替代完整 Android。此前 Mac + scrcpy / Tango 公网演示已依用户要求关闭。曾研究独立云主机上的 [Cuttlefish](https://source.android.com/docs/devices/cuttlefish/get-started)，其官方 WebRTC 界面可控制完整 Android，并列出麦克风扩展路径；本输入法端到端兼容性未验证。用户已取消在线试用，当前只发布实际 APK 截图、操作录屏与下载，详见设备演示文档。
 
 2026-10-21 补查 [nanoMuse 的演示源码](https://github.com/nano-muse/nanoMuse/tree/main/demo/mobilegym)：使用 [MobileGym](https://github.com/Purewhiter/mobilegym)，用 React 复现手机和应用，模拟手机全部在浏览器运行，不需要 Android 设备或虚拟机。适合展示 Agent 的手机操作；本项目的系统输入法服务与 JNI 拼音仍须用完整 Android 验证。
+
+## 2026-10-21 · 个性化机制核验
+
+以下核对官方帮助与源码，未装机复现第三方自动学习。本节只说明公开证据；[我们的推荐](design-options.md)另列。
+
+| 来源 | 公开确认 | 没有确认的事 |
+| --- | --- | --- |
+| [Typeless 词典](https://www.typeless.com/help/quickstart/history-and-dictionary) | 听写后纠正词，偏好拼写自动加入词典；历史在设备上，可选保留期限 | 未披露底层监听算法；不能推成定期扫描全部历史 |
+| [Typeless 个性化](https://www.typeless.com/help/quickstart/personalization) | 声称逐渐学习措辞、正式程度、长短等抽象风格；可关闭学习 | 没公开更新周期、训练方式或五小时规则；说明不等于 Android 功能完全一致的实测 |
+| [Wispr Flow 词典](https://docs.wisprflow.ai/articles/4052411709-Teach-Flow-your-words-with-the-dictionary) | 桌面端可选纠词学习，过滤普通词、URL、路径等；不是每个改字都入词典 | 平台有差异，不能把桌面监听能力套到安卓；词典偏好与字面替换是不同机制 |
+| [Wispr Flow Styles](https://docs.wisprflow.ai/articles/2368263928-how-to-setup-flow-styles) | 按应用场景选择格式风格 | 不是自动从全部历史学习完整人格的证据 |
+| [VoiceInk AutoLearnService](https://github.com/Beingpax/VoiceInk/blob/main/VoiceInk/Features/Dictionary/AutoLearn/AutoLearnService.swift) / [快照比较](https://github.com/Beingpax/VoiceInk/blob/main/VoiceInk/Features/Dictionary/AutoLearn/FinalSnapshotDiffEngine.swift) | 读取的源码包含插入范围 / 锚点、前后快照差异、候选队列与模型审核；候选入队后可触发审核，也支持手动 | 这套是桌面实现，不证明安卓能拿到所有发送前改稿 |
+
+推荐事件驱动与空闲合批，有工程先例：[LangMem 延迟处理](https://langchain-ai.github.io/langmem/guides/delayed_processing/)展示把连续活动合并后再反思；它的示例延迟不是我们产品的既定更新周期。
+
+### OCR 与多模态
+
+[ML Kit OCR](https://developers.google.com/ml-kit/vision/text-recognition/v2)可本地识别文字并返回文字块、位置等，原图可以不上传；但聊天人物、引用与关系理解还需额外规则或模型。不能说 OCR 必然丢失所有布局。
+
+[Qwen3-VL 官方项目](https://github.com/QwenLM/Qwen3-VL)提供图文理解、视觉定位与 OCR 等能力，适合直接处理聊天画面。**所以推荐军师一期直接多模态，避免维护额外的聊天 OCR 解析层**；这是工程判断，尚无本项目同样本准确率 / 成本对照，不宣称一定更准或更便宜。
+
+直接多模态会上传本次截图；本机历史和云端推理是不同数据用途。截图与文字均可能被误读，人物记忆必须能追溯来源，不能只信模型自报置信度。

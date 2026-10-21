@@ -1,261 +1,215 @@
-/** Executable product contracts. No network, device access or provider calls. */
-export function nodeIndex(flow) {
-  const nodes = new Map();
-  for (const g of flow.groups)
-    for (const n of g.nodes)
-      nodes.set(g.domain + "." + n.id, { ...n, domain: g.domain, group: g });
-  return nodes;
-}
-export function portAt(flow, endpoint) {
-  const [domain, id, key] = endpoint.split(".");
-  const node = nodeIndex(flow).get(domain + "." + id);
-  const port = node?.ports.find((p) => p.id === key);
-  if (!port) throw Error("Unknown port: " + endpoint);
-  const sameSide = node.ports.filter((p) => p.side === port.side),
-    i = sameSide.indexOf(port);
-  const [x, y, w, h] = node.rect,
-    [gx, gy] = node.group.rect;
-  const f = (i + 1) / (sameSide.length + 1);
-  return {
-    x: gx + x + (port.side === "right" ? w : port.side === "left" ? 0 : w * f),
-    y: gy + y + (port.side === "bottom" ? h : port.side === "top" ? 0 : h * f),
-    side: port.side,
-    dir: port.dir,
-    type: port.type,
-    node,
-    port,
-  };
-}
-export function edgeRoute(flow, edge) {
-  const a = portAt(flow, edge.from),
-    b = portAt(flow, edge.to);
-  const offset = (p, d) => [
-    p.x + (p.side === "right" ? d : p.side === "left" ? -d : 0),
-    p.y + (p.side === "bottom" ? d : p.side === "top" ? -d : 0),
-  ];
-  const lead = offset(a, 13),
-    tail = offset(b, 13);
-  if (edge.channel) {
-    const c = flow.channels.find((c) => c.id === edge.channel),
-      direction = a.node.domain === c.a ? "ab" : "ba";
-    const path = c.paths[direction],
-      start = path[0],
-      finish = path.at(-1);
-    const sign = Math.sign(finish[0] - start[0]) || 1,
-      exitX = start[0] - sign * 12,
-      enterX = finish[0] + sign * 12;
-    return [
-      [a.x, a.y],
-      lead,
-      ...(edge.exitVia || [
-        [exitX, lead[1]],
-        [exitX, start[1]],
-      ]),
-      ...path,
-      ...(edge.entryVia || [
-        [enterX, finish[1]],
-        [enterX, tail[1]],
-      ]),
-      tail,
-      [b.x, b.y],
-    ];
+/** Entities stay fixed while example data moves between their owners. */
+export function nodeIndex(spec) {
+  const index = new Map();
+  for (const g of spec.world.groups) {
+    const d = spec.domains.find((d) => d.id === g.domain);
+    for (const p of g.nodes) {
+      const n = d.nodes.find((n) => n.id === p.id);
+      index.set(`${d.id}.${n.id}`, { ...n, rect: p.rect, domain: d.id });
+    }
   }
-  if (edge.via) return [[a.x, a.y], lead, ...edge.via, tail, [b.x, b.y]];
-  if (Math.abs(a.x - b.x) < 30)
-    return [[a.x, a.y], lead, [lead[0], tail[1]], tail, [b.x, b.y]];
-  const mid = (lead[0] + tail[0]) / 2;
-  return [[a.x, a.y], lead, [mid, lead[1]], [mid, tail[1]], tail, [b.x, b.y]];
+  return index;
+}
+/** Exactly one straight lane per direction, ending at domain boundaries. */
+export function laneRoute(world, channel, direction) {
+  const a = world.groups.find((g) => g.domain === channel.a).rect;
+  const b = world.groups.find((g) => g.domain === channel.b).rect;
+  const y = channel.lanes[direction];
+  return direction === "ab"
+    ? [
+        [a[0] + a[2], y],
+        [b[0], y],
+      ]
+    : [
+        [b[0], y],
+        [a[0] + a[2], y],
+      ];
 }
 export function validateWorld(spec) {
   const need = (v, m) => {
     if (!v) throw Error(m);
   };
   need(
-    spec.schemaVersion === 4 && spec.meta?.title,
-    "Unsupported product schema",
+    spec.schemaVersion === 5 && spec.meta?.title,
+    "Unsupported domain schema",
   );
-  const domains = new Map(),
-    colors = new Set(),
-    documents = new Set(spec.documents.map((d) => d.id));
-  need(documents.size === spec.documents.length, "Duplicate document");
+  const docs = new Set(spec.documents.map((d) => d.id));
+  need(docs.size === spec.documents.length, "Duplicate document");
   const refs = (x) => {
-    for (const r of x.documents || [])
-      need(documents.has(r), "Unknown document " + r);
+    for (const id of x.documents || [])
+      need(docs.has(id), "Unknown document " + id);
   };
+  const domains = new Map(),
+    colors = new Set();
   for (const d of spec.domains) {
     need(
-      d.id && !domains.has(d.id) && d.name && d.summary,
-      "Incomplete domain",
+      d.id && d.name && d.summary && !domains.has(d.id),
+      "Duplicate or incomplete domain",
     );
     need(
-      /^#[0-9a-f]{6}$/i.test(d.color) && !colors.has(d.color),
-      "Domain colors must be distinct",
+      /^#[a-f\d]{6}$/i.test(d.color) && !colors.has(d.color),
+      "Distinct domain colors required",
     );
     domains.set(d.id, d);
     colors.add(d.color);
     refs(d);
+    const ids = new Set();
+    for (const n of d.nodes || []) {
+      need(
+        n.id && n.title && n.summary && !ids.has(n.id),
+        "Duplicate or incomplete entity",
+      );
+      need(!n.ports, "Entity nodes do not have workflow ports");
+      ids.add(n.id);
+      refs(n);
+    }
   }
-  const prompts = new Map(spec.prompts.map((p) => [p.id, p]));
-  for (const p of prompts.values())
+  const w = spec.world,
+    placed = new Set(),
+    pairs = new Set(),
+    channels = new Set();
+  need(w.width > 0 && w.height > 0, "World bounds required");
+  for (const g of w.groups) {
+    need(
+      domains.has(g.domain) && !placed.has(g.domain),
+      "A domain occurs once",
+    );
+    placed.add(g.domain);
+    const [x, y, width, height] = g.rect;
+    need(
+      x >= 0 && y >= 0 && x + width <= w.width && y + height <= w.height,
+      "Domain outside canvas",
+    );
+    const entities = domains.get(g.domain).nodes || [];
+    need(
+      g.nodes.length === entities.length &&
+        new Set(g.nodes.map((n) => n.id)).size === entities.length,
+      "Place every entity exactly once",
+    );
+    for (const n of g.nodes) {
+      need(
+        entities.some((e) => e.id === n.id),
+        "Unknown entity",
+      );
+      const [nx, ny, nw, nh] = n.rect;
+      need(
+        nx >= 12 &&
+          ny >= 60 &&
+          nw >= 80 &&
+          nh >= 40 &&
+          nx + nw <= width - 12 &&
+          ny + nh <= height - 12,
+        "Entity outside domain",
+      );
+    }
+  }
+  const nodes = nodeIndex(spec),
+    prompts = new Set(spec.prompts.map((p) => p.id));
+  for (const p of spec.prompts)
     need(
       p.owner === "cloud" &&
-        documents.has(p.document) &&
+        docs.has(p.document) &&
         p.contract?.input &&
-        p.contract?.output &&
-        p.contract?.rules?.length,
-      "Prompt ownership",
+        p.contract?.output,
+      "Cloud owns prompt contracts",
     );
-  need(
-    spec.workflows.length === 2 &&
-      spec.workflows[0].id === "voice" &&
-      spec.workflows[1].id === "advisor",
-    "Exactly two business graphs",
-  );
-  let relations = 0,
-    nodesCount = 0,
-    channelsCount = 0;
-  for (const f of spec.workflows) {
-    const nodes = nodeIndex(f),
-      owners = new Set(),
-      pairs = new Set(),
-      edges = new Map(),
-      seenEvents = new Set();
-    need(f.width > 0 && f.height > 0, "Graph bounds");
-    for (const g of f.groups) {
+  for (const n of nodes.values())
+    for (const id of n.prompts || [])
       need(
-        domains.has(g.domain) && !owners.has(g.domain),
-        "Each domain occurs once",
+        n.domain === "cloud" && prompts.has(id),
+        "Prompt attached outside Cloud",
       );
-      owners.add(g.domain);
-      const [x, y, w, h] = g.rect;
-      need(
-        x >= 0 && y >= 0 && x + w <= f.width && y + h <= f.height,
-        "Domain outside canvas",
-      );
-      const ids = new Set();
-      for (const n of g.nodes) {
-        need(
-          n.title && n.summary && !ids.has(n.id),
-          "Duplicate or incomplete node",
-        );
-        ids.add(n.id);
-        refs(n);
-        const [nx, ny, nw, nh] = n.rect;
-        need(
-          nx >= 12 &&
-            ny >= 42 &&
-            nw >= 80 &&
-            nh >= 40 &&
-            nx + nw <= w - 12 &&
-            ny + nh <= h - 12,
-          "Node outside its domain",
-        );
-        need(
-          n.ports?.length &&
-            new Set(n.ports.map((p) => p.id)).size === n.ports.length,
-          "Real nodes need distinct ports",
-        );
-        for (const p of n.ports)
-          need(
-            ["in", "out"].includes(p.dir) &&
-              ["left", "right", "top", "bottom"].includes(p.side) &&
-              p.type,
-            "Invalid port",
-          );
-        for (const p of n.prompts || [])
-          need(
-            g.domain === "cloud" && prompts.has(p),
-            "Prompts belong to Cloud",
-          );
-      }
-    }
-    for (const c of f.channels) {
-      const pair = [c.a, c.b].sort().join(":");
-      need(
-        c.a !== c.b && owners.has(c.a) && owners.has(c.b) && !pairs.has(pair),
-        "At most two domain bus lines",
-      );
-      pairs.add(pair);
-      for (const d of ["ab", "ba"])
-        need(c.paths[d].length >= 2, "Missing return bus");
-      need(c.stack.length === 4, "Missing scrollable packet history");
-      if ([c.a, c.b].includes("provider"))
-        need([c.a, c.b].includes("cloud"), "Supplier bypass");
-    }
-    for (const e of f.edges) {
-      need(e.id && !edges.has(e.id), "Duplicate edge");
-      edges.set(e.id, e);
-      const a = portAt(f, e.from),
-        b = portAt(f, e.to);
-      need(
-        a.dir === "out" && b.dir === "in" && a.type === b.type,
-        "Output/input type mismatch",
-      );
-      if (a.node.domain !== b.node.domain) {
-        const c = f.channels.find((c) => c.id === e.channel);
-        need(
-          c &&
-            [a.node.domain, b.node.domain].every((d) => [c.a, c.b].includes(d)),
-          "Cross-domain node edge needs a shared bus",
-        );
-      } else need(!e.channel, "Internal node edges cannot use a domain bus");
-      need(e.title && e.detail, "Data must be named on each node connection");
-    }
-    for (const [id, n] of nodes) {
-      need(
-        f.edges.some(
-          (e) => e.from.startsWith(id + ".") || e.to.startsWith(id + "."),
+  for (const c of w.channels) {
+    const pair = [c.a, c.b].sort().join(":");
+    need(
+      c.a !== c.b &&
+        placed.has(c.a) &&
+        placed.has(c.b) &&
+        !pairs.has(pair) &&
+        !channels.has(c.id),
+      "Only one pair of domain lanes",
+    );
+    pairs.add(pair);
+    channels.add(c.id);
+    const a = w.groups.find((g) => g.domain === c.a).rect,
+      b = w.groups.find((g) => g.domain === c.b).rect;
+    need(a[0] + a[2] < b[0], "Lanes run between left and right domains");
+    need(
+      !w.groups.some((g) => g.rect[0] > a[0] && g.rect[0] < b[0]),
+      "A lane cannot cross another domain",
+    );
+    need(
+      c.lanes.ab < c.lanes.ba &&
+        [c.lanes.ab, c.lanes.ba].every(
+          (y) =>
+            y > Math.max(a[1], b[1]) && y < Math.min(a[1] + a[3], b[1] + b[3]),
         ),
-        "Orphan node",
-      );
-      for (const p of n.prompts || [])
-        need(
-          f.edges.some(
-            (e) => e.from.startsWith(id + ".") && e.to.startsWith("provider."),
-          ),
-          "Prompt has no model destination",
-        );
-    }
-    for (const e of f.events) {
-      need(e.id && !seenEvents.has(e.id), "Duplicate event");
+      "Two distinct return lanes",
+    );
+    need(c.stack?.length === 4, "Scrollable card stack required");
+    const [cx, cy, sw, sh] = c.stack;
+    need(
+      cx - sw / 2 > a[0] + a[2] &&
+        cx + sw / 2 < b[0] &&
+        cy - sh / 2 >= 0 &&
+        cy + sh / 2 <= w.height,
+      "Cards stay between domains",
+    );
+    if ([c.a, c.b].includes("provider"))
+      need([c.a, c.b].includes("cloud"), "Suppliers only connect to Cloud");
+  }
+  need(!w.edges, "No internal workflow wiring");
+  need(
+    spec.businesses.length === 2 &&
+      spec.businesses.map((v) => v.id).join(",") === "voice,advisor",
+    "Two business views required",
+  );
+  for (const view of spec.businesses) {
+    const seen = new Set();
+    for (const e of view.events) {
       need(
-        (e.after || []).every((id) => seenEvents.has(id)),
-        "Event violates causality",
+        e.id && !seen.has(e.id) && e.title && e.body && e.delay >= 0,
+        "Incomplete data event",
       );
       need(
-        (e.edge && edges.has(e.edge)) || (e.node && nodes.has(e.node)),
-        "Event needs real endpoints",
+        (e.after || []).every((id) => seen.has(id)),
+        "Future event dependency",
       );
-      need(e.title && e.body && e.delay >= 0, "Incomplete event");
+      need(
+        e.channel
+          ? channels.has(e.channel) && ["ab", "ba"].includes(e.direction)
+          : nodes.has(e.node),
+        "Unknown data channel or local entity",
+      );
       for (const id of Object.keys(e.status || {}))
-        need(nodes.has(id), "State update outside graph");
-      for (const id of [...(e.startStreams || []), ...(e.stopStreams || [])])
-        need(edges.has(id), "Stream needs a real node edge");
-      seenEvents.add(e.id);
+        need(nodes.has(id), "Unknown state owner");
+      if (e.proposal)
+        need(docs.has(e.proposal), "Proposals need a reviewable explanation");
+      for (const id of [...(e.startStreams || []), ...(e.stopStreams || [])]) {
+        const [channel, dir] = id.split(":");
+        need(
+          channels.has(channel) && ["ab", "ba"].includes(dir),
+          "Unknown streaming lane",
+        );
+      }
+      seen.add(e.id);
     }
     need(
-      f.events[0].edge && edges.get(f.events[0].edge).from.startsWith("phone."),
-      "User phone starts the world",
+      view.events[0]?.channel === "phone-app" &&
+        view.events[0].direction === "ab",
+      "Examples begin with a user action",
     );
-    need(
-      f.events.some((e) => e.phase === "learning") &&
-        f.events.some((e) => e.phase === "reuse"),
-      "History must feed back into later use",
-    );
-    relations += f.edges.length;
-    nodesCount += nodes.size;
-    channelsCount += f.channels.length;
   }
   return {
     domains: domains.size,
-    workflows: spec.workflows.length,
-    nodes: nodesCount,
-    relations,
-    channels: channelsCount,
+    businesses: spec.businesses.length,
+    nodes: nodes.size,
+    channels: channels.size,
+    lanes: channels.size * 2,
     prompts: prompts.size,
   };
 }
-/** Append-only observations; reading old packets never advances the simulated world. */
+/** Reading older cards neither advances the example nor jumps to new arrivals. */
 export class PacketHistory {
   constructor(limit = 80) {
     this.limit = limit;
@@ -290,10 +244,11 @@ export class PacketHistory {
       .filter((p) => Math.abs(p.offset) <= 2);
   }
 }
-/** One causal clock drives all nodes and packet histories, never independent random loops. */
+/** A single example clock updates data, never the domain topology. */
 export class ProductWorld {
-  constructor(flow) {
-    this.flow = flow;
+  constructor(world, view) {
+    this.world = world;
+    this.view = view;
     this.reset();
   }
   reset() {
@@ -301,34 +256,36 @@ export class ProductWorld {
     this.current = null;
     this.done = false;
     this.status = {};
-    this.facts = {};
     this.seen = new Set();
     this.activeStreams = new Set();
-    this.channels = new Map(
-      this.flow.channels.map((c) => [c.id, new PacketHistory()]),
-    );
     this.journal = [];
+    this.channels = new Map(
+      this.world.channels.map((c) => [c.id, new PacketHistory()]),
+    );
   }
   step() {
-    const e = this.flow.events[this.cursor];
+    const e = this.view.events[this.cursor];
     if (!e) {
       this.done = true;
       return null;
     }
     if (!(e.after || []).every((id) => this.seen.has(id)))
-      throw Error("Causal prerequisite missing");
-    const edge = this.flow.edges.find((x) => x.id === e.edge);
-    const packet = { ...e, edge: edge?.id, from: edge?.from, to: edge?.to };
-    if (edge?.channel) this.channels.get(edge.channel).append(packet);
+      throw Error("Missing prerequisite");
+    const c = this.world.channels.find((c) => c.id === e.channel);
+    const packet = {
+      ...e,
+      from: c ? (e.direction === "ab" ? c.a : c.b) : undefined,
+      to: c ? (e.direction === "ab" ? c.b : c.a) : undefined,
+    };
+    if (c) this.channels.get(c.id).append(packet);
     Object.assign(this.status, e.status || {});
-    Object.assign(this.facts, e.facts || {});
     for (const id of e.startStreams || []) this.activeStreams.add(id);
     for (const id of e.stopStreams || []) this.activeStreams.delete(id);
     this.current = packet;
     this.journal.push(packet);
     this.seen.add(e.id);
     this.cursor++;
-    this.done = this.cursor === this.flow.events.length;
+    this.done = this.cursor === this.view.events.length;
     return packet;
   }
 }

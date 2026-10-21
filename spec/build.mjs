@@ -23,6 +23,12 @@ for (const doc of spec.documents) {
     throw Error("Document escaped spec directory");
   const source = await fs.readFile(resolved, "utf8");
   const renderer = new Renderer();
+  // The inspector already supplies the document title.
+  renderer.heading = function ({ tokens, depth }) {
+    return depth === 1
+      ? ""
+      : `<h${depth}>${this.parser.parseInline(tokens)}</h${depth}>`;
+  };
   renderer.html = ({ text }) =>
     text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
   renderer.link = function ({ href, title, tokens }) {
@@ -84,10 +90,10 @@ console.log(
   "Built spec/index.html: " +
     spec.domains.length +
     " domains, " +
-    counts.workflows +
-    " workflows, " +
-    counts.relations +
-    " relations, " +
+    counts.businesses +
+    " business views, " +
+    counts.lanes +
+    " domain lanes, " +
     ids.size +
     " documents.",
 );
