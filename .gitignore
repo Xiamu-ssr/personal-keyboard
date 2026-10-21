@@ -14,6 +14,7 @@ hs_err_pid*.log
 .DS_Store
 spec/demo/*.apk
 spec/demo/*.png
+spec/demo/*.mp4
 spec/demo/*.json
 !spec/demo/README.md
 !spec/demo/artifact.json

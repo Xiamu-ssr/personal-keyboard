@@ -55,7 +55,9 @@
     el("demo-status").textContent = label;
   }
   function showFrame(url) {
+    el("native-video").pause();
     el("native-placeholder").hidden = !!url;
+    el("native-gallery").hidden = !!url;
     el("android-frame").hidden = !url;
     if (url) el("android-frame").src = url;
     else el("android-frame").removeAttribute("src");
@@ -124,11 +126,42 @@
   el("prepare-demo").addEventListener("click", () => action("start"));
   el("stop-demo").addEventListener("click", () => action("stop"));
   refresh();
+  const video = el("native-video");
+  const still = el("native-image");
+  function playPreview() {
+    if (!video.hidden && !matchMedia("(prefers-reduced-motion: reduce)").matches)
+      video.play().catch(() => {});
+  }
+  el("native-gallery").querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      video.pause();
+      el("native-gallery").querySelectorAll("button").forEach((b) =>
+        b.setAttribute("aria-pressed", String(b === button)),
+      );
+      const movie = button.dataset.video;
+      video.hidden = !movie;
+      still.hidden = !!movie;
+      if (movie) {
+        video.poster = "./demo/" + button.dataset.poster;
+        video.src = "./demo/" + movie;
+        video.setAttribute("aria-label", "真实 APK 录屏：" + button.querySelector("span").textContent);
+        playPreview();
+      } else {
+        still.src = "./demo/" + button.dataset.image;
+        still.alt = "豆豆输入法 · " + button.querySelector("span").textContent;
+      }
+    });
+  });
+  el("native-dialog").addEventListener("spec:open", () => {
+    if (!local) playPreview();
+  });
   el("native-dialog").addEventListener("close", () => {
+    video.pause();
     if (location.hash === "#demo")
       history.replaceState(null, "", location.pathname + location.search);
   });
   if (location.hash === "#demo" && !local) {
     el("native-dialog").showModal();
+    playPreview();
   }
 })();

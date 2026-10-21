@@ -216,12 +216,12 @@ domains:
     chips:
       - id: models_asr
         name: 中文 ASR
-        desc: Fun-ASR / 系统识别
+        desc: 系统 / 云端识别
         business:
           - 转写，并补标点、规范数字等；热词辅助识别。
           - 按个人文风改写整句由后续文本模型完成。
         technical:
-          - 当前用系统识别；Fun-ASR 实时为待接入首选，转写与个性整理分开。
+          - 当前用系统识别；优先评测 Qwen-Audio 3.1 Message，与 Fun-ASR 实时对照。
         documents:
           - models-and-cost
       - id: models_text

@@ -1,30 +1,24 @@
-# 真实 Android 画面
+# 截图与操作动画
 
-同一仓库内构建 APK、生成 Spec。Node / scrcpy 传输真实 Android 画面和触控，不把 HTML 冒充安卓。当前 APK 没有内置模型账号。
+公开 Spec 提供截图、实际 APK 录屏与下载；在线安卓试用已取消。页面不会启动或连接个人 Mac、手机或云端 Android。原 `/keyboard-spec/live/` 地址保持关闭。
 
-## 公开页面
+## 现在看什么
 
-2026-10-21 按用户要求停用连接个人 Mac 的公网演示：关闭 launchd 自动启动和反向隧道，原 `/keyboard-spec/live/` 路由返回 410，删除 Mac 桥接启动入口。公开 Spec 的“APK 预览”仅显示原生截图和下载链接；打开 `/#demo` 也不会启动或连接任何 Android。
+- 打字与语音：15.5 秒，实际键帽拼音输入、候选上屏、工具格与语音面板。
+- 军师读屏：8.25 秒，缩矮、截取本机练习页、本地 OCR、返回；原草稿仍在。
+- 截图：首页、个人记忆、人物、设置，另有键盘和军师截图作为录屏封面。
 
-后续在线试用的目标是独立云端 Android：安装本仓库发布的同一 APK，网页只传画面和触控，会话结束清空测试数据。GitHub Pages 负责静态页面，不连接家庭电脑或个人手机。
+录屏来自 Android 15，安装的就是公开发布的 `0.3.0-alpha.1` APK；只有本 App 练习区和测试资料，无真实账号或私聊。云端 ASR 和文字模型未配置，所以不展示伪造的语音转写或建议回复。截图与录屏都是静态媒体，不能当成在线操作。
 
-选择托管平台时，必须实测系统输入法启用、JNI 中文候选、辅助功能截图 / OCR。语音还需要浏览器麦克风传入 Android；Appetize 官方明确不支持麦克风输入，不能用于完整语音体验。当前没有部署新的云端试用服务。
+视频为 H.264 / MP4，无音轨，支持网页播放；打开预览后静音循环，系统偏好减少动态效果时不自动播放，关闭窗口即暂停。`spec/media.json` 记录 APK 来源、尺寸、时长和文件摘要。
 
-`demo/remote/` 保留实验性设备生命周期与会话边界代码及测试，未作为公网服务启动；Nginx 示例保留关闭旧地址的配置。
+## APK 与发布
 
-## 网页安卓方案区别
+[下载 APK](./demo/doudou-keyboard.apk)，Android 11+，debug 自用预览签名。安装后在系统启用并选择豆豆输入法，再到 App 的练习区试用。
 
-2026-10-21 核查 nanoMuse 源码：官网使用 [MobileGym](https://github.com/nano-muse/nanoMuse/tree/main/demo/mobilegym)，由 React 模拟手机和应用，并不是运行 Android APK。[MobileGym 本体](https://github.com/Purewhiter/mobilegym)适合展示聊天与 Agent 操作；不能用来验收 Android 输入法服务、JNI 拼音或系统截屏。
+GitHub Pages 与 ECS 发布同一签名 APK、截图和录屏。Pages 工作流从同版本 Release 取文件并校验 `spec/release.json` 与 `spec/media.json`；不会重新生成另一套 APK 签名。
 
-- [NekoDroid 支持范围](https://github.com/nishal21/NekoDroid/blob/main/docs/SUPPORTED_APKS.md)：目前是有限的单 DEX 测试 APK 执行器，不支持 JNI、完整 Android 系统服务或一般应用。补到可运行本输入法，相当于补 Android 运行环境，不适合作为演示基础。
-- [Cuttlefish](https://source.android.com/docs/devices/cuttlefish/get-started)：Android 官方完整虚拟设备，自带网页控制界面，需要 KVM；[WebRTC 文档](https://source.android.com/docs/devices/cuttlefish/webrtc)列出麦克风等传输扩展。作为独立云主机上的完整 APK 试用首选候选，部署后仍需验证本输入法及麦克风端到端流程。
-- [Appetize](https://docs.appetize.io/platform/embedding-apps)：上传 APK，在其云端运行并嵌入网页。官方价格页目前免费档每月 30 分钟、单次 3 分钟，适合先验证界面和输入法兼容性；[官方限制](https://support.appetize.io/does-appetize.io-support-audio-including-sound-or-microphone)明确不支持麦克风输入，无法完整演示语音。[定价](https://appetize.io/pricing)
-- [Google Android Emulator 容器脚本](https://github.com/google/android-emulator-container-scripts)：完整 Android + WebRTC，服务器需要 KVM，项目标记为实验性。
-- [redroid](https://github.com/remote-android/redroid-doc)：Linux 容器运行 Android，依赖 Binder 等内核能力，可配网页投屏；公开演示应放在独立云主机，不与个人数据和正式业务混用。
-
-现有 ECS 没有 `/dev/kvm`，当前也未提供 Binder 设备；这不是断言其内核无法支持，但本次不为演示修改共用生产服务器内核。
-
-## 本机设备演示
+## 本地开发验收
 
 ```sh
 npm ci
@@ -33,10 +27,4 @@ npm run demo:setup
 npm run spec:serve
 ```
 
-打开 `http://127.0.0.1:8560`，在“APK 预览”选择已解锁并授权 ADB 的设备。只安装 / 投屏选定设备，不自动启动模拟器。勾选临时授权才启用输入法与主动截屏，停止时恢复原设置。厂商安装确认仍由本人正常完成。
-
-固定官方 scrcpy 3.3.3 服务端（SHA-256 见依赖锁）与 Tango WebCodecs 包版本。本机 Spec 8560 和画面 8561 只监听 127.0.0.1；已关闭公网桥接控制器 8562 与 ECS 隧道 18562。
-
-## GitHub Pages
-
-Pages 可以托管静态 Spec 和编译的 APK，但不能运行 Android、Node 或 ADB。`workflow_dispatch` 的 Pages 流程从同版本 Release 取得已经验收的 APK 与八张测试截图，逐一校验仓库中的 SHA-256 清单再构建 Spec。Pages 与 ECS 使用同一份签名 APK，发布文件不包含模型配置与运行资料。仓库已依本人授权公开，当前两处页面都只提供静态预览与下载。
+打开 `http://127.0.0.1:8560`，在预览窗口选择已解锁并授权 ADB 的设备；只安装 / 投屏明确选定的设备，不自动启动模拟器。临时授权及停止恢复仅供本地验收。Node / scrcpy 服务只监听回环地址，不部署公网设备桥接。

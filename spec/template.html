@@ -13,7 +13,7 @@
         <h1>豆豆输入法 <span>· Spec</span></h1>
       </div>
       <div class="header-actions">
-        <button id="open-native" class="quiet">APK 预览</button
+        <button id="open-native" class="quiet">截图与动画</button
         ><button id="open-library" class="quiet">约定与来源</button
         ><span id="revision"></span>
       </div>
@@ -61,7 +61,7 @@
     </aside>
     <dialog id="native-dialog" class="modal">
       <header class="native-toolbar">
-        <h2>实机截图</h2>
+        <h2>豆豆输入法</h2>
         <span id="demo-status" hidden></span>
         <a href="./demo/doudou-keyboard.apk" download>下载 APK</a>
         <button
@@ -93,7 +93,8 @@
       <div id="demo-message" role="status"></div>
       <div class="native-stage">
         <div id="native-placeholder">
-          <img src="./demo/voice.png" alt="豆豆输入法 Android 15 原生语音界面截图" />
+          <video id="native-video" controls loop muted playsinline preload="none" poster="./demo/typing.png" src="./demo/keyboard-tour.mp4" aria-label="真实 APK 录屏：拼音输入、工具与语音面板"></video>
+          <img id="native-image" src="./demo/home.png" alt="豆豆输入法首页" hidden />
         </div>
         <iframe
           id="android-frame"
@@ -102,6 +103,14 @@
           hidden
         ></iframe>
       </div>
+      <nav id="native-gallery" aria-label="APK 截图与操作录屏">
+        <button type="button" data-video="keyboard-tour.mp4" data-poster="typing.png" aria-pressed="true"><img src="./demo/typing.png" alt="" /><span>打字与语音</span><small>录屏</small></button>
+        <button type="button" data-video="advisor-tour.mp4" data-poster="advisor.png" aria-pressed="false"><img src="./demo/advisor.png" alt="" /><span>军师读屏</span><small>录屏</small></button>
+        <button type="button" data-image="home.png" aria-pressed="false"><img src="./demo/home.png" alt="" /><span>首页</span></button>
+        <button type="button" data-image="memory.png" aria-pressed="false"><img src="./demo/memory.png" alt="" /><span>个人记忆</span></button>
+        <button type="button" data-image="people.png" aria-pressed="false"><img src="./demo/people.png" alt="" /><span>人物</span></button>
+        <button type="button" data-image="settings.png" aria-pressed="false"><img src="./demo/settings.png" alt="" /><span>设置</span></button>
+      </nav>
     </dialog>
     <dialog id="cost-dialog" class="modal">
       <button
@@ -120,7 +129,7 @@
       <div class="model-grid">
         <div>
           <strong>语音 → 文字</strong>
-          <p>Paraformer / Fun-ASR<br />中文、热词、流式短句对比</p>
+          <p>Qwen-Audio Message / Fun-ASR<br />中文、热词、流式短句对比</p>
         </div>
         <div>
           <strong>润色与回复</strong>
@@ -133,8 +142,8 @@
       </div>
       <p class="notice">
         先配两项：ASR + 一个共用文本模型。ZenMux 已有 Qwen ASR 转写接口；
-        中文实时输入首选 Fun-ASR Realtime，北京原价 ¥1.188 / 小时。 10
-        小时试用有资格与期限，小用量先按量使用。<a
+        中文实时输入优先试 Qwen-Audio 3.1 Message，Fun-ASR 作对照。
+        下方按 Fun-ASR ¥1.188 / 小时估算，小用量先按量使用。<a
           href="#docs"
           data-doc="models-and-cost"
           >查看开通步骤与套餐比较 ↗</a

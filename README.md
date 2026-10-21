@@ -6,6 +6,7 @@
 
 - [在线产品 Spec](https://xiamu-ssr.github.io/personal-keyboard/) · [ECS 镜像](https://106.14.73.99/keyboard-spec/)：交互式业务 / 技术域模型。
 - [下载自用 APK](https://xiamu-ssr.github.io/personal-keyboard/demo/doudou-keyboard.apk)：Android 11+，arm64 / x86_64，debug 签名；不含模型密钥。
+- [截图与操作动画](https://xiamu-ssr.github.io/personal-keyboard/#demo)：实际 APK 录制的拼音输入、工具 / 语音面板，以及军师截屏识字；首页、记忆、人物和设置截图。
 - [当前实现与边界](spec/implementation.md) · [验收记录](spec/acceptance.md)
 
 ## 现在能做什么
@@ -41,7 +42,7 @@ npm run demo:setup
 npm run spec:serve
 ```
 
-打开 `http://127.0.0.1:8560`。Spec 直接表达域、能力、数据归属和关系契约，详细文档从图中展开。本地可选择已授权设备运行同一 APK，停止后恢复临时设置。公开 Spec 仅提供原生截图与 APK 下载；连接个人 Mac 的公网演示已关闭，后续在线试用须使用独立云端 Android。GitHub Pages 与 ECS 校验并发布同一份已验收的 Release APK。
+打开 `http://127.0.0.1:8560`。Spec 直接表达域、能力、数据归属和关系契约，详细文档从图中展开。本地可选择已授权设备运行同一 APK，停止后恢复临时设置。公开页面提供原生截图、使用录屏和 APK 下载，在线安卓试用已取消。GitHub Pages 与 ECS 校验并发布同一份已验收的 Release APK；录屏校验清单见 `spec/media.json`。
 
 - [产品](spec/product.md) · [交互](spec/interaction.md) · [架构](spec/architecture.md)
 - [模型、购买与成本](spec/models-and-cost.md) · [研究来源](spec/research.md)

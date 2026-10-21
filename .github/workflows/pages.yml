@@ -24,14 +24,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=$(node -p 'require("./package.json").version')
-          gh release download "v${version}" --repo "$GITHUB_REPOSITORY" --dir spec/demo --clobber --pattern doudou-keyboard.apk --pattern '*.png'
+          gh release download "v${version}" --repo "$GITHUB_REPOSITORY" --dir spec/demo --clobber --pattern doudou-keyboard.apk --pattern '*.png' --pattern '*.mp4'
           node demo/verify-public.mjs
       - run: npm run check
       - name: Select public artifacts only
         run: |
           mkdir -p .runtime/pages/demo
           cp spec/index.html .runtime/pages/
-          cp spec/demo/doudou-keyboard.apk spec/demo/artifact.json spec/demo/*.png .runtime/pages/demo/
+          cp spec/demo/doudou-keyboard.apk spec/demo/artifact.json spec/demo/*.png spec/demo/*.mp4 .runtime/pages/demo/
           touch .runtime/pages/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:

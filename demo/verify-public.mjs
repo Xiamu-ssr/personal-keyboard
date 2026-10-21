@@ -8,4 +8,11 @@ for(const [name,expected]of Object.entries(manifest.files)){
  const bytes=await fs.readFile(path.join(root,'spec/demo',name));
  if(bytes.length!==expected.bytes||createHash('sha256').update(bytes).digest('hex')!==expected.sha256)throw Error('Public artifact digest mismatch: '+name);
 }
-console.log('Verified public APK and eight native screenshots against the release manifest.');
+const media=JSON.parse(await fs.readFile(path.join(root,'spec/media.json'),'utf8'));
+if(media.version!==manifest.version||media.sourceApkSha256!==manifest.files['doudou-keyboard.apk'].sha256)throw Error('Recording APK version mismatch');
+if(Object.keys(media.files).sort().join(',')!=='advisor-tour.mp4,keyboard-tour.mp4')throw Error('Unexpected recording manifest');
+for(const [name,expected]of Object.entries(media.files)){
+ const bytes=await fs.readFile(path.join(root,'spec/demo',name));
+ if(bytes.length!==expected.bytes||createHash('sha256').update(bytes).digest('hex')!==expected.sha256)throw Error('Recording digest mismatch: '+name);
+}
+console.log('Verified APK, eight native screenshots and two APK recordings against their manifests.');

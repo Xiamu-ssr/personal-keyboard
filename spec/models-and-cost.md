@@ -8,23 +8,46 @@
 
 | 能力               | 自用首选                                               | 可采购替代                                 | 原因                                     |
 | ------------------ | ------------------------------------------------------ | ------------------------------------------ | ---------------------------------------- |
-| 中文流式语音       | 阿里云 Fun-ASR Realtime，Qwen3 ASR Realtime 对照 | Groq Whisper Large V3 Turbo 作为非流式对照 | 中文、热词、短句延迟须用本人语音评测     |
+| 中文流式语音       | 阿里云 Qwen-Audio 3.1 Message，Fun-ASR Realtime 对照 | Groq Whisper Large V3 Turbo 作为非流式对照 | 中文、热词、短句延迟须用本人语音评测     |
 | 润色、三种回复     | 现有 CPA 中可用的 Gemini Flash                         | 阿里云 qwen3.7-flash                       | 先利用已有订阅；对外收费使用稳定官方 API |
 | 差异分类、记忆抽取 | 小型文本模型，合并/批处理                              | qwen-flash / qwen3.7-flash                 | 处理短结构化输出                         |
 | OCR                | ML Kit 中文设备端模型，随 APK 打包                     | PaddleOCR 本地方案待设备评估               | 无逐次 API 费用，不要求 Play 商店安装    |
 | TTS / 生图         | 首版不需要                                             | 后续按具体功能采购                         | 语音输入不是语音播报；人物图不是生图     |
 
-## 本版决定：先选 Fun-ASR Realtime
+## 2026-10-21 选型更新
 
-2026-10-21 官方资料复核后，中文输入法首选 `fun-asr-realtime`：双向流式、热词、标点 / 数字规整、可调 VAD 与噪声判定阈值。北京区 ¥0.00033/秒，即 ¥1.188/小时；每天半小时，30 天约 ¥17.82。10 小时免费额度是有资格与有效期的试用，不是永久每月赠送。
+优先试 **`qwen-audio-3.1-asr-flash-message`（百炼原生实时接口）**，Fun-ASR Realtime 作对照。阿里云当前选型页已将 Message 版列为输入法 / 短语音首选：实时中间结果、句末整理、即时热词、近几轮上下文，适合个性化输入。这里更新的是采购建议，APK 仍使用设备系统识别，没有偷偷切换线上模型。
 
-朋友所说“泛型 ASR”可能是 Fun-ASR，未取得确切模型 ID，不能认定。官方强调抗噪，但噪声鲁棒、过滤无效声音、只听本人是三个问题：邻座人声仍可能被识别；口述“不要，改成……”也不能靠噪声阈值解决。个性化改写由后续文本模型处理。
+Message 版可启用 `disfluency_removal_enabled` 过滤语气词并润色，支持保留方言，且可传即时热词；这些是官方接口参数。基础整理不等于已经学会用户文风，也不保证每次改口都正确理解。
 
-`qwen3-asr-flash-realtime` 作为同价位对照（北京区同为 ¥0.00033/秒）；ZenMux 当前可查 `qwen/qwen3-asr-flash`，标价 US$0.000035/秒，即 US$0.126/小时。但该转写接口提交音频后输出 SSE，不等于实时麦克风双向流；其公开参数未承诺热词透传。不要仅为统一网关放弃实时反馈。
+Fun-ASR Realtime 同样是现代语音大模型，具有实时转写、热词、标点 / 数字规整和噪声鲁棒性；不能把它与其他模型简单分成“能抗噪”与“不能抗噪”。北京原价 ¥0.00033/秒，即 ¥1.188/小时，每月 15 小时约 ¥17.82。它的定时长成本保留作计算器基线。
 
-选型不是质量验收：用本人 30–50 条安静 / 风扇 / 街边 / 旁人说话 / 中英混说 / 专有名词 / 口述改口样本，对比错字、无声幻觉、首字延迟、尾字延迟及后期修改量。当前未购买服务、未录入账号、未对真人语音做比较，不能宣称某模型绝对最好。
+### 用户列出的模型如何比较
 
-来源：[Fun-ASR Realtime](https://help.aliyun.com/zh/model-studio/fun-asr-realtime)、[噪声判定与流式接口](https://help.aliyun.com/zh/model-studio/fun-asr-realtime-java-sdk)、[百炼价格](https://help.aliyun.com/zh/model-studio/model-pricing)、[ZenMux 模型](https://zenmux.ai/qwen/qwen3-asr-flash)、[ZenMux 转写接口](https://zenmux.ai/docs/api/openai/create-audio-transcriptions.html)。
+| 模型 / 服务 | 对输入法有意义的差别 | 当前可比较的单价 |
+| --- | --- | --- |
+| Qwen-Audio-3.1-ASR-Flash | 新一代短音频模型，支持上下文、方言及原生整理；ZenMux 这一普通 ID 不等于 Message 实时接口 | ZenMux 输入 US$0.12 / 百万 token，输出 US$0.41 / 百万 token |
+| Qwen3-ASR-Flash | 较早一代，多语言、抗噪；适合整句录完后的识别对照 | ZenMux US$0.126 / 小时 |
+| Doubao-Seed-ASR-2.0 | 中文 / 方言 / 专有名词、语义顺滑；ZenMux 列出的用途是录音文件转写 | ZenMux US$0.11772 / 小时 |
+| GPT Transcribe | 文件与已提交语音轮次，支持上下文、关键词和多语言提示；连续低延迟识别另有 GPT Live Transcribe | ZenMux US$0.27 / 小时 |
+| Grok Voice STT 1.0 | 词级时间戳、可选说话人分离、多声道；本项目尚无中文近场对照结果 | ZenMux 约 US$0.10 / 小时 |
+| MiMo-V2.5-ASR | 开源，中英混说、方言、噪声和重叠语音是官方重点；开源模型不代表手机可直接离线流畅运行 | ZenMux US$0.72 / 小时 |
+| Fun-ASR Realtime | 持续上传麦克风音频，边说边出字；热词和近场 VAD 可控 | 百炼北京 ¥1.188 / 小时 |
+| Qwen-Audio-3.1-ASR-Flash-Message | 输入法 / 语音消息专用实时形态；句末整理、即时热词和上下文增强 | 百炼北京输入 ¥6 / 百万 token，输出 ¥4.5 / 百万 token |
+
+按秒报价乘 3,600 换算；按 token 的模型不强套一个每小时价格，需要确认音频编码与一次真实 `usage`。价格不代表识别排名。
+
+Message 北京区有 100 万 token 的试用额度，官方标注 90 天有效期；Fun-ASR 的 10 小时试用同样不是每月永久赠送。以账号实际资格和余量为准。
+
+### 模型能力与网关接口分别核对
+
+ZenMux 的 `POST /api/v1/audio/transcriptions` 是 JSON 提交音频 base64 或 URL，`stream: true` 流式返回文字；这不等于 WebSocket 连续上传麦克风。公开参数目前不能证明 Message 版的热词、上下文和句末整理能完整透传。停止录音后出结果可先用 ZenMux 对照；实时个性化输入优先验证百炼 Message 原生接口。
+
+朋友所说“泛型 ASR”可能是 Fun-ASR，但没有确切模型 ID，不能认定。噪声鲁棒、过滤无效声音与只听本人仍是不同问题；旁人清晰说话不一定会被过滤。
+
+用本人相同的 30–50 条安静、风扇、街边、旁人说话、中英混说、热词和口述改口录音，对比错字、漏字、首字 / 句末延迟、原意保留与修改量，再确定默认模型。当前未购买或调用这些云端 ASR，不能宣称绝对排名。
+
+来源：[阿里云选型页](https://help.aliyun.com/zh/model-studio/asr-model)、[Message 客户端参数](https://help.aliyun.com/zh/model-studio/qwen-asr-message-client-events)、[百炼价格](https://help.aliyun.com/zh/model-studio/model-pricing)、[ZenMux 模型](https://zenmux.ai/models)、[ZenMux 转写接口](https://zenmux.ai/docs/api/openai/create-audio-transcriptions.html)、[OpenAI 转写工作流](https://developers.openai.com/api/docs/guides/transcription)、[MiMo 官方项目](https://github.com/XiaomiMiMo/MiMo-V2.5-ASR)。
 
 ## 转写与语句整理
 
@@ -70,11 +93,11 @@ ASR 已不只是逐字转写。Paraformer 官方接口支持自动标点、数�
 
 ### 非流式备选与自部署
 
-ZenMux 的 Qwen3-ASR-Flash 作为录完一句再转写的便宜对照；中文实时体验首选上文 Fun-ASR Realtime。开源 Qwen3-ASR 0.6B / 1.7B 可自部署，不能直接当作云端 Flash 的同一服务，轻量服务器延迟与并发尚未实测。
+ZenMux 的 Qwen3-ASR-Flash 作为录完一句再转写的便宜对照；中文实时体验优先验证上文 Qwen-Audio 3.1 Message。开源 Qwen3-ASR 0.6B / 1.7B 可自部署，不能直接当作云端 Flash 的同一服务，轻量服务器延迟与并发尚未实测。
 
 ### ZenMux 有 ASR，但要分清流式形态
 
-官方已提供 `POST https://zenmux.ai/api/v1/audio/transcriptions`，文档示例模型为 `qwen/qwen3-asr-flash`，JSON 内提交音频 base64 或 URL。`stream: true` 流式返回文字，不等于 WebSocket 持续上传麦克风音频。可用来验证“录完一句再转写”，实时边说边出字优先测百炼原生实时接口。
+官方已提供 `POST https://zenmux.ai/api/v1/audio/transcriptions`，文档示例模型为 `qwen/qwen3-asr-flash`，JSON 内提交音频 base64 或 URL。`stream: true` 流式返回文字，不等于 WebSocket 持续上传麦克风音频。可用来验证“录完一句再转写”，实时边说边出字优先测百炼 Message 原生接口。
 
 该模型当前公开标价 US$0.000035 / 秒，即 US$0.126 / 小时、15 小时约 US$1.89。ZenMux 另列 `qwen/qwen-audio-3.1-asr-flash`，描述包含原生润色；它按 token 标价，不能把价格套用到按秒模型。是否适合个人口吻、能否保留原意仍需本人语音评测。
 

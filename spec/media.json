@@ -1,0 +1,24 @@
+{
+  "version": "0.3.0-alpha.1",
+  "sourceApkSha256": "272d4f016315ea9209dd1a37e418efe3af78bd80c03653958060e0841fb492db",
+  "source": "Actual Android 15 APK screen recordings; local practice and test data only.",
+  "cloudModelsConfigured": false,
+  "files": {
+    "keyboard-tour.mp4": {
+      "sha256": "4e51ff460fdb19a9de5fc764553ee39c4ecda705e41f3a48d426e8afc214ac0b",
+      "bytes": 162933,
+      "durationSeconds": 15.5,
+      "width": 720,
+      "height": 1560,
+      "codec": "h264"
+    },
+    "advisor-tour.mp4": {
+      "sha256": "8b118e9d974f511e1c1e65db078c1a93cf425f0e290c05e49d4968c698b6b43a",
+      "bytes": 100458,
+      "durationSeconds": 8.25,
+      "width": 720,
+      "height": 1560,
+      "codec": "h264"
+    }
+  }
+}

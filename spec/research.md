@@ -40,6 +40,6 @@ FlorisBoard 官方中文文档说明其音码算法不足，不推荐日常拼�
 
 麦克风、录音音量条与识别等待使用不同状态：音量条只消费真实 RMS 回调；等待是旋转进度，离开即取消，系统关闭动效时不旋转。未声称还原了视频每一帧或测得其动画时长。
 
-[Appetize](https://docs.appetize.io/platform/embedding-apps) 可云端运行 APK 并嵌入网页，但[官方明确不支持麦克风输入](https://support.appetize.io/does-appetize.io-support-audio-including-sound-or-microphone)；系统输入法和截屏仍须实测。浏览器原生 Android 项目并非都能运行任意 APK：[NekoDroid](https://github.com/nishal21/NekoDroid/blob/main/docs/SUPPORTED_APKS.md) 目前只支持有限测试程序，尚不支持 JNI 与完整 Android 用户空间。本项目有 JNI 输入引擎和系统 IME，不能拿它替代完整 Android。此前 Mac + scrcpy / Tango 公网演示已依用户要求关闭。后续首选候选为独立云主机上的 [Cuttlefish](https://source.android.com/docs/devices/cuttlefish/get-started)，其官方 WebRTC 界面可控制完整 Android，并列出麦克风扩展路径；本输入法端到端兼容性仍未验证，详见设备演示文档。
+[Appetize](https://docs.appetize.io/platform/embedding-apps) 可云端运行 APK 并嵌入网页，但[官方明确不支持麦克风输入](https://support.appetize.io/does-appetize.io-support-audio-including-sound-or-microphone)；系统输入法和截屏仍须实测。浏览器原生 Android 项目并非都能运行任意 APK：[NekoDroid](https://github.com/nishal21/NekoDroid/blob/main/docs/SUPPORTED_APKS.md) 目前只支持有限测试程序，尚不支持 JNI 与完整 Android 用户空间。本项目有 JNI 输入引擎和系统 IME，不能拿它替代完整 Android。此前 Mac + scrcpy / Tango 公网演示已依用户要求关闭。曾研究独立云主机上的 [Cuttlefish](https://source.android.com/docs/devices/cuttlefish/get-started)，其官方 WebRTC 界面可控制完整 Android，并列出麦克风扩展路径；本输入法端到端兼容性未验证。用户已取消在线试用，当前只发布实际 APK 截图、操作录屏与下载，详见设备演示文档。
 
 2026-10-21 补查 [nanoMuse 的演示源码](https://github.com/nano-muse/nanoMuse/tree/main/demo/mobilegym)：使用 [MobileGym](https://github.com/Purewhiter/mobilegym)，用 React 复现手机和应用，模拟手机全部在浏览器运行，不需要 Android 设备或虚拟机。适合展示 Agent 的手机操作；本项目的系统输入法服务与 JNI 拼音仍须用完整 Android 验证。

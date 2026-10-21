@@ -1292,7 +1292,7 @@ main {
 
 .demo-controls[hidden], .consent[hidden] {display:none;}
 
-#native-dialog{width:min(560px,calc(100% - 24px));height:min(880px,calc(100dvh - 32px));padding:16px;overflow:hidden}
+#native-dialog{width:min(820px,calc(100% - 24px));height:min(900px,calc(100dvh - 32px));padding:16px;overflow:hidden}
 #native-dialog[open]{display:flex;flex-direction:column;gap:12px}
 .native-toolbar{display:flex;align-items:center;gap:14px;flex-shrink:0}
 #native-dialog h2{margin:0 auto 0 0;font-size:20px}
@@ -1302,5 +1302,13 @@ main {
 #native-dialog #android-frame{width:100%;height:100%;max-height:none;border:0}
 #native-dialog #native-placeholder{width:100%;height:100%;padding:0;min-height:0;display:flex;justify-content:center}
 #native-dialog #native-placeholder[hidden]{display:none}
-#native-placeholder img{display:block;max-width:100%;height:100%;object-fit:contain}
+#native-placeholder img,#native-placeholder video{display:block;max-width:100%;height:100%;object-fit:contain}
+#native-placeholder [hidden]{display:none}
+#native-gallery{display:flex;gap:8px;overflow-x:auto;flex-shrink:0;padding:2px 0 5px;scrollbar-width:thin}
+#native-gallery[hidden]{display:none}
+#native-gallery button{flex:1 0 95px;min-width:95px;display:grid;grid-template-columns:36px 1fr;grid-template-rows:1fr auto;gap:2px 8px;align-items:center;padding:7px;background:#eef2f3;border:2px solid transparent;border-radius:12px;text-align:left}
+#native-gallery button[aria-pressed="true"]{border-color:#627f92;background:#fff}
+#native-gallery button img{grid-row:1/3;width:36px;height:78px;object-fit:cover;border-radius:5px}
+#native-gallery button span{font-size:13px;line-height:1.5}
+#native-gallery button small{font-size:11px;color:var(--muted)}
 body[data-spec-mode="static"] #native-dialog .demo-controls,body[data-spec-mode="static"] #native-dialog .consent,body[data-spec-mode="static"] #demo-message{display:none}
