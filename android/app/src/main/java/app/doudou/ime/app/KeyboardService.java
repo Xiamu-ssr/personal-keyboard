@@ -163,6 +163,7 @@ public final class KeyboardService extends InputMethodService
   public void typing() {
     if (root == null) return;
     reset("typing", localEditor == null ? 284 : 394);
+    root.setBackgroundColor(Ui.KEYBOARD);
     if (localEditor != null) {
       panelHeading(
           "修改后返回",

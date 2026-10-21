@@ -66,7 +66,7 @@ public final class KeyboardView extends LinearLayout {
     LinearLayout voice = Ui.row(c);
     voice.setGravity(Gravity.CENTER);
     voice.setPadding(Ui.dp(c, 4), 0, Ui.dp(c, 12), 0);
-    voice.setBackground(Ui.pressable(c, 0xff343735, 22));
+    voice.setBackground(Ui.pressable(c, Ui.SPECIAL_KEY, 22));
     voice.addView(
         Ui.icon(c, privacy ? "隐私" : "语音", a::voice), new LayoutParams(Ui.dp(c, 30), Ui.dp(c, 32)));
     TextView prompt = Ui.text(c, privacy ? "隐私输入" : "点击说话", 14, Ui.SUB);
@@ -147,7 +147,7 @@ public final class KeyboardView extends LinearLayout {
     TextView key = Ui.text(c, label, special ? 16 : label.length() > 1 ? 14 : 22, Ui.INK);
     key.setGravity(Gravity.CENTER);
     key.setFontFeatureSettings("kern");
-    key.setBackground(Ui.pressable(c, special ? 0xff363938 : 0xff525654, 7));
+    key.setBackground(Ui.pressable(c, special ? Ui.SPECIAL_KEY : Ui.KEY, 7));
     key.setElevation(Ui.dp(c, .8f));
     key.setContentDescription(label);
     key.setFocusable(true);
@@ -182,7 +182,8 @@ public final class KeyboardView extends LinearLayout {
               actions.haptic(this);
               click.run();
             });
-    key.setBackground(Ui.pressable(c, primary ? 0xff596d61 : 0xff363938, 7));
+    ((Ui.Glyph) key).color = primary ? Ui.BG : Ui.INK;
+    key.setBackground(Ui.pressable(c, primary ? Ui.ACCENT : Ui.SPECIAL_KEY, 7));
     key.setElevation(Ui.dp(c, .8f));
     row.addView(key, geometry(weight));
     if (name.equals("退格")) {

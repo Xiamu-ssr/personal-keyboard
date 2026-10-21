@@ -1,9 +1,13 @@
 {
-  "ws-scrcpy": {
-    "repository": "https://github.com/NetrisTV/ws-scrcpy.git",
-    "commit": "cd6cea6ebde17af6685c2b325183fc24bef9d52b",
+  "scrcpy-server": {
+    "version": "3.3.3",
+    "url": "https://github.com/Genymobile/scrcpy/releases/download/v3.3.3/scrcpy-server-v3.3.3",
+    "sha256": "7e70323ba7f259649dd4acce97ac4fefbae8102b2c6d91e2e7be613fd5354be0",
+    "license": "Apache-2.0"
+  },
+  "tango": {
+    "repository": "https://github.com/yume-chan/ya-webadb",
     "license": "MIT",
-    "build": "Android only; WebCodecs and MSE; no remote shell, file listing, devtools or iOS",
-    "localChange": "Bind HttpServer to 127.0.0.1 and require PERSONAL_KEYBOARD_DEVICE to scope the tracker; pinned source checked before both changes"
+    "packages": "Exact versions and integrity are in package-lock.json"
   }
 }

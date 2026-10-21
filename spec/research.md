@@ -26,10 +26,18 @@
 - [VoiceFlow Keyboard Android](https://github.com/yutungh/voiceflow-keyboard-android)：语音键盘与 LLM 整理的原型参考，不能据此称为成熟中文键盘。
 - [ReplyWise](https://github.com/raja21068/ReplyWise-Local)：读取了按联系人检索与偏好学习实现。选择语气/长度可写回提示词；不能照搬“没选中就是负反馈”的计分。
 - [VoiceInk](https://github.com/Beingpax/VoiceInk)：自动学习词典的桌面参考；辅助功能观察范围与安卓 IME 不同。
-- [ws-scrcpy](https://github.com/NetrisTV/ws-scrcpy)：本 Spec 的真实 Android 画面与控制组件，MIT；固定源码 commit，禁用 shell、文件浏览和 iOS 组件。
+- [Tango / ya-webadb](https://github.com/yume-chan/ya-webadb) 与 [scrcpy](https://github.com/Genymobile/scrcpy)：Android 15 画面与触控，分别为 MIT / Apache-2.0；依赖锁固定版本与服务端 SHA-256，只提供视频、点按和键码。旧 ws-scrcpy 因系统接口失效产生黑屏，已迁移移除，不维持两套投屏协议。
 
 FlorisBoard 官方中文文档说明其音码算法不足，不推荐日常拼音。不能仅因某个 AI 键盘基于它，就直接选为本项目中文底座。
 
 ## 首轮产品实验
 
 拿同一批经本人授权的聊天，比较同模型“无人物记忆”与“有记忆”，隐藏版本名称再评。观察可直接使用的比例、修改量、等待时间、错认人物、错误承诺和重复使用。图谱规模、生成条数、模型自评不算用户价值证据。
+
+## 2026-10-21 实际视频与本版视觉
+
+查看 [Typeless 官方 Android 发布视频](https://www.youtube.com/watch?v=0Zb8AieP7I4)，实际跳转观察移动端录音区与转写呈现。视频中浅色主题与用户提供的深色截图不是同一个配色：本版以用户深色截图为准，采用中性炭灰 / 白色、居中大麦克风胶囊、两侧次要动作、说完后修正 / 整理 / 填入。保留豆包参考的键帽与工具格，不复制 Typeless 品牌或宣传素材。
+
+麦克风、录音音量条与识别等待使用不同状态：音量条只消费真实 RMS 回调；等待是旋转进度，离开即取消，系统关闭动效时不旋转。未声称还原了视频每一帧或测得其动画时长。
+
+[Appetize](https://docs.appetize.io/platform/embedding-apps) 可云端运行 APK 并嵌入网页，但需要账号及受限额度。浏览器原生 Android 项目并非都能运行任意 APK：[NekoDroid](https://github.com/nishal21/NekoDroid) 明确尚不支持 JNI 与完整 Android 用户空间，本项目有 JNI 输入引擎和系统 IME，不能拿它替代完整 Android。采用完整 Android 虚拟机 + ws-scrcpy，保证演示运行同一 APK。

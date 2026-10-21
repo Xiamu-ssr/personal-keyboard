@@ -16,3 +16,4 @@ spec/demo/*.apk
 spec/demo/*.png
 spec/demo/*.json
 !spec/demo/README.md
+!spec/demo/artifact.json

@@ -8,12 +8,6 @@ const PACKAGE = "app.doudou.ime",
 const runtime = path.join(root, ".runtime");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function streamResources(serial) {
-  const rows = (await adb(serial, ["forward", "--list"])).stdout
-    .split("\n")
-    .map((s) => s.trim().split(/\s+/));
-  const forwards = rows
-    .filter(([device, , remote]) => device === serial && remote === "tcp:8886")
-    .map(([, local]) => local);
   let pids = [];
   try {
     pids = (await adb(serial, ["shell", "pidof", "app_process"])).stdout
@@ -32,9 +26,12 @@ async function streamResources(serial) {
       if (args.includes("com.genymobile.scrcpy.Server")) servers.push(pid);
     } catch {}
   }
-  return { forwards, servers };
+  return { servers };
 }
 export class DemoSession {
+  constructor({ publicOrigin = "" } = {}) {
+    this.publicOrigin = publicOrigin;
+  }
   child = null;
   state = null;
   starting = false;
@@ -74,15 +71,18 @@ export class DemoSession {
       )
     )
       throw Error("设备目前锁屏，请本人解锁后再开始。不会自动解锁。");
-    const apk = path.join(root, "android/app/build/outputs/apk/debug/app-debug.apk");
+    const apk = path.join(
+      root,
+      "android/app/build/outputs/apk/debug/app-debug.apk",
+    );
     try {
       await fs.access(apk);
     } catch {
       throw Error("请先运行 npm run demo:build 构建原生 APK。");
     }
-    const viewer = path.join(runtime, "ws-scrcpy/dist/index.js");
+    const viewer = path.join(root, "demo/stream/server.mjs");
     try {
-      await fs.access(viewer);
+      await fs.access(path.join(runtime, "stream-web/bundle.js"));
     } catch {
       throw Error(
         "请先运行 npm run demo:setup 安装固定版本的 Android 画面组件。",
@@ -103,7 +103,6 @@ export class DemoSession {
       oldServices: await get("enabled_accessibility_services"),
       oldAccessibilityEnabled: await get("accessibility_enabled"),
       changed: !!enableCapture,
-      oldForwards: resources.forwards,
       viewerStarted: false,
       createdAt: new Date().toISOString(),
     };
@@ -120,7 +119,35 @@ export class DemoSession {
           "豆豆输入法 APK 安装尚未完成：请在设备上确认本次安装，再重试。输入法与读屏尚未切换。",
         );
       }
+      // A fresh Android install is stopped until its launcher runs; let IMMS register it.
+      await adb(serial, [
+        "shell",
+        "am",
+        "start",
+        "-W",
+        "-n",
+        PACKAGE + "/.app.MainActivity",
+      ]);
       if (enableCapture) {
+        let registered = false;
+        for (let i = 0; i < 30; i++) {
+          const methods = (
+            await adb(serial, ["shell", "ime", "list", "-a", "-s"])
+          ).stdout;
+          if (
+            methods.includes(IME) ||
+            methods.includes(PACKAGE + "/" + PACKAGE + ".app.KeyboardService")
+          ) {
+            registered = true;
+            break;
+          }
+          await sleep(200);
+        }
+        if (!registered)
+          throw Error(
+            "Android 尚未登记豆豆输入法；未切换其他输入法或读屏设置。",
+          );
+
         await adb(serial, ["shell", "ime", "enable", IME]);
         await adb(serial, ["shell", "ime", "set", IME]);
         const services =
@@ -144,23 +171,6 @@ export class DemoSession {
           "1",
         ]);
       }
-      await adb(serial, [
-        "shell",
-        "am",
-        "start",
-        "-n",
-        PACKAGE + "/.app.MainActivity",
-      ]);
-      const config = path.join(runtime, "viewer-config.json");
-      await fs.writeFile(
-        config,
-        JSON.stringify({
-          runGoogTracker: true,
-          runApplTracker: false,
-          server: [{ secure: false, port: 8561 }],
-          remoteHostList: [],
-        }),
-      );
       const log = await fs.open(path.join(runtime, "viewer.log"), "a");
       this.state.viewerStarted = true;
       await fs.writeFile(
@@ -172,7 +182,7 @@ export class DemoSession {
         cwd: path.dirname(viewer),
         env: {
           ...process.env,
-          WS_SCRCPY_CONFIG: config,
+          PERSONAL_KEYBOARD_ORIGIN: this.publicOrigin,
           PERSONAL_KEYBOARD_DEVICE: serial,
           NODE_OPTIONS: "--max-old-space-size=256",
         },
@@ -220,9 +230,6 @@ export class DemoSession {
     if (state.viewerStarted)
       try {
         const current = await streamResources(state.serial);
-        for (const local of current.forwards)
-          if (!state.oldForwards.includes(local))
-            await adb(state.serial, ["forward", "--remove", local]);
         // No stream was present at start. Verify the exact server arguments before ending this demo's process.
         for (const pid of current.servers) {
           const args = (
@@ -232,7 +239,7 @@ export class DemoSession {
               "/proc/" + pid + "/cmdline",
             ])
           ).stdout.split("\0");
-          if (args.includes("1.19-ws8") && args.includes("8886"))
+          if (args.includes("3.3.3"))
             await adb(state.serial, ["shell", "kill", pid]);
         }
       } catch {

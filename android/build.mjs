@@ -12,6 +12,7 @@ const apk=path.join(root,'android/app/build/outputs/apk/debug/app-debug.apk');
 const destination=path.join(root,'spec/demo/doudou-keyboard.apk');
 await fs.copyFile(apk,destination);
 const blob=await fs.readFile(apk);
-const artifact={package:'app.doudou.ime',version:'0.2.0-alpha.1',sha256:createHash('sha256').update(blob).digest('hex'),bytes:blob.length,buildType:'debug',production:false,modelsBundled:false};
+const version=(await fs.readFile(path.join(root,'android/app/build.gradle'),'utf8')).match(/versionName '([^']+)'/)[1];
+const artifact={package:'app.doudou.ime',version,sha256:createHash('sha256').update(blob).digest('hex'),bytes:blob.length,buildType:'debug',production:false,modelsBundled:false};
 await fs.writeFile(path.join(root,'spec/demo/artifact.json'),JSON.stringify(artifact,null,2)+'\n');
 console.log('APK: '+destination+'\nSHA256 '+artifact.sha256);

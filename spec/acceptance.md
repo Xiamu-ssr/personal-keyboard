@@ -1,51 +1,45 @@
-# 验收 · 0.2.0-alpha.1 · 2026-10-21
+# 验收 · 0.3.0-alpha.1 · 2026-10-21
 
-本次为原生界面与代码域重构。用户指定改用安卓虚拟机，未操作 OPPO。上版的真机通过记录不算作本版证据。
+本轮更新 Typeless 参考的炭灰主题、原生语音面板和网页真实 APK 演示。依用户要求使用独立安卓虚拟机，未操作 OPPO；上版真机记录不代替本版证据。
 
-## 当前自动检查
+## 自动检查
 
-- **24 项 JVM 核心测试通过**：真实 JNI 拼音、整句 / 部分选词、简拼召回、可改变排序的选择频率、个人快捷码移除；Unicode 差异、撤销、未知发送状态、过期任务、人物确认、回复返回与上下文上限。
-- **2,014 组原生边界输入通过** AddressSanitizer / UndefinedBehaviorSanitizer 检查；重复字母与固定随机输入均未触发边界错误。
-- debug APK、测试 APK 构建成功；Android lint 无错误。
-- **6 项 Node 检查通过**：产品世界契约、成本换算和本地设备操作边界。
+- 24 项 JVM 测试通过：真实 JNI 拼音、整句和简拼、个人快捷码、纠错差异、撤销、过期任务与人物隔离。
+- debug APK 与测试 APK 构建成功；Android lint 无错误。
+- 9 项 Node 测试通过：产品世界、成本、本地设备范围，以及远端鉴权、WebSocket 范围、限流与资源到期回收。
+- JNI 本轮未修改；0.2 已通过的 2,014 组 ASan / UBSan 边界输入作为历史证据，本轮未重复运行。
 
-## Android 15 / API 35 虚拟机
+## 实际 Android 15 / API 35
 
-**12 项设备测试全部通过**，由真实 Android instrumentation 操作原生界面：
+12 项 instrumentation 测试全部通过，覆盖：
 
-- 点键输出“你好”“我想你”、`lll` 展开并选择“六六六”、退格与多行换行。
-- 八项工具入口；语音面板真实权限错误、可返回，不伪造转写。
-- 禁止个性学习的编辑器阻止军师；不清空草稿。
-- 正常键盘 847px → 捕获条 275px → 系统截屏 → 本机中文 OCR → 修正 / 返回 / 取消。实际内容高度 284dp → 76dp；识字包含本机练习区文字。
-- 原生管理页切换、资料修订与持久化、检索空结果、删除及撤销、人物记忆展示。
-- SQLite 重开、版本冲突、分人物删除恢复、备份重新映射、非法备份回滚、历史保留，以及 OCR 后图片释放。
+- 原生键帽输出“你好”“我想你”，lll 候选“六六六”、候选展开、退格和换行。
+- 工具格、新语音面板的真实权限错误与返回。
+- 禁止学习的编辑器阻止军师；缩矮至 76dp、主动截屏、本地中文 OCR、修正、取消和草稿保护。
+- 热词、文风、人物、设置、持久化、检索、删除与撤销。
+- SQLite 重开、版本冲突、人物删除恢复、备份映射与非法备份回滚、历史保留、OCR 后图片释放。
 
-截图只有 App 练习区与带有“本机验收示例”的资料，无聊天记录、账号或模型密钥。画面来自实际 APK，不是 HTML 机壳或预写的模型回答。测试资料已移出，原始证据在本机忽略目录。
+设备安装和公开下载使用同一 APK 源文件，SHA-256：272d4f016315ea9209dd1a37e418efe3af78bd80c03653958060e0841fb492db。
 
-交付 APK 与虚拟机安装包 SHA-256 相同：`e225dcdaf55d06b1a2c6ac59f2ea1fd7081d8410acc4bbbff4b22fe53611792c`。
+## 公网网页操作真实 APK
 
-本轮独立虚拟机配置 1,536MB 客体内存、2 核。验收后正常关闭，核对本轮 qemu 进程结束及两个端口释放。真实手机和其他任务的模拟器未作更改。
+已通过 ECS HTTPS 页面显示 Android 15 实际画面；从网页点开原生练习页，用屏幕键帽输入 nihao，选择“你好”并填入，再打开新版原生语音面板。图像与触控来自 scrcpy 3.3.3 / Tango，页面没有复刻 APK 界面或预写模型回复。
+
+ECS 没有 KVM，本次实际 Android 宿主是本 Mac。演示需私有口令并主动启动，只控制专用测试设备。2 分钟无页面心跳或运行满 15 分钟回收。受保护的 WebSocket 仅提供画面与有限触控、按键，不提供 ADB、Shell、文件或任意设备转发。
+
+结束演示后核对 qemu 退出及 5580 / 5581 / 8561 端口释放。轻量控制器和 SSH 转发保留，下一次按需启动。专用虚拟机为 1,536MB 客体内存、2 核，不触碰真实手机或其他模拟器。
+
+8 张真实截图逐张检查，只有本 App 练习区与人工测试资料，无账号、密钥或私聊。浏览器麦克风未转发到 Android，此次不包含真人语音准确率验收。
 
 ## 尚未验证
 
-- 本版 OPPO 与微信 / QQ / Messenger、其他 ROM 的实际兼容性。
-- 云端专用 ASR、本人语音准确率与延迟、真实模型润色及回复质量。
-- 自动差异分类 / 人物记忆抽取、自动翻页、说话人识别和豆豆同步。
-- 英语自动纠错、多语言预测、双拼、滑行、手写；当前文字输入以基础中英文为范围。
-- 浏览器视频投屏此前可构建，本轮通过 instrumentation 验收，没有重测其视频链路。
+- 本版 OPPO、微信 / QQ / Messenger 与其他 ROM 的实际兼容性。
+- 专用云端 ASR、本人语音准确率和延迟、真实文字模型的润色及回复质量。
+- 自动差异分类、人物记忆抽取、自动翻页、说话人识别和豆豆同步。
+- 英语自动纠错、多语言预测、双拼、滑行和手写；文字输入目前为基础中英文。
 
 ## 重现
 
-```sh
-npm run android:test
-npm run android:sanitize
-npm run android:build
-cd android
-./gradlew :app:assembleDebugAndroidTest
-# ANDROID_SERIAL 必须指向本人明确选定的隔离设备。
-adb -s "$ANDROID_SERIAL" install -r app/build/outputs/apk/debug/app-debug.apk
-adb -s "$ANDROID_SERIAL" install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-adb -s "$ANDROID_SERIAL" shell am instrument -w app.doudou.ime.test/androidx.test.runner.AndroidJUnitRunner
-```
+运行 npm run check、npm run android:test、npm run android:build，然后在 android 目录构建 assembleDebugAndroidTest，用明确选定的 ANDROID_SERIAL 安装两个 APK 并运行 androidx.test.runner.AndroidJUnitRunner。
 
-运行前在选定设备记录并临时配置输入法与主动截屏。真机结束后恢复原设置；临时虚拟机关闭后核对进程与端口。测试包只操作自己的练习区和测试资料，不遍历其他应用的聊天。
+运行前记录临时设置，真机结束后恢复；临时虚拟机关闭后核对进程与端口。测试只操作本 App 练习和测试资料。

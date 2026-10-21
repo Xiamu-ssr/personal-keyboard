@@ -207,12 +207,23 @@ public class NativeFlowTest {
     }
     assertNotNull("Already authorized screenshot service did not bind", CaptureService.current);
     instrumentation.runOnMainSync(() -> editor.setText("本机验收草稿"));
+    instrumentation.waitForIdleSync();
+    try {
+      ui.waitForIdle(160, 3000);
+    } catch (java.util.concurrent.TimeoutException e) {
+      throw new AssertionError("Practice editor did not settle after updating its draft", e);
+    }
     int normal = keyboardHeight();
     click("军师");
     await("正在读取当前屏幕…");
     int shrunk = keyboardHeight();
-    assertTrue("Capture must expose more of the host", shrunk < normal - 300);
+    long resizedBy = SystemClock.uptimeMillis() + 2500;
+    while (shrunk >= normal - 300 && SystemClock.uptimeMillis() < resizedBy) {
+      SystemClock.sleep(20);
+      shrunk = keyboardHeight();
+    }
     System.out.println("IME height px normal=" + normal + " shrunk=" + shrunk);
+    assertTrue("Capture must expose more of the host", shrunk < normal - 300);
     await("创建这个聊天对象");
     screenshot("advisor");
     click("查看 / 修正本次识字");

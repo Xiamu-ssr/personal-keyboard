@@ -2,10 +2,10 @@
 
 安卓个人输入法：离线拼音、语音整理、原地军师，以及热词、文风和人物记忆。和豆豆是两个独立安装的 App；当前资料保存在输入法本机。
 
-当前版本 **0.2.0-alpha.1 · 自用预览版**。原生界面参照 Typeless 的层级与豆包的键帽 / 工具格重做，代码按业务域拆分。按本轮约定，付费 ASR 和实际文字模型账号稍后配置。
+当前版本 **0.3.0-alpha.1 · 自用预览版**。原生界面参照 Typeless 的层级与豆包的键帽 / 工具格重做，代码按业务域拆分。新版使用 Typeless 参考的炭灰与白色主题、麦克风胶囊及真实音量反馈。按本轮约定，付费 ASR 和实际文字模型账号稍后配置。
 
-- [在线产品 Spec](https://106.14.73.99/keyboard-spec/)：交互式业务 / 技术域模型。
-- [下载自用 APK](https://106.14.73.99/keyboard-spec/demo/doudou-keyboard.apk)：Android 11+，arm64 / x86_64，debug 签名；不含模型密钥。
+- [在线产品 Spec](https://xiamu-ssr.github.io/personal-keyboard/) · [ECS 镜像](https://106.14.73.99/keyboard-spec/)：交互式业务 / 技术域模型。
+- [下载自用 APK](https://xiamu-ssr.github.io/personal-keyboard/demo/doudou-keyboard.apk)：Android 11+，arm64 / x86_64，debug 签名；不含模型密钥。
 - [当前实现与边界](spec/implementation.md) · [验收记录](spec/acceptance.md)
 
 ## 现在能做什么
@@ -41,7 +41,7 @@ npm run demo:setup
 npm run spec:serve
 ```
 
-打开 `http://127.0.0.1:8560`。Spec 直接表达域、能力、数据归属和关系契约，详细文档从图中展开。Node / ws-scrcpy 只向选定设备传输真实 Android 画面与触摸，不自动启动模拟器；临时验收结束恢复原输入法和辅助功能状态。
+打开 `http://127.0.0.1:8560`。Spec 直接表达域、能力、数据归属和关系契约，详细文档从图中展开。本地模式只控制选定设备，临时验收后恢复设置；在线模式通过口令按需启动独立 Android 15 虚拟机，画面和触控嵌入 Spec，闲置或超时自动关闭。两种方式都运行本仓库构建的 APK。Mac 需在线；ECS 负责 HTTPS 转发。GitHub Pages 发布工作流会校验已验收的 Release APK 并构建静态 Spec；Pages 与 ECS 使用同一份签名 APK；远端 Android 仍由独立宿主按需运行。
 
 - [产品](spec/product.md) · [交互](spec/interaction.md) · [架构](spec/architecture.md)
 - [模型、购买与成本](spec/models-and-cost.md) · [研究来源](spec/research.md)

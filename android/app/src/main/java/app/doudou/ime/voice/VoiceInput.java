@@ -15,6 +15,10 @@ public final class VoiceInput implements RecognitionListener {
     void status(String value);
 
     void error(String value);
+
+    default void level(float rmsDb) {}
+
+    default void processing() {}
   }
 
   private final Context context;
@@ -66,7 +70,9 @@ public final class VoiceInput implements RecognitionListener {
               if (valid()) VoiceInput.this.onBeginningOfSpeech();
             }
 
-            public void onRmsChanged(float f) {}
+            public void onRmsChanged(float f) {
+              if (valid()) VoiceInput.this.onRmsChanged(f);
+            }
 
             public void onBufferReceived(byte[] a) {}
 
@@ -133,14 +139,19 @@ public final class VoiceInput implements RecognitionListener {
   }
 
   @Override
-  public void onRmsChanged(float f) {}
+  public void onRmsChanged(float f) {
+    if (!cancelled && listener != null) listener.level(f);
+  }
 
   @Override
   public void onBufferReceived(byte[] a) {}
 
   @Override
   public void onEndOfSpeech() {
-    if (listener != null) listener.status("正在识别…");
+    if (!cancelled && listener != null) {
+      listener.status("正在识别…");
+      listener.processing();
+    }
   }
 
   @Override

@@ -22,7 +22,7 @@ public final class HomeScreen extends Screen {
     Ui.pad(activity, hero, 22, 24);
     GradientDrawable color =
         new GradientDrawable(
-            GradientDrawable.Orientation.TL_BR, new int[] {0xff34453c, 0xff232c27});
+            GradientDrawable.Orientation.TL_BR, new int[] {Ui.HERO, Ui.PANEL});
     color.setCornerRadius(Ui.dp(activity, 20));
     hero.setBackground(color);
     TextView title = Ui.text(activity, "说出来，\n还是你的语气。", 27, Ui.INK);
@@ -30,7 +30,7 @@ public final class HomeScreen extends Screen {
     title.setLineSpacing(Ui.dp(activity, 5), 1);
     hero.addView(title);
     Ui.gap(activity, hero, 12);
-    hero.addView(Ui.text(activity, "日常打字、语音整理，和原地军师。", 13, 0xffb7c2bb));
+    hero.addView(Ui.text(activity, "日常打字、语音整理，和原地军师。", 13, Ui.SUB));
     Ui.gap(activity, hero, 22);
     hero.addView(
         Ui.primary(

@@ -76,7 +76,7 @@ public final class MainActivity extends Activity implements Navigator {
     notice.removeAllViews();
     LinearLayout row = Ui.row(this);
     Ui.pad(this, row, 18, 4);
-    row.setBackground(Ui.bg(this, 0xff303a34, 14));
+    row.setBackground(Ui.bg(this, Ui.SURFACE, 14));
     row.addView(Ui.text(this, text, 13, Ui.INK), new LinearLayout.LayoutParams(0, -2, 1));
     row.addView(Ui.button(this, "撤销", undo));
     notice.addView(row);
@@ -102,9 +102,9 @@ public final class MainActivity extends Activity implements Navigator {
     heading.addView(label, new LinearLayout.LayoutParams(0, Ui.dp(this, 54), 1));
     label.setGravity(Gravity.CENTER_VERTICAL);
     if (page.equals("home")) {
-      TextView mark = Ui.text(this, "0.2", 11, Ui.ACCENT);
+      TextView mark = Ui.text(this, "0.3", 11, Ui.ACCENT);
       Ui.pad(this, mark, 10, 6);
-      mark.setBackground(Ui.bg(this, 0xff2e3d34, 20));
+      mark.setBackground(Ui.bg(this, Ui.SELECTED, 20));
       heading.addView(mark);
     }
     root.addView(heading);
@@ -126,7 +126,7 @@ public final class MainActivity extends Activity implements Navigator {
     root.addView(notice);
     root.addView(Ui.divider(this));
     LinearLayout nav = Ui.row(this);
-    nav.setBackgroundColor(0xff202322);
+    nav.setBackgroundColor(Ui.PANEL);
     Ui.pad(this, nav, 12, 8);
     String[] labels = {"输入", "记忆", "人物", "设置"},
         icons = {"首页", "词典", "人物", "设置"},

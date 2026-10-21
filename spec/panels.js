@@ -70,23 +70,11 @@
   }
   async function refresh() {
     if (!local) {
-      status(location.protocol === "file:" ? "静态阅览" : "云端阅览");
-      [
-        "device-select",
-        "refresh-devices",
-        "prepare-demo",
-        "stop-demo",
-        "enable-capture",
-      ].forEach((id) => (el(id).disabled = true));
-      el("demo-message").textContent =
-        "这里可以下载自用 APK、查看真实截图及验收记录。实时 Android 画面只在本机连接设备后提供。";
-      const placeholder = el("native-placeholder");
-      placeholder.querySelector("h3").textContent = "实时 Android 画面需要本机设备";
-      placeholder.querySelector("p").textContent =
-        "真实 Android 画面需要连接本机设备，云端阅览不会访问或控制你的手机。";
-      const link = placeholder.querySelector("a");
-      link.dataset.doc = "interaction";
-      link.textContent = "查看军师交互与高度变化";
+      status("真实 Android · 按需启动");
+      el("device-select").closest(".demo-controls").hidden = true;
+      el("enable-capture").closest(".consent").hidden = true;
+      el("demo-message").textContent = "输入演示口令后可启动专用 Android；画面和触控来自本仓库 APK。Mac 需在线，闲置自动关闭。";
+      showFrame("https://106.14.73.99/keyboard-spec/live/");
       return;
     }
     try {
@@ -145,4 +133,10 @@
   el("prepare-demo").addEventListener("click", () => action("start"));
   el("stop-demo").addEventListener("click", () => action("stop"));
   refresh();
+  const privateDemo = location.hash.match(/^#demo\/([A-Za-z0-9_-]{32})$/);
+  if (privateDemo && !local) {
+    history.replaceState(null, "", location.pathname + location.search);
+    el("native-dialog").showModal();
+    showFrame("https://106.14.73.99/keyboard-spec/live/#" + privateDemo[1]);
+  }
 })();

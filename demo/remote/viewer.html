@@ -1,0 +1,20 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>豆豆输入法 · 真实 APK</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#222;color:#f1f0ee;font:15px system-ui}main{max-width:900px;margin:auto;padding:18px}header,form,.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}h1{font-size:20px;margin:0 auto 0 0}button,input{font:inherit;border:1px solid #555;border-radius:18px;padding:10px 16px}input{background:#333;color:#fff;max-width:260px}button{background:#eee;color:#222;cursor:pointer}button:disabled{opacity:.45;cursor:default}p{color:#aaa;line-height:1.6}#state{font-size:13px}iframe{width:100%;height:min(760px,76vh);border:0;background:#171717;border-radius:20px}#message{min-height:26px;color:#ddd}a{color:#eee}body.embed main{padding:10px}.actions{margin:10px 0}[hidden]{display:none!important}</style>
+<main><header><h1>豆豆输入法 · 真正运行 APK</h1><span id="state">按需启动</span></header><p>专用 Android 15 虚拟机，只含练习资料。2 分钟无人使用或运行满 15 分钟会关闭；Mac 需在线。请勿填入账号、密钥或私人聊天。</p>
+<form id="login"><input id="key" type="password" autocomplete="off" placeholder="演示口令" aria-label="演示口令"><button>连接演示</button></form>
+<div class="actions" id="controls" hidden><button id="start">启动 Android</button><button id="stop">结束演示</button><a href="../demo/doudou-keyboard.apk">下载同版 APK</a></div>
+<div id="message" role="status">不会自动启动虚拟机。语音模型待配置；浏览器麦克风不会自动传入 Android。</div><iframe id="screen" title="Android 实际画面与触控" hidden allow="clipboard-read; clipboard-write; fullscreen"></iframe></main>
+<script>
+const by=id=>document.getElementById(id);let busy=false,session="";
+try{session=sessionStorage.getItem("keyboard-demo-session")||"";}catch{}
+if(window!==parent)document.body.classList.add('embed');
+async function api(name,body){const requestedSession=session;const r=await fetch('api/'+name,{method:body?'POST':'GET',headers:{'Content-Type':'application/json','X-Demo-Session':requestedSession},body:body?JSON.stringify(body):undefined});if(!(r.headers.get('content-type')||'').includes('application/json'))throw Error('演示暂时离线，确认 Mac 在线后重试');const d=await r.json();if(!r.ok){if(r.status===401&&requestedSession===session){by('login').hidden=false;by('controls').hidden=true;}throw Error(d.error||'演示离线');}return d;}
+function connectView(d){by('login').hidden=true;by('controls').hidden=false;view(d);if(d.viewer){by('screen').src=d.viewer;by('screen').hidden=false;by('message').textContent='已重新连接当前 Android 会话。';}}
+function view(d){by('state').textContent=({stopped:'已停止',starting:'启动中…',running:'Android 在线',stopping:'正在回收资源…'})[d.phase]||d.phase;}
+by('login').onsubmit=async e=>{e.preventDefault();try{const logged=await api('login',{key:by('key').value});session=logged.session;try{sessionStorage.setItem('keyboard-demo-session',session);}catch{}by('key').value='';const d=await api('status');connectView(d);if(!d.viewer)by('message').textContent='已连接。点“启动 Android”后，可以直接点按真实 App。';}catch(e){by('message').textContent=e.message;}};
+async function act(name){if(busy)return;busy=true;by('start').disabled=by('stop').disabled=true;by('message').textContent=name==='start'?'正在启动专用 Android，首次约需一分钟…':'正在结束演示并回收资源…';try{const d=await api(name,{});view(d);by('screen').hidden=!d.viewer;if(d.viewer){by('screen').src=d.viewer;by('message').textContent='这是 APK 的实际画面；点“试试豆豆”可使用输入法。';}else{by('screen').removeAttribute('src');by('message').textContent='本次模拟器已关闭。';}}catch(e){by('message').textContent=e.message;}finally{busy=false;by('start').disabled=by('stop').disabled=false;}}
+by('start').onclick=()=>act('start');by('stop').onclick=()=>act('stop');
+setInterval(async()=>{if(by('controls').hidden||busy||document.hidden)return;try{const d=await api('ping',{});view(d);if(d.phase==='stopped'){by('screen').hidden=true;by('screen').removeAttribute('src');}}catch(e){by('message').textContent=e.message;}},20_000);
+api('status').then(connectView).catch(()=>{});
+const supplied=location.hash.slice(1);if(supplied){by('key').value=supplied;history.replaceState(null,'',location.pathname);by('login').requestSubmit();}
+</script></html>

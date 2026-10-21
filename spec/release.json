@@ -1,0 +1,41 @@
+{
+  "version": "0.3.0-alpha.1",
+  "files": {
+    "doudou-keyboard.apk": {
+      "sha256": "272d4f016315ea9209dd1a37e418efe3af78bd80c03653958060e0841fb492db",
+      "bytes": 36841381
+    },
+    "home.png": {
+      "sha256": "1a4cfa1df12ce920abb8f1527b9c37caed7c4ba326dfb423acf57d9c4dd7722b",
+      "bytes": 149038
+    },
+    "typing.png": {
+      "sha256": "a2fcd490bd748eb0aa0bcb7db34bf497b5dd2847ec532a85af5ea1169207dc89",
+      "bytes": 123278
+    },
+    "tools.png": {
+      "sha256": "07952e82c35f7be3833d90b458832dc7a1fe18fc97190c1060aff20e319ac2d8",
+      "bytes": 118496
+    },
+    "voice.png": {
+      "sha256": "e4654f3c112dbf4504f258f0305fc6af61ec5491b2628092efb796c18068d975",
+      "bytes": 95666
+    },
+    "memory.png": {
+      "sha256": "02a73f377db69ba9c29083fae2b00e02e4e2a0639c96b54bc8452b504f78fdd3",
+      "bytes": 101040
+    },
+    "people.png": {
+      "sha256": "a961194ea1f5b769eaa3cfdf4e21782cbafbbea5e03a9228c135365900bf4cd9",
+      "bytes": 99060
+    },
+    "advisor.png": {
+      "sha256": "e813a84897c56b1fbea4501e8c5782675f0b0ef03f9f28eeb7006947da4fca04",
+      "bytes": 124480
+    },
+    "settings.png": {
+      "sha256": "f8fcf7f53084fab41033650222fa3c8dcb9ed5389ae846594f56dd03e89bdea6",
+      "bytes": 169584
+    }
+  }
+}

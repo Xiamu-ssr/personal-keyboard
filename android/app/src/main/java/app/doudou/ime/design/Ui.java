@@ -8,13 +8,18 @@ import android.view.*;
 import android.widget.*;
 
 public final class Ui {
-  public static final int BG = 0xff181919,
-      PANEL = 0xff252626,
-      KEY = 0xff484a49,
-      INK = 0xfff2f3f1,
-      SUB = 0xff9b9f9c,
-      ACCENT = 0xffbee4cf,
-      LINE = 0xff343736,
+  public static final int BG = 0xff222222,
+      PANEL = 0xff2c2c2c,
+      KEY = 0xff525252,
+      INK = 0xfff4f4f4,
+      SUB = 0xffaaaaaa,
+      ACCENT = 0xfff1f0ee,
+      SURFACE = 0xff333333,
+      SELECTED = 0xff464646,
+      KEYBOARD = 0xff303030,
+      SPECIAL_KEY = 0xff414141,
+      HERO = 0xff383838,
+      LINE = 0xff3a3a3a,
       RED = 0xffffb4ab;
 
   public static int dp(Context c, float n) {
@@ -63,7 +68,7 @@ public final class Ui {
     t.setGravity(Gravity.CENTER);
     pad(c, t, 14, 8);
     t.setMinHeight(dp(c, 44));
-    t.setBackground(pressable(c, 0xff303332, 12));
+    t.setBackground(pressable(c, SURFACE, 12));
     t.setOnClickListener(v -> click.run());
     t.setFocusable(true);
     t.setContentDescription(s);
@@ -86,7 +91,7 @@ public final class Ui {
     e.setTextSize(16);
     e.setMinHeight(dp(c, 52));
     e.setPadding(dp(c, 14), dp(c, 12), dp(c, 14), dp(c, 12));
-    e.setBackground(bg(c, 0xff292c2a, 12));
+    e.setBackground(bg(c, PANEL, 12));
     e.setSelectAllOnFocus(false);
     return e;
   }
@@ -198,7 +203,7 @@ public final class Ui {
     item.setGravity(Gravity.CENTER);
     LinearLayout pill = row(c);
     pill.setGravity(Gravity.CENTER);
-    pill.setBackground(bg(c, selected ? 0xff3b4942 : android.graphics.Color.TRANSPARENT, 20));
+    pill.setBackground(bg(c, selected ? SELECTED : android.graphics.Color.TRANSPARENT, 20));
     Glyph glyph = new Glyph(c, icon);
     glyph.color = selected ? ACCENT : SUB;
     pill.addView(glyph, new LinearLayout.LayoutParams(dp(c, 24), dp(c, 24)));
@@ -218,7 +223,7 @@ public final class Ui {
     LinearLayout tile = col(c);
     tile.setGravity(Gravity.CENTER);
     pad(c, tile, 2, 10);
-    tile.setBackground(pressable(c, 0xff333635, 20));
+    tile.setBackground(pressable(c, SURFACE, 20));
     Glyph glyph = new Glyph(c, icon);
     tile.addView(glyph, new LinearLayout.LayoutParams(dp(c, 28), dp(c, 30)));
     gap(c, tile, 9);
@@ -260,7 +265,7 @@ public final class Ui {
     final Paint p = new Paint(3);
     public int color = INK;
 
-    Glyph(Context c, String n) {
+    public Glyph(Context c, String n) {
       super(c);
       name = n;
     }

@@ -51,7 +51,7 @@ public final class MemoryScreen extends Screen {
       pill.setPadding(0, 0, 0, 0);
       pill.setBackground(
           Ui.pressable(
-              activity, tab.equals(key) ? 0xff414a45 : android.graphics.Color.TRANSPARENT, 18));
+              activity, tab.equals(key) ? Ui.SELECTED : android.graphics.Color.TRANSPARENT, 18));
       pill.setTextColor(tab.equals(key) ? Ui.INK : Ui.SUB);
       tabs.addView(pill, new LinearLayout.LayoutParams(0, Ui.dp(activity, 36), 1));
     }

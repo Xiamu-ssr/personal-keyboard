@@ -1,0 +1,48 @@
+name: Publish Spec and tested APK
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: keyboard-pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Fetch the verified, consistently signed native build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          gh release download "v${version}" --repo "$GITHUB_REPOSITORY" --dir spec/demo --clobber --pattern doudou-keyboard.apk --pattern '*.png'
+          node demo/verify-public.mjs
+      - run: npm run check
+      - name: Select public artifacts only
+        run: |
+          mkdir -p .runtime/pages/demo
+          cp spec/index.html .runtime/pages/
+          cp spec/demo/doudou-keyboard.apk spec/demo/artifact.json spec/demo/*.png .runtime/pages/demo/
+          touch .runtime/pages/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .runtime/pages
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish
+        id: deployment
+        uses: actions/deploy-pages@v4

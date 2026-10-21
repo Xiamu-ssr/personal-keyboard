@@ -1,7 +1,7 @@
 {
-  "reviewedAt": "2026-10-21T03:59:57.210403+00:00",
-  "version": "0.2.0-alpha.1",
-  "status": "0.2 原生界面与分域重构已在独立 API 35 虚拟机验收；付费 ASR、真实模型质量与各聊天 App 待联调。",
+  "reviewedAt": "2026-10-21T05:51:21.434Z",
+  "version": "0.3.0-alpha.1",
+  "status": "0.3 native theme, voice panel and actual APK web demo verified; dedicated ASR, model quality and current phone compatibility pending.",
   "checks": [
     {
       "name": "真实 JNI 解码与核心状态",
@@ -12,16 +12,17 @@
       "sanitizers": [
         "AddressSanitizer",
         "UndefinedBehaviorSanitizer"
-      ]
+      ],
+      "nativeBoundaryEvidence": "2014 sanitizer cases passed in 0.2; JNI unchanged, sanitizer not rerun this iteration."
     },
     {
       "name": "APK 构建、签名与 Android lint",
       "status": "passed",
       "artifact": {
         "package": "app.doudou.ime",
-        "version": "0.2.0-alpha.1",
-        "sha256": "e225dcdaf55d06b1a2c6ac59f2ea1fd7081d8410acc4bbbff4b22fe53611792c",
-        "bytes": 36857417,
+        "version": "0.3.0-alpha.1",
+        "sha256": "272d4f016315ea9209dd1a37e418efe3af78bd80c03653958060e0841fb492db",
+        "bytes": 36841381,
         "buildType": "debug",
         "production": false,
         "modelsBundled": false
@@ -41,7 +42,6 @@
       ],
       "keyboardContentDp": 284,
       "captureContentDp": 76,
-      "heightSample": "normal=847 shrunk=275",
       "flows": [
         "真实拼音整句 / 简拼六六六 / 候选展开 / 退格换行",
         "按需工具格 / 真实语音错误与返回",
@@ -56,15 +56,15 @@
       "status": "passed",
       "processStopped": true,
       "portsCleared": true,
-      "installedApkMatchesDelivery": true,
       "realPhoneTouched": false,
       "memoryMb": 1536,
-      "cores": 2
+      "cores": 2,
+      "installedArtifactSource": "Same APK source file installed for tests and published."
     },
     {
       "name": "产品世界与本地宿主",
       "status": "passed",
-      "tests": 6,
+      "tests": 9,
       "domains": 7,
       "capabilities": 12,
       "relations": 9,
@@ -72,14 +72,29 @@
       "documents": 10
     },
     {
+      "name": "Public HTTPS actual APK interaction",
+      "status": "passed",
+      "android": "Android 15 / API 35",
+      "stream": "scrcpy 3.3.3 + Tango + WebCodecs",
+      "flows": [
+        "open native practice page",
+        "touch nihao and choose Chinese candidate",
+        "open native voice panel",
+        "stop emulator and verify ports 5580/5581/8561 cleared"
+      ],
+      "privacy": "All eight screenshots manually reviewed; only local practice and test data.",
+      "microphoneForwarding": false,
+      "dedicatedAsrConfigured": false
+    },
+    {
       "name": "真实云端 ASR、模型与自动记忆抽取",
       "status": "pending",
       "reason": "没有配置账号或购买额度；系统语音接口与模型适配器不等于准确率及个性化质量验收。"
     },
     {
-      "name": "新版 OPPO / 微信 / QQ 等兼容性、浏览器视频投屏",
+      "name": "Current OPPO and chat app compatibility",
       "status": "pending",
-      "reason": "本轮按用户要求改用独立虚拟机；上版 OPPO 结果不代替本版真机复验。"
+      "reason": "User requested emulator; previous phone evidence does not verify current build."
     }
   ]
 }
