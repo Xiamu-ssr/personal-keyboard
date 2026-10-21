@@ -16,7 +16,7 @@ std::string utf8(JNIEnv* e, jstring s) {
 }
 }
 extern "C" JNIEXPORT jboolean JNICALL
-Java_app_doudou_ime_core_PinyinEngine_nativeOpen(JNIEnv* e,jclass,jstring dict,jstring user) {
+Java_app_doudou_ime_input_engine_PinyinEngine_nativeOpen(JNIEnv* e,jclass,jstring dict,jstring user) {
     std::lock_guard<std::mutex> lock(mutex);
     if(opened)ime_pinyin::im_close_decoder();
     opened=ime_pinyin::im_open_decoder(utf8(e,dict).c_str(),utf8(e,user).c_str());
@@ -24,7 +24,7 @@ Java_app_doudou_ime_core_PinyinEngine_nativeOpen(JNIEnv* e,jclass,jstring dict,j
     return opened;
 }
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_app_doudou_ime_core_PinyinEngine_nativeCandidates(JNIEnv* e,jclass,jstring input,jint limit) {
+Java_app_doudou_ime_input_engine_PinyinEngine_nativeCandidates(JNIEnv* e,jclass,jstring input,jint limit) {
     std::lock_guard<std::mutex> lock(mutex);
     jclass stringClass=e->FindClass("java/lang/String");
     std::string raw=utf8(e,input);
@@ -53,7 +53,7 @@ Java_app_doudou_ime_core_PinyinEngine_nativeCandidates(JNIEnv* e,jclass,jstring 
     return out;
 }
 extern "C" JNIEXPORT void JNICALL
-Java_app_doudou_ime_core_PinyinEngine_nativeLearn(JNIEnv* e,jclass,jstring input,jstring selected) {
+Java_app_doudou_ime_input_engine_PinyinEngine_nativeLearn(JNIEnv* e,jclass,jstring input,jstring selected) {
     std::lock_guard<std::mutex> lock(mutex);if(!opened)return;
     std::string raw=utf8(e,input);ime_pinyin::im_reset_search();size_t n=ime_pinyin::im_search(raw.c_str(),raw.size());
     const jchar* chosen=e->GetStringChars(selected,nullptr);size_t chosenLen=e->GetStringLength(selected);
@@ -65,7 +65,7 @@ Java_app_doudou_ime_core_PinyinEngine_nativeLearn(JNIEnv* e,jclass,jstring input
     e->ReleaseStringChars(selected,chosen);
 }
 extern "C" JNIEXPORT jboolean JNICALL
-Java_app_doudou_ime_core_PinyinEngine_nativeClear(JNIEnv* e,jclass,jstring dict,jstring user) {
+Java_app_doudou_ime_input_engine_PinyinEngine_nativeClear(JNIEnv* e,jclass,jstring dict,jstring user) {
     std::lock_guard<std::mutex> lock(mutex);
     if(opened)ime_pinyin::im_close_decoder();
     std::string path=utf8(e,user);std::remove(path.c_str());

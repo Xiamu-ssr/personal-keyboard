@@ -3,8 +3,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { root, adb, devices } from "./tools.mjs";
 const PACKAGE = "app.doudou.ime",
-  IME = PACKAGE + "/.KeyboardService",
-  CAPTURE = PACKAGE + "/" + PACKAGE + ".CaptureService";
+  IME = PACKAGE + "/.app.KeyboardService",
+  CAPTURE = PACKAGE + "/" + PACKAGE + ".capture.CaptureService";
 const runtime = path.join(root, ".runtime");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function streamResources(serial) {
@@ -149,7 +149,7 @@ export class DemoSession {
         "am",
         "start",
         "-n",
-        PACKAGE + "/.MainActivity",
+        PACKAGE + "/.app.MainActivity",
       ]);
       const config = path.join(runtime, "viewer-config.json");
       await fs.writeFile(
@@ -251,7 +251,7 @@ export class DemoSession {
         ).stdout.trim();
         if (
           current === IME ||
-          current === PACKAGE + "/" + PACKAGE + ".KeyboardService"
+          current === PACKAGE + "/" + PACKAGE + ".app.KeyboardService"
         )
           await adb(state.serial, ["shell", "ime", "set", state.oldIme]);
         if (!state.oldEnabledImes.includes(PACKAGE))

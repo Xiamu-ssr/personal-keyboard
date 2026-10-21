@@ -1,8 +1,8 @@
 meta:
   title: 豆豆输入法
   subtitle: 产品世界 · 业务与技术
-  version: 0.1.0-alpha.1
-  reviewedAt: 2026-10-20
+  version: 0.2.0-alpha.1
+  reviewedAt: 2026-10-21
   status: 原生自用预览版；模型配置待后续联调
 layout:
   width: 1200
@@ -216,12 +216,12 @@ domains:
     chips:
       - id: models_asr
         name: 中文 ASR
-        desc: Paraformer / Fun-ASR
+        desc: Qwen-ASR / 系统识别
         business:
           - 转写，并补标点、规范数字等；热词辅助识别。
           - 按个人文风改写整句由后续文本模型完成。
         technical:
-          - Paraformer 支持标点、ITN、热词和可选语气词过滤；Fun-ASR 以对应接口能力为准。
+          - 当前用系统识别；Qwen-ASR 为待接入基线，转写与个性整理分开。
         documents:
           - models-and-cost
       - id: models_text

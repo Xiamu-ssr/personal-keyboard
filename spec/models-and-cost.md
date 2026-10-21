@@ -1,6 +1,6 @@
 # 模型、采购与成本
 
-核验：2026-10-20。单价依地域、上下文区间及供应商更新；下表是选型基线，不是自动购买授权。实际调用前在控制台确认。
+接口补查：2026-10-21；其余价格基线：2026-10-20。单价依地域、上下文区间及供应商更新；下表是选型基线，不是自动购买授权。实际调用前在控制台确认。
 
 ## 推荐组合
 
@@ -20,7 +20,7 @@ ASR 已不只是逐字转写。Paraformer 官方接口支持自动标点、数�
 
 本产品仍分两步：ASR 识别与基础规整 → 文本模型结合适用文风整理。比如把“明天……不对，后天再去”整理成“后天再去”，属于待验证的句意整理要求，不把它冒充为 ASR 已保证的能力。热词供识别使用，文风供整理使用，用户可信修改再反哺两者。
 
-当前 APK 是固定交互样例，真实 ASR 与文本整理尚未接入；供应商支持某能力不等于本项目已实现。
+当前 APK 使用设备实际提供的系统 ASR，保留转写 / 整理的独立流程；专用云端 ASR 与真实文字模型账号尚未配置。供应商支持某能力不等于本项目已联调。
 
 ## 可以直接购买的价格
 
@@ -56,6 +56,14 @@ ASR 已不只是逐字转写。Paraformer 官方接口支持自动标点、数�
 4. 面向付费用户，使用官方可采购 API 或清晰约定的企业供应商；不把闲鱼学生/赠送权益、共享 Key、未知中转倍率当作单位经济依据。
 5. 个人数据仍由键盘管理；模型供应商可替换，不把人物记忆锁在某个账号的云端聊天 Session。
 
+### 这版 ASR 如何选择
+
+先以 **Qwen3-ASR-Flash** 作为短句云端转写基线，用现有 ZenMux 即可试，不必另买一套阿里云会员。需要真正边录边上传再对比百炼原生实时接口。它不是已经被证明“最好”的模型：用本人普通话 / 口音、中英专词、噪声、短句耗时与纠错量评测后再定。
+
+千问模型使用较强的音频 / 语言上下文能力，但仍以忠实转写为主；数字规整、热词上下文与个人口吻润色是不同能力。阿里云的 Qwen-ASR 接口允许背景 / 实体词表；ZenMux 通用转写文档未列同等 context 字段，不能假定已经透传热词。当前热词已用于文字整理，ASR 侧需在接入时单独验收。
+
+Qwen 官方也开放了 0.6B / 1.7B 的 Qwen3-ASR，可自部署；它们不能直接当作云端 Flash 的同一服务，轻量服务器的延迟和并发还没有实测。
+
 ### ZenMux 有 ASR，但要分清流式形态
 
 官方已提供 `POST https://zenmux.ai/api/v1/audio/transcriptions`，文档示例模型为 `qwen/qwen3-asr-flash`，JSON 内提交音频 base64 或 URL。`stream: true` 流式返回文字，不等于 WebSocket 持续上传麦克风音频。可用来验证“录完一句再转写”，实时边说边出字优先测百炼原生实时接口。
@@ -85,6 +93,8 @@ ASR 已不只是逐字转写。Paraformer 官方接口支持自动标点、数�
 - [阿里云模型价格](https://help.aliyun.com/zh/model-studio/model-pricing)
 - [百炼节省计划与资源包](https://help.aliyun.com/zh/model-studio/savings-plan-and-resource-package)
 - [智能语音交互 NLS 计费](https://help.aliyun.com/zh/isi/product-overview/billing-10)
+- [Qwen-ASR API 与上下文](https://help.aliyun.com/zh/model-studio/qwen-asr-api-reference/)
+- [Qwen3-ASR 开源实现](https://github.com/QwenLM/Qwen3-ASR)
 - [ZenMux 转写接口](https://zenmux.ai/docs/api/openai/create-audio-transcriptions.html)
 - [ZenMux Qwen3 ASR Flash 标价](https://zenmux.ai/qwen/qwen3-asr-flash)
 - [ZenMux Qwen-Audio 3.1 ASR Flash](https://zenmux.ai/qwen/qwen-audio-3.1-asr-flash)

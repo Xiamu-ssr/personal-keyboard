@@ -1,11 +1,12 @@
 {
-  "reviewedAt": "2026-10-20T15:19:36.320018+00:00",
-  "status": "原生自用 Alpha：拼音、资料持久化、主动截屏和本地中文 OCR 已在 OPPO 验收；真实模型与付费 ASR 待后续配置。旧界面底稿已移除。",
+  "reviewedAt": "2026-10-21T03:59:57.210403+00:00",
+  "version": "0.2.0-alpha.1",
+  "status": "0.2 原生界面与分域重构已在独立 API 35 虚拟机验收；付费 ASR、真实模型质量与各聊天 App 待联调。",
   "checks": [
     {
-      "name": "真实 JNI 拼音与核心状态逻辑",
+      "name": "真实 JNI 解码与核心状态",
       "status": "passed",
-      "tests": 21,
+      "tests": 24,
       "failures": 0,
       "nativeBoundaryCases": 2014,
       "sanitizers": [
@@ -18,9 +19,9 @@
       "status": "passed",
       "artifact": {
         "package": "app.doudou.ime",
-        "version": "0.1.0-alpha.1",
-        "sha256": "e4415c8ad7ee5333d1827ac8f2fbd4a5ccdfb208e4d8671c888c19d447d329ac",
-        "bytes": 38661216,
+        "version": "0.2.0-alpha.1",
+        "sha256": "e225dcdaf55d06b1a2c6ac59f2ea1fd7081d8410acc4bbbff4b22fe53611792c",
+        "bytes": 36857417,
         "buildType": "debug",
         "production": false,
         "modelsBundled": false
@@ -28,45 +29,40 @@
       "lintErrors": 0
     },
     {
-      "name": "OPPO PHW110 原生验收",
+      "name": "独立 Android 15 / API 35 虚拟机",
       "status": "passed",
-      "tests": 9,
+      "tests": 12,
       "failures": 0,
-      "realDevice": true,
+      "realDevice": false,
       "realModel": false,
       "displayPx": [
         1080,
-        2412
+        2340
       ],
-      "keyboard": {
-        "normal_height_px": 888,
-        "capture_height_px": 276,
-        "density": 3,
-        "normal_content_dp": 280,
-        "capture_content_dp": 76,
-        "system_bottom_inset_px": 48
-      },
+      "keyboardContentDp": 284,
+      "captureContentDp": 76,
+      "heightSample": "normal=847 shrunk=275",
       "flows": [
-        "真实点键拼音整句 / 退格 / 多行换行",
-        "禁止个性学习输入框关闭读屏与语音",
-        "缩矮 / 主动截屏 / 本地中文 OCR / 修正 / 返回 / 取消",
-        "原草稿保护 / SQLite 修订与持久化 / 删除恢复",
-        "备份人物重映射 / 非法备份回滚 / 历史保留期限"
+        "真实拼音整句 / 简拼六六六 / 候选展开 / 退格换行",
+        "按需工具格 / 真实语音错误与返回",
+        "主动缩矮截屏 / 本地 OCR / 修正 / 取消 / 草稿保护",
+        "资料修订 / 检索 / 删除撤销 / 人物与管理页",
+        "SQLite 持久化 / 版本冲突 / 人物删除恢复 / 备份 / 历史保留"
       ],
-      "screenshots": "本 App 练习区，已检查无私聊、账号或密钥"
+      "screenshots": "仅本 App 练习区和可识别的测试资料，已人工检查无账号、密钥或私聊"
     },
     {
-      "name": "测试后恢复设备设置",
+      "name": "本轮虚拟机收尾",
       "status": "passed",
-      "settingsRestored": true,
-      "testPackageRemoved": true,
-      "appRetained": true,
+      "processStopped": true,
+      "portsCleared": true,
       "installedApkMatchesDelivery": true,
-      "emulatorStarted": false,
-      "restoredAt": "2026-10-20T15:15:48.647Z"
+      "realPhoneTouched": false,
+      "memoryMb": 1536,
+      "cores": 2
     },
     {
-      "name": "产品世界与本地宿主测试",
+      "name": "产品世界与本地宿主",
       "status": "passed",
       "tests": 6,
       "domains": 7,
@@ -76,14 +72,14 @@
       "documents": 10
     },
     {
-      "name": "真实文字模型、付费 ASR 与智能学习联调",
+      "name": "真实云端 ASR、模型与自动记忆抽取",
       "status": "pending",
-      "reason": "按本次要求先完成 App 逻辑；未配置真实模型，没有预写回复冒充生成。Android 系统语音适配器已实现，准确率未实测。"
+      "reason": "没有配置账号或购买额度；系统语音接口与模型适配器不等于准确率及个性化质量验收。"
     },
     {
-      "name": "真实聊天 App 兼容性与浏览器视频投屏",
+      "name": "新版 OPPO / 微信 / QQ 等兼容性、浏览器视频投屏",
       "status": "pending",
-      "reason": "本轮真机使用本 App 练习区和 instrumentation；不代表微信 / QQ 及全部 ROM 验收，也不代表浏览器视频已验收。"
+      "reason": "本轮按用户要求改用独立虚拟机；上版 OPPO 结果不代替本版真机复验。"
     }
   ]
 }

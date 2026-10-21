@@ -1,0 +1,63 @@
+package app.doudou.ime.input;
+
+import android.content.Context;
+import android.widget.LinearLayout;
+import app.doudou.ime.app.KeyboardApp;
+import java.util.function.Consumer;
+
+/** Live-editor boundary; panels do not hold InputConnections or send messages. */
+public interface EditorHost {
+  Context context();
+
+  KeyboardApp services();
+
+  long generation();
+
+  String editorPackage();
+
+  String mode();
+
+  int bottomInset();
+
+  boolean privateMode();
+
+  LinearLayout openPanel(String mode, int heightDp);
+
+  void typing();
+
+  void commitComposing();
+
+  void snapshot();
+
+  boolean insert(String text);
+
+  boolean protectedInsert(String text);
+
+  void editLocal(String title, String value, Consumer<String> done);
+
+  void settings(String page);
+
+  void history(String title, String value, String source);
+
+  void message(String title, String detail, Runnable retry);
+
+  void openVoice();
+
+  void openAdvisor();
+
+  void cancelVoice();
+
+  void cancelAdvisor();
+
+  void togglePrivacy();
+
+  void moveCursor(int delta);
+
+  void delete();
+
+  void undoInsertion();
+
+  String full();
+
+  void selectAll();
+}

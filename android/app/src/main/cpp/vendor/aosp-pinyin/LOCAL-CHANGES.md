@@ -11,3 +11,5 @@ Local fixes are confined to bounded search allocation:
 The bundled binary dictionary is built from the same archive's UTF-16 source data with 64-bit little-endian `size_t`, matching the two supported Android ABIs. Reproduce it with `python3 android/tools/native-host.py --rebuild-dictionary`. It is not the incompatible 32-bit AOSP binary.
 
 `--sanitize` checks repeated initials and seeded random input with AddressSanitizer and UndefinedBehaviorSanitizer. JVM tests additionally exercise Chinese sentence ranking, partial composition and personal vocabulary.
+
+The independent initials index is generated from the same licensed UTF-16 source. Run `python3 android/tools/build-abbreviations.py`; `initials-info.json` records the input and output digests. `expressions.tsv` contains editable contemporary phrases. JNI now belongs to `input.engine.PinyinEngine`; this changes Java binding names, not the native decoding algorithm.
