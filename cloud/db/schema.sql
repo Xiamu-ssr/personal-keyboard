@@ -18,3 +18,11 @@ CREATE TABLE IF NOT EXISTS sync_keys(user_id uuid PRIMARY KEY REFERENCES users(i
 CREATE TABLE IF NOT EXISTS sync_manifests(user_id uuid PRIMARY KEY REFERENCES users(id),revision bigint NOT NULL,blob_name text NOT NULL,byte_count bigint NOT NULL,sha256 text NOT NULL,updated_at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS orders(id uuid PRIMARY KEY,user_id uuid NOT NULL REFERENCES users(id),plan_snapshot jsonb NOT NULL,amount_minor bigint NOT NULL CHECK(amount_minor>0),currency text NOT NULL DEFAULT 'CNY',status text NOT NULL DEFAULT 'pending' CHECK(status IN('pending','paid','closed','refunded')),transaction_id text UNIQUE,created_at timestamptz NOT NULL DEFAULT now(),paid_at timestamptz);
 CREATE TABLE IF NOT EXISTS payment_nonces(nonce text PRIMARY KEY,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS personal_memory(user_id uuid PRIMARY KEY REFERENCES users(id),version bigint NOT NULL,body_cipher text NOT NULL,updated_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS memory_changes(user_id uuid NOT NULL REFERENCES users(id),version bigint NOT NULL,body_cipher text NOT NULL,PRIMARY KEY(user_id,version));
+CREATE TABLE IF NOT EXISTS memory_receipts(user_id uuid NOT NULL REFERENCES users(id),request_id uuid NOT NULL,payload_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(user_id,request_id));
+CREATE TABLE IF NOT EXISTS memory_history(user_id uuid NOT NULL REFERENCES users(id),history_id uuid NOT NULL,revision integer NOT NULL,payload_hash text NOT NULL,body_cipher text,next_offset integer NOT NULL DEFAULT 0,state text NOT NULL DEFAULT 'queued' CHECK(state IN('queued','done','superseded')),created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(user_id,history_id,revision));
+CREATE INDEX IF NOT EXISTS memory_history_queue ON memory_history(user_id,state,created_at);
+CREATE TABLE IF NOT EXISTS memory_work(user_id uuid PRIMARY KEY REFERENCES users(id),lease_token uuid,lease_until timestamptz,retry_at timestamptz NOT NULL DEFAULT now(),state text NOT NULL DEFAULT 'queued',error_code text);
+
+ALTER TABLE memory_work ADD COLUMN IF NOT EXISTS attempts integer NOT NULL DEFAULT 0;

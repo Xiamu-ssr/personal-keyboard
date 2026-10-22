@@ -13,6 +13,8 @@ public final class KeyboardApp extends Application {
   public MemoryStore store;
   public app.doudou.ime.cloud.CloudClient cloud;
   public app.doudou.ime.sync.ManagedSync sync;
+  public app.doudou.ime.history.HistoryStore histories;
+  public app.doudou.ime.memory.CloudMemory personalization;
   public final ExecutorService worker = Executors.newSingleThreadExecutor();
   public final ExecutorService network = Executors.newFixedThreadPool(2);
   public volatile PinyinEngine pinyin;
@@ -24,6 +26,8 @@ public final class KeyboardApp extends Application {
     instance = this;
     cloud = new app.doudou.ime.cloud.CloudClient(this);
     store = new MemoryStore(this);
+    histories = new app.doudou.ime.history.HistoryStore(this);
+    personalization = new app.doudou.ime.memory.CloudMemory(this);
     sync = new app.doudou.ime.sync.ManagedSync(this);
     if (prefs().getInt("productMigration", 0) < 4) {
       getSharedPreferences("vault", MODE_PRIVATE).edit().clear().apply();
@@ -36,11 +40,42 @@ public final class KeyboardApp extends Application {
           .putInt("productMigration", 4)
           .apply();
     }
+    if (prefs().getInt("productMigration", 0) < 5) {
+      try {
+        org.json.JSONObject legacy = store.exportData();
+        org.json.JSONArray profiles = new org.json.JSONArray(),
+            items = legacy.getJSONArray("items");
+        for (int i = 0; i < items.length(); i++) {
+          org.json.JSONObject item = items.getJSONObject(i);
+          if (java.util.Arrays.asList("word", "style", "person", "memory")
+              .contains(item.optString("kind"))) profiles.put(item);
+        }
+        store.setMeta(
+            "profile.migration", new org.json.JSONObject().put("items", profiles).toString());
+        store.setMeta("profile.migration.owner", cloud.userId());
+        histories.migrateLegacy(legacy, cloud.userId());
+        store.discardLegacy();
+        prefs()
+            .edit()
+            .remove("cloudLearning")
+            .remove("advisorVision")
+            .putInt("productMigration", 5)
+            .apply();
+      } catch (Exception e) {
+        throw new IllegalStateException("本机历史迁移未完成，原数据库保留", e);
+      }
+    }
+    try {
+      personalization.activate();
+    } catch (Exception e) {
+      throw new IllegalStateException("个人记忆缓存损坏，请同步恢复", e);
+    }
     app.doudou.ime.memory.LearningWorker.schedule(this);
+    app.doudou.ime.memory.LearningWorker.enqueue(this);
     worker.execute(this::openDecoder);
     worker.execute(
         () -> {
-          store.pruneHistory(prefs().getInt("retentionDays", 30));
+          histories.prune(prefs().getInt("retentionDays", 30));
           for (File f : getCacheDir().listFiles())
             if (f.getName().startsWith("capture-") || f.getName().startsWith("voice-")) f.delete();
         });

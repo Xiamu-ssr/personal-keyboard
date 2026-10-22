@@ -41,31 +41,9 @@ test("normalization and final-character cap preserve Unicode boundaries", () => 
   assert.equal(limitText("你 好 👨🏾abc", 4), "你 好 👨🏾");
   assert.equal(canonical({ b: 1, a: 2 }), canonical({ a: 2, b: 1 }));
 });
-test("model learning cannot cite outside batch or assign unknown contact", () => {
-  const input = modelInput("memory", {
-    events: [{ id: "e1", text: "豆豆", subject: "p1" }],
-  });
-  const p = {
-    category: "factual_edit",
-    scope: "contact",
-    subject: "p2",
-    content: "x",
-    sourceIds: ["e1"],
-    baseRevision: 0,
-    confidence: 0.9,
-  };
-  assert.throws(() =>
-    validateModelResult("memory", JSON.stringify({ proposals: [p] }), input),
-  );
-  p.subject = "p1";
-  p.sourceIds = ["secret"];
-  assert.throws(() =>
-    validateModelResult("memory", JSON.stringify({ proposals: [p] }), input),
-  );
-  p.sourceIds = ["e1"];
-  assert.equal(
-    validateModelResult("memory", JSON.stringify({ proposals: [p] }), input)
-      .proposals.length,
-    1,
-  );
+test("commercial requests do not accept canonical memory copies or OCR-only advisor", () => {
+  assert.throws(() => modelInput("advisor", { images: [], words: ["private"] }));
+  assert.throws(() => modelInput("advisor", { context: "OCR text" }));
+  assert.throws(() => modelInput("rewrite", { transcript: "x", styles: ["local copy"] }));
+  assert.throws(() => modelInput("memory", { events: [] }));
 });

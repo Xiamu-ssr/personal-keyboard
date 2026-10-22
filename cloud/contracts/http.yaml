@@ -1,6 +1,6 @@
-version: 2
+version: 3
 status: implemented-provider-configuration-pending
-base: https://106.14.73.99/keyboard-api
+base: https://106.14.88.147/keyboard-api
 identity:
   domestic: phone-sms-code
   international: deferred
@@ -21,9 +21,12 @@ routes:
   - {method: GET, path: /v1/account, auth: product-user}
   - {method: POST, path: /v1/account/delete, auth: recently-sms-verified-user-and-explicit-confirmation}
   - {method: WS, path: /v1/asr, auth: authorization-bearer-header}
-  - {method: POST, path: /v1/jobs, kinds: [rewrite, advisor, memory], auth: product-user}
+  - {method: POST, path: /v1/jobs, kinds: [rewrite, advisor], auth: product-user}
   - {method: GET, path: /v1/jobs/{id}, auth: owning-user}
   - {method: POST, path: /v1/jobs/{id}/cancel, auth: owning-user}
+  - {method: GET, path: /v1/memory, auth: product-user, query: after-version, response: full-reset-or-complete-record-deltas-and-tombstones}
+  - {method: POST, path: /v1/memory, auth: product-user, request: requestId-baseVersion-operations-or-candidate-confirmation}
+  - {method: POST, path: /v1/memory/history, auth: product-user, request: historyId-revision-and-text-only-increments, response: durable-accepted-revisions}
   - {method: POST, path: /v1/sync/key, auth: paid-sync-and-recent-sms-verification}
   - {method: GET, path: /v1/sync, auth: paid-sync-owning-user}
   - {method: PUT, path: /v1/sync, auth: paid-sync-and-manifest-baseRevision}
@@ -39,7 +42,10 @@ routes:
   - {method: GET, path: /admin/api/jobs, auth: admin-session}
   - {method: GET, path: /admin/api/audits, auth: admin-session}
 privacy:
-  imagesAndAudio: memory-only
+  cloudImagesAndAudio: transient-in-memory-for-current-inference
+  phoneHistory: local-asr-inserted-result-and-advisor-screenshots
+  cloudMemory: encrypted-canonical-hotwords-scene-styles-people-and-facts
+  learningHistory: encrypted-until-processed-then-body-erased
   transientJobText: encrypted-24h-recovery-cache
   logs: metadata-no-private-text-or-credentials
   sync: account-bound-encrypted-backups-not-end-to-end-encryption

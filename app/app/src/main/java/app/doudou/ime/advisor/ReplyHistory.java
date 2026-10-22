@@ -7,10 +7,12 @@ public final class ReplyHistory {
   public static final class Page {
     public final List<String> replies;
     public final String style;
+    public final String messages;
 
-    Page(List<String> values, String name) {
+    Page(List<String> values, String name, String evidence) {
       replies = Collections.unmodifiableList(new ArrayList<>(values));
       style = name;
+      messages = evidence;
     }
   }
 
@@ -25,13 +27,17 @@ public final class ReplyHistory {
     return current == null ? "" : current.style;
   }
 
-  public void accept(List<String> values, String style, boolean retainPrevious) {
+  public void accept(List<String> values, String style, boolean retainPrevious, String messages) {
     if (values.size() != 3) throw new IllegalArgumentException("Three replies required");
     if (retainPrevious && current != null) {
       older.push(current);
       while (older.size() > 8) older.removeLast();
     } else older.clear();
-    current = new Page(values, style);
+    current = new Page(values, style, messages);
+  }
+
+  public String messages() {
+    return current == null ? "[]" : current.messages;
   }
 
   public boolean canBack() {

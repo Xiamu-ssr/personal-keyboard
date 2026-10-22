@@ -69,6 +69,19 @@ public final class EditTracker {
     right = null;
   }
 
+  public String observedText(String full, long gen) {
+    if (expected == null
+        || generation != gen
+        || full == null
+        || full.isEmpty()
+        || full.length() > 12000
+        || !full.startsWith(left)
+        || !full.endsWith(right)
+        || full.length() < left.length() + right.length()) return null;
+    String actual = full.substring(left.length(), full.length() - right.length());
+    return actual.isEmpty() ? null : actual;
+  }
+
   public boolean active() {
     return expected != null;
   }

@@ -37,7 +37,9 @@ public interface EditorHost {
 
   void settings(String page);
 
-  void history(String title, String value, String source);
+  void trackHistory(String id);
+
+  String conversationRef();
 
   void message(String title, String detail, Runnable retry);
 

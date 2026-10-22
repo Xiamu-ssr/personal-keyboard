@@ -9,11 +9,13 @@ import org.json.*;
  */
 public final class CloudTask {
   private final CloudClient client;
+  private final String account;
   private final AtomicBoolean cancelled = new AtomicBoolean();
   private volatile String job = "";
 
   public CloudTask(CloudClient c) {
     client = c;
+    account = c.userId();
   }
 
   public void cancel() {
@@ -23,7 +25,7 @@ public final class CloudTask {
       app.doudou.ime.app.KeyboardApp.instance.network.execute(
           () -> {
             try {
-              client.request("/v1/jobs/" + id + "/cancel", "POST", new JSONObject());
+              client.request(account, "/v1/jobs/" + id + "/cancel", "POST", new JSONObject());
             } catch (Exception ignored) {
             }
           });
@@ -35,12 +37,12 @@ public final class CloudTask {
     JSONObject payload =
         new JSONObject().put("requestId", requestId).put("kind", kind).put("input", input);
     if (sourceJob != null && !sourceJob.isEmpty()) payload.put("sourceJob", sourceJob);
-    JSONObject current = client.request("/v1/jobs", "POST", payload);
+    JSONObject current = client.request(account, "/v1/jobs", "POST", payload);
     job = current.getString("id");
     long deadline = System.currentTimeMillis() + 85000;
     while (true) {
       if (cancelled.get()) {
-        client.request("/v1/jobs/" + job + "/cancel", "POST", new JSONObject());
+        client.request(account, "/v1/jobs/" + job + "/cancel", "POST", new JSONObject());
         throw new java.io.IOException("任务已取消");
       }
       String status = current.getString("status");
@@ -56,7 +58,7 @@ public final class CloudTask {
       }
       if (System.currentTimeMillis() > deadline) throw new java.io.IOException("任务仍在处理，可重试恢复原任务");
       Thread.sleep(650);
-      current = client.request("/v1/jobs/" + job, "GET", null);
+      current = client.request(account, "/v1/jobs/" + job, "GET", null);
     }
   }
 

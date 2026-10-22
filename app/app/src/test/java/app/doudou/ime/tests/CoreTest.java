@@ -179,62 +179,77 @@ public class CoreTest {
   }
 
   @Test
-  public void identityRequiredAndContextDeduplicated() {
+  public void screenshotCanGenerateWithoutInventingAPerson() {
     AdvisorSession s = new AdvisorSession();
     s.begin(1, "chat");
-    s.append("今天几点\n你好");
-    s.append("你好\n下次再说");
-    assertEquals("今天几点\n你好\n下次再说", s.context());
     assertFalse(s.canGenerate());
-    s.identify(17);
+    s.image("jpeg-one");
     assertTrue(s.canGenerate());
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void cannotGuessPerson() {
-    new AdvisorSession().identify(0);
+    assertEquals("", s.conversationRef());
+    s.identify("person-id", "小林");
+    assertEquals("chat:person-id", s.conversationRef());
   }
 
   @Test
-  public void newJobCannotKeepOldPerson() {
+  public void selectionInvalidatesPendingInference() {
+    AdvisorSession s = new AdvisorSession();
+    int old = s.begin(1, "chat");
+    s.image("jpeg");
+    s.identify("person-id", "小林");
+    assertFalse(s.valid(old, 1));
+    assertTrue(s.valid(s.token(), 1));
+  }
+
+  @Test
+  public void newJobCannotKeepOldPersonOrScreenshot() {
     AdvisorSession s = new AdvisorSession();
     s.begin(1, "a");
-    s.append("消息");
-    s.identify(2);
+    s.image("jpeg");
+    s.identify("id", "name");
     s.begin(2, "b");
-    assertEquals(0, s.person);
-    assertEquals("", s.context());
+    assertEquals("", s.personId);
+    assertEquals(0, s.pages());
+    assertFalse(s.canGenerate());
   }
 
   @Test
   public void backRestoresExactReplyStyleWithoutMutation() {
     ReplyHistory h = new ReplyHistory();
-    h.accept(Arrays.asList("a", "b", "c"), "", false);
-    h.accept(Arrays.asList("d", "e", "f"), "温和", true);
-    h.accept(Arrays.asList("g", "h", "i"), "温和", true);
+    h.accept(Arrays.asList("a", "b", "c"), "", false, "first-evidence");
+    h.accept(Arrays.asList("d", "e", "f"), "温和", true, "next-evidence");
+    h.accept(Arrays.asList("g", "h", "i"), "温和", true, "next-evidence");
     h.back();
     assertEquals("d", h.replies().get(0));
     assertEquals("温和", h.style());
     h.back();
     assertEquals("a", h.replies().get(0));
+    assertEquals("first-evidence", h.messages());
     assertEquals("", h.style());
     assertFalse(h.canBack());
   }
 
   @Test
-  public void oversizedContextDoesNotOverwriteExistingCapture() {
+  public void screenshotLimitDoesNotDiscardEarlierScreens() {
     AdvisorSession a = new AdvisorSession();
     a.begin(1, "chat");
-    a.append("原文");
-    char[] chars = new char[16001];
-    Arrays.fill(chars, '字');
+    a.image("one");
+    a.image("two");
+    a.image("three");
     try {
-      a.append(new String(chars));
+      a.image("four");
       fail();
     } catch (IllegalArgumentException expected) {
     }
-    assertEquals("原文", a.context());
-    assertEquals(1, a.pages());
+    assertEquals(Arrays.asList("one", "two", "three"), a.images());
+  }
+
+  @Test
+  public void completeResultObservationIncludesEditsButNeverClearOrAnotherEditor() {
+    EditTracker t = new EditTracker();
+    t.begin("前文，后文", 3, 3, "豆包", 7);
+    assertEquals("豆豆啊", t.observedText("前文，豆豆啊后文", 7));
+    assertNull(t.observedText("前文，后文", 7));
+    assertNull(t.observedText("前文，豆豆后文", 8));
   }
 
   @Test

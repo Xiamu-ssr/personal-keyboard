@@ -3,21 +3,14 @@ import { uuid } from "../security.mjs";
 import { requireValue } from "../http/errors.mjs";
 import { billableCharacters } from "../billing/ledger.mjs";
 export function asrInput(raw) {
-  const words = raw.words || [];
-  requireValue(
-    Array.isArray(words) &&
-      words.length <= 50 &&
-      words.every((w) => typeof w === "string" && w.length <= 60),
-    "INVALID_INPUT",
-    "热词列表无效",
-  );
+  requireValue(raw.words === undefined, 'INVALID_INPUT', '热词由云端个人记忆提供');
   requireValue(
     typeof (raw.context || "") === "string" &&
       (raw.context || "").length <= 400,
     "INVALID_INPUT",
     "近期上下文过长",
   );
-  return { words, context: raw.context || "", polish: raw.polish !== false };
+  return { context: raw.context || "", polish: raw.polish !== false };
 }
 export function limitText(text, maximum) {
   let count = 0,
@@ -35,6 +28,7 @@ export function connectAsr(
     cfg,
     ledger,
     accounts,
+    memory,
     makeSocket = (url, opts) => new WebSocket(url, opts),
   },
 ) {
@@ -170,6 +164,7 @@ export function connectAsr(
         client.close();
         return;
       }
+      const words = (await memory.snapshot(user.id)).memory.hotwords.slice(-50).map(w => w.text);
       send({
         type: "accepted",
         jobId: job.id,
@@ -202,7 +197,7 @@ export function connectAsr(
                 intermediate_result_enabled: true,
                 disfluency_removal_enabled: input.polish,
                 vad_model: "near_meeting_16k",
-                vocabulary: Object.fromEntries(input.words.map((w) => [w, 4])),
+                vocabulary: Object.fromEntries(words.map((w) => [w, 4])),
               },
               input: input.context
                 ? {

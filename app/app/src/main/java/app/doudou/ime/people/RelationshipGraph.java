@@ -39,7 +39,27 @@ public final class RelationshipGraph extends View {
       float x = cx + (float) Math.cos(angle) * r, y = cy + (float) Math.sin(angle) * r;
       points.add(new PointF(x, y));
       paint.setColor(Ui.LINE);
-      c.drawLine(cx, cy, x, y, paint);
+    }
+    for (int i = 0; i < n; i++) {
+      try {
+        org.json.JSONArray relations =
+            new org.json.JSONObject(people.get(i).aux).getJSONArray("relations");
+        for (int j = 0; j < relations.length(); j++) {
+          org.json.JSONObject relation = relations.getJSONObject(j);
+          String target = relation.getString("targetId");
+          PointF end = null;
+          if (target.equals("self")) end = new PointF(cx, cy);
+          else
+            for (int k = 0; k < n; k++)
+              if (people.get(k).globalId.equals(target)) end = points.get(k);
+          if (end != null) {
+            PointF start = points.get(i);
+            paint.setColor(Ui.LINE);
+            c.drawLine(start.x, start.y, end.x, end.y, paint);
+          }
+        }
+      } catch (org.json.JSONException ignored) {
+      }
     }
     node(c, cx, cy, "我", true);
     for (int i = 0; i < n; i++) {

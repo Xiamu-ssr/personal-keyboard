@@ -55,10 +55,6 @@ public abstract class PanelController extends ContextWrapper {
     host.settings(page);
   }
 
-  protected void history(String title, String value, String source) {
-    host.history(title, value, source);
-  }
-
   protected void message(String title, String detail, Runnable retry) {
     host.message(title, detail, retry);
   }

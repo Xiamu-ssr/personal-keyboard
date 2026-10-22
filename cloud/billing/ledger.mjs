@@ -261,7 +261,8 @@ export class Ledger {
       let job = (await c.query("SELECT user_id FROM jobs WHERE id=$1", [id]))
         .rows[0];
       if (!job) return null;
-      await this.db.accountLock(c, job.user_id);
+      const account = await this.db.accountLock(c, job.user_id);
+      if (account?.status !== "active") { outcome = "cancelled"; result = null; }
       job = (await c.query("SELECT * FROM jobs WHERE id=$1 FOR UPDATE", [id]))
         .rows[0];
       if (!["queued", "running"].includes(job.status)) return job;

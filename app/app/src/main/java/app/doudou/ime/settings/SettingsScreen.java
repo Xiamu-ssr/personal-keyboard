@@ -46,7 +46,7 @@ public final class SettingsScreen extends Screen {
         () ->
             new AlertDialog.Builder(activity)
                 .setTitle("只在点军师时读屏")
-                .setMessage("用于截取当前屏幕并在本机识字。不后台读屏、不代发消息。系统的辅助功能提示可能更宽泛，豆豆仅申请截屏能力。")
+                .setMessage("点击军师时截取当前屏幕；截图用于本次图文推理并保存在手机。")
                 .setPositiveButton(
                     "去系统设置",
                     (d, w) ->
@@ -66,15 +66,12 @@ public final class SettingsScreen extends Screen {
         section("豆豆账户", app.cloud.loggedIn() ? app.cloud.phoneHint() : "登录后使用语音和军师；普通输入离线可用。");
     action(account, app.cloud.loggedIn() ? "账户、权益与云同步" : "手机号登录", () -> nav.open("account", 0));
     add(account);
-    LinearLayout intelligence = section("军师与学习", "截图不进入历史或云备份；文字历史和学习候选留在本机。");
-    toggle(intelligence, "军师使用图文理解", "advisorVision", false);
-    captionIn(intelligence, "关闭时仅上传本地 OCR 文字；开启时，把本次截图一并交给图文模型，帮助理解气泡、表情与聊天结构。");
-    toggle(intelligence, "定期整理新增历史", "cloudLearning", false);
+    LinearLayout intelligence = section("个人记忆", "热词、文风和人物由云端管理，手机同步缓存。历史与截图保存在本机。");
     action(
         intelligence,
-        "整理新增历史",
+        "同步个人记忆",
         () -> {
-          Ui.toast(activity, "开始整理新增文字，完成后可在待学习里确认");
+          Ui.toast(activity, "正在同步个人记忆");
           app.worker.execute(
               () -> {
                 String result;
@@ -87,7 +84,7 @@ public final class SettingsScreen extends Screen {
                 activity.runOnUiThread(() -> Ui.toast(activity, message));
               });
         });
-    captionIn(intelligence, "开启后约每五小时检查新增文字，分批处理；没有新增不调用。候选须经确认，不覆盖手动修订。");
+    captionIn(intelligence, "新增历史自动合批提交；明确纠词可撤销，文风和人物更新先核对。");
     add(intelligence);
     LinearLayout privacy = section("数据与备份", "备份含人物、词库和本机历史，请保存到你信任的位置；不包含登录凭据和同步密钥。");
     action(
@@ -103,7 +100,7 @@ public final class SettingsScreen extends Screen {
                           .edit()
                           .putInt("retentionDays", new int[] {7, 30, 90, 0}[w])
                           .apply();
-                      app.store.pruneHistory(new int[] {7, 30, 90, 0}[w]);
+                      app.histories.prune(new int[] {7, 30, 90, 0}[w]);
                       nav.refresh();
                     })
                 .show());
@@ -119,7 +116,7 @@ public final class SettingsScreen extends Screen {
                 EXPORT));
     action(
         privacy,
-        "导入资料（作为新记录）",
+        "从备份恢复历史",
         () ->
             activity.startActivityForResult(
                 new Intent(Intent.ACTION_OPEN_DOCUMENT)
@@ -128,15 +125,16 @@ public final class SettingsScreen extends Screen {
                 IMPORT));
     action(
         privacy,
-        "清除全部个性化资料",
+        "清除本机历史和候选学习",
         () ->
             new AlertDialog.Builder(activity)
-                .setTitle("清除全部本地资料？")
-                .setMessage("词库、人物、文风、历史和学习数据会永久删除。此操作无法撤销，建议先导出。")
+                .setTitle("清除本机历史和截图？")
+                .setMessage("本机历史、截图和候选排序学习将删除；已确认的个人记忆可在记忆页管理。建议先导出备份。")
                 .setPositiveButton(
                     "清除",
                     (d, w) -> {
-                      app.store.clearAll();
+                      app.histories.clear();
+                      app.store.clearLocalLearning();
                       app.clearDecoderLearning();
                       nav.refresh();
                       Ui.toast(activity, "已清除本地资料");
@@ -144,12 +142,12 @@ public final class SettingsScreen extends Screen {
                 .setNegativeButton("取消", null)
                 .show());
     add(privacy);
-    caption("本地资料随时可导出。云同步在账户页按权益开启，和模型分析分别管理。");
+    caption("个人记忆随账户同步，完整历史和截图的云备份在账户页开启。");
     LinearLayout about =
         section(
             "豆豆输入法 " + BuildConfig.VERSION_NAME,
             "拼音：AOSP PinyinIME（Apache 2.0）\n"
-                + "中文 OCR：Google ML Kit 本地模型\n"
+                + "个人词拼音：TinyPinyin（Apache 2.0）\n"
                 + "语音：Qwen Message，经豆豆 Cloud 代理。");
     action(
         about,
@@ -188,12 +186,18 @@ public final class SettingsScreen extends Screen {
   public void result(int request, int result, Intent data) {
     if (result != Activity.RESULT_OK || data == null || data.getData() == null) return;
     android.net.Uri uri = data.getData();
+    final String account = app.cloud.userId();
     app.worker.execute(
         () -> {
           try {
             if (request == EXPORT) {
               try (OutputStream out = activity.getContentResolver().openOutputStream(uri)) {
-                out.write(app.store.exportData().toString(2).getBytes("UTF-8"));
+                out.write(
+                    app.histories
+                        .backup(32L * 1024 * 1024, account)
+                        .put("personalMemory", app.store.cache(account))
+                        .toString(2)
+                        .getBytes("UTF-8"));
               }
               activity.runOnUiThread(() -> Ui.toast(activity, "备份已导出"));
             }
@@ -203,15 +207,17 @@ public final class SettingsScreen extends Screen {
                 byte[] b = new byte[4096];
                 int n;
                 while ((n = in.read(b)) != -1) {
-                  if (out.size() + n > 5_000_000) throw new IOException("备份超过 5MB");
+                  if (out.size() + n > 50_000_000) throw new IOException("备份超过50MB");
                   out.write(b, 0, n);
                 }
               }
-              int count = app.store.importData(new JSONObject(out.toString("UTF-8")));
+              JSONObject backup = new JSONObject(out.toString("UTF-8"));
+              if (backup.optInt("schema") == 2) app.histories.migrateLegacy(backup, account);
+              else app.histories.restore(backup, account);
               activity.runOnUiThread(
                   () -> {
                     nav.refresh();
-                    Ui.toast(activity, "已导入 " + count + " 项");
+                    Ui.toast(activity, "历史已恢复，已有记录保持");
                   });
             }
           } catch (Exception e) {

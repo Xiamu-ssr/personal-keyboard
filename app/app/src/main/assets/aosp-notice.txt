@@ -188,3 +188,14 @@
 
    END OF TERMS AND CONDITIONS
 
+
+
+TinyPinyin 2.0.3
+TinyPinyin contributors
+https://github.com/promeG/TinyPinyin
+Licensed under the Apache License, Version 2.0.
+
+Aho-Corasick 0.3.0
+Aho-Corasick contributors
+https://github.com/robert-bor/aho-corasick
+Licensed under the Apache License, Version 2.0.

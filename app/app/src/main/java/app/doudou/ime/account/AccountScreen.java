@@ -5,6 +5,7 @@ import android.text.InputType;
 import android.widget.*;
 import app.doudou.ime.app.*;
 import app.doudou.ime.design.Ui;
+import app.doudou.ime.memory.LearningWorker;
 import org.json.*;
 
 /** Phone identity and product entitlements, independent of supplier configuration. */
@@ -63,6 +64,8 @@ public final class AccountScreen extends Screen {
                       () -> {
                         app.cloud.login(challenge, value);
                         app.cloud.account();
+                        app.personalization.activate();
+                        LearningWorker.enqueue(app);
                         return "登录成功";
                       });
                 });
@@ -71,7 +74,7 @@ public final class AccountScreen extends Screen {
       }
       add(card);
       caption("首次登录一次性赠送 10,000 转写字符和 20 次军师；不按月重置。");
-      caption(status.isEmpty() ? "音频经豆豆 Cloud 转交语音服务；文字与记忆默认留在本机。" : status);
+      caption(status.isEmpty() ? "历史和截图保存在手机；个人记忆随账户同步。" : status);
       return;
     }
     JSONObject account = app.cloud.cachedAccount(), ent = account.optJSONObject("entitlements");
@@ -93,13 +96,26 @@ public final class AccountScreen extends Screen {
       metric(allowance, "军师次数", advisor == null ? 0 : advisor.optLong("available"));
     } else captionIn(allowance, "刷新后查看用量");
     add(allowance);
+    LinearLayout memory = section("个人记忆", "热词、文风和人物随账户同步，普通输入使用本机缓存。");
+    action(
+        memory,
+        "立即同步",
+        () ->
+            work(
+                () -> {
+                  app.personalization.sync();
+                  return "个人记忆已同步";
+                }));
+    add(memory);
     LinearLayout sync =
         section(
-            "云同步",
-            ent != null && ent.optBoolean("cloudSync") ? "已包含，资料在上传前加密。" : "免费账户保存在本机，付费套餐开放后可升级。");
+            "历史云备份",
+            ent != null && ent.optBoolean("cloudSync")
+                ? "包含历史与截图，上传前加密。"
+                : "历史与截图目前保存在手机；备份权益尚未开放。");
     if (ent != null && ent.optBoolean("cloudSync")) {
       Switch enabled = new Switch(activity);
-      enabled.setText("同步个人资料与文字历史");
+      enabled.setText("备份历史与截图");
       enabled.setTextColor(Ui.INK);
       enabled.setChecked(app.cloud.preferences().getBoolean("syncEnabled", false));
       enabled.setOnCheckedChangeListener(
@@ -133,6 +149,7 @@ public final class AccountScreen extends Screen {
             work(
                 () -> {
                   app.cloud.logout();
+                  app.personalization.activate();
                   return "已退出";
                 }));
     action(
@@ -149,10 +166,12 @@ public final class AccountScreen extends Screen {
                         work(
                             () -> {
                               app.cloud.request(
+                                  app.cloud.userId(),
                                   "/v1/account/delete",
                                   "POST",
                                   new JSONObject().put("confirm", true));
                               app.cloud.clearSession();
+                              app.personalization.activate();
                               return "账户已注销";
                             }))
                 .show());

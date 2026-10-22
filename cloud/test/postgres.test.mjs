@@ -15,7 +15,7 @@ test(
   async () => {
     const env = JSON.parse(
       await fs.readFile(
-        new URL("../../.runtime/commercial-v04/test-env.json", import.meta.url),
+        new URL("../../.runtime/v05/test-env.json", import.meta.url),
         "utf8",
       ),
     );
@@ -33,6 +33,17 @@ test(
       workspace: "test",
       modelKey: "test",
     });
+    const modelCalls = [];
+    const memoryModel = {
+      async init() {},
+      request(memory, version, history) { return { memory, version, history }; },
+      async fits(request) { return !this.tooLarge; },
+      async generate(request) {
+        modelCalls.push(structuredClone(request));
+        const h = JSON.parse(request.history.text);
+        return { baseVersion: request.version, operations: h.resultText === '豆豆' && h.insertedText === '豆包' ? [{ kind: 'hotword', action: 'upsert', id: 'new:word', value: { text: '豆豆', variants: ['豆包'] }, sourceId: h.id, sourceRevision: h.revision, category: 'correction', confidence: 1 }] : [] };
+      },
+    };
     const sent = [],
       sms = {
         async send(phone, code) {
@@ -45,10 +56,12 @@ test(
       async run(kind, input, images, signal) {
         await new Promise((r) => setTimeout(r, 25));
         if (input.intent === "fail") throw Error("fixture failure");
+        this.lastInput = input;
         return {
           result:
             kind === "advisor"
               ? {
+                  messages: [{ speaker: "other", text: "fixture visible chat", image: 1 }],
                   replies: [
                     { style: "温和", text: "fixture-a" },
                     { style: "直接", text: "fixture-b" },
@@ -95,6 +108,7 @@ test(
       cfg,
       sms,
       models,
+      memoryModel,
       asrSocket: () =>
         new WebSocket("ws://127.0.0.1:" + provider.address().port),
     });
@@ -160,7 +174,7 @@ test(
       assert.equal(initial.entitlements.asr.available, 10000);
       assert.equal(initial.entitlements.advisor.available, 20);
       const id = uuid(),
-        input = { words: ["豆豆"], context: "", polish: true };
+        input = { context: "", polish: true };
       const reservations = await Promise.all(
         Array.from({ length: 8 }, () =>
           app.ledger.reserve(uid, id, "asr", input),
@@ -192,10 +206,28 @@ test(
       );
       await app.ledger.finish(r2.job.id, "cancelled");
       assert.equal((await app.ledger.balance(uid)).advisor.available, 20);
+      // Canonical memory is free, CAS-protected, and applied on the server.
+      const wordId = uuid(), personId = uuid(), factId = uuid(), styleId = uuid();
+      const manual = { requestId: uuid(), baseVersion: 0, operations: [
+        { kind: 'hotword', action: 'upsert', id: wordId, value: { text: '云杉', variants: [] } },
+        { kind: 'person', action: 'upsert', id: personId, value: { name: '小林', aliases: ['林同学'] } },
+        { kind: 'fact', action: 'upsert', id: factId, personId, value: { key: '公司', value: '海岚', scope: '当前' } },
+        { kind: 'style', action: 'upsert', id: styleId, value: { scene: '工作', rules: ['简洁'], examples: [] } },
+      ] };
+      assert.equal((await request('/v1/memory', manual, token)).status, 200);
+      assert.equal((await request('/v1/memory', manual, token)).value.version, 1);
+      assert.equal((await request('/v1/memory', { ...manual, operations: [] }, token)).status, 409);
+      const race = await Promise.all(['海岚甲', '海岚乙'].map(value => request('/v1/memory', { requestId: uuid(), baseVersion: 1, operations: [{ kind: 'fact', action: 'upsert', personId, id: factId, value: { key: '公司', value, scope: '当前' } }] }, token)));
+      assert.deepEqual(race.map(r => r.status).sort(), [200, 409]);
+      const memory = (await request('/v1/memory', null, token)).value;
+      assert.equal(memory.memory.people[0].name, '小林'); assert.equal(memory.version, 2);
+      assert.equal((await request('/v1/memory?after=1', null, token)).value.changes[0].group, 'people');
+      assert.equal((await request('/v1/jobs', { requestId: uuid(), kind: 'advisor', input: { context: 'OCR-only' } }, token)).status, 400);
+      const jpeg = 'data:image/jpeg;base64,' + Buffer.from([255, 216, ...Array(40).fill(0)]).toString('base64');
       const req = {
         requestId: uuid(),
         kind: "advisor",
-        input: { context: "fixture context", intent: "reply" },
+        input: { images: [jpeg], personId, recentContext: "result-only context", intent: "reply" },
       };
       let pending = (await request("/v1/jobs", req, token)).value;
       assert(pending.id);
@@ -207,6 +239,32 @@ test(
       }
       assert.equal(done.status, "succeeded");
       assert.equal(done.result.replies.length, 3);
+      assert.equal(done.result.messages[0].speaker, 'other');
+      assert.equal(models.lastInput.people[0].id, personId); assert.equal(models.lastInput.styles[0].scene, '工作');
+      assert.equal(models.lastInput.words, undefined); assert.equal(models.lastInput.recentContext, 'result-only context');
+      // The server acknowledges a history revision durably before any inference.
+      app.memory.stopped = true;
+      const history = { id: uuid(), revision: 1, type: 'voice', asrText: '豆包', insertedText: '豆包', resultText: '豆豆', messages: [] };
+      const historyReq = { events: [history] };
+      assert.equal((await request('/v1/memory/history', historyReq, token)).status, 202);
+      assert.equal((await request('/v1/memory/history', historyReq, token)).status, 202);
+      assert.equal((await request('/v1/memory/history', { events: [{ ...history, resultText: 'tampered' }] }, token)).status, 409);
+      assert.equal((await app.db.query('SELECT count(*) n FROM memory_history WHERE history_id=$1', [history.id])).rows[0].n, '1');
+      app.memory.stopped = false; await app.memory.pump(); app.memory.stopped = true;
+      assert.equal(modelCalls.length, 1); assert.equal(modelCalls[0].memory.people[0].id, personId);
+      let learned = (await request('/v1/memory', null, token)).value;
+      assert(learned.memory.hotwords.some(w => w.text === '豆豆'));
+      assert.equal((await app.db.query('SELECT body_cipher FROM memory_history WHERE history_id=$1', [history.id])).rows[0].body_cipher, null);
+      // A newer edit retracts old automatic learning and is processed from its own cursor.
+      assert.equal((await request('/v1/memory/history', { events: [{ ...history, revision: 2, resultText: '豆包' }] }, token)).status, 202);
+      learned = (await request('/v1/memory', null, token)).value;
+      assert(!learned.memory.hotwords.some(w => w.text === '豆豆'));
+      memoryModel.tooLarge = true; app.memory.stopped = false; await app.memory.pump(); app.memory.stopped = true;
+      assert.equal(modelCalls.length, 1);
+      assert.equal((await app.db.query('SELECT next_offset,state FROM memory_history WHERE history_id=$1 AND revision=2', [history.id])).rows[0].next_offset, 0);
+      assert.equal((await request('/v1/memory/history', { events: [{ id: history.id, revision: 3, type: 'voice', deleted: true }] }, token)).status, 202);
+      assert.equal((await app.db.query("SELECT count(*) n FROM memory_history WHERE history_id=$1 AND state='queued'", [history.id])).rows[0].n, '0');
+      memoryModel.tooLarge = false;
       assert.equal((await request("/v1/jobs", req, token)).value.id, done.id);
       assert.equal((await app.ledger.balance(uid)).advisor.used, 1);
       const ws = new WebSocket(base.replace("http:", "ws:") + "/v1/asr", {
@@ -218,7 +276,6 @@ test(
             JSON.stringify({
               type: "configure",
               requestId: uuid(),
-              words: ["豆豆"],
               context: "",
               polish: true,
             }),
@@ -351,6 +408,12 @@ test(
             !r.input_cipher && !String(r.result_cipher).includes("fixture"),
         ),
       );
+      const late = await app.ledger.reserve(uid, uuid(), 'advisor', { intent: 'late' });
+      assert.equal((await request('/v1/account/delete', { confirm: true }, auth.accessToken)).status, 200);
+      for (const table of ['personal_memory', 'memory_history', 'memory_receipts', 'memory_work']) assert.equal((await app.db.query('SELECT count(*) n FROM ' + table + ' WHERE user_id=$1', [uid])).rows[0].n, '0');
+      assert.equal((await request('/v1/account', null, auth.accessToken)).status, 401);
+      assert.equal((await app.ledger.finish(late.job.id, 'succeeded', { replies: [] })).result_cipher, null);
+      await assert.rejects(app.sync.key({ id: uid, verified_at: new Date() }), /账号不可用/);
     } finally {
       await app.close();
       await new Promise((r) => provider.close(r));

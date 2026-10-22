@@ -3,192 +3,156 @@ package app.doudou.ime.tests;
 import static org.junit.Assert.*;
 
 import android.content.Context;
-import android.graphics.*;
+import android.graphics.Bitmap;
 import androidx.test.platform.app.InstrumentationRegistry;
-import app.doudou.ime.capture.LocalOcr;
+import app.doudou.ime.history.HistoryStore;
 import app.doudou.ime.memory.MemoryStore;
-import java.util.concurrent.*;
+import java.util.*;
 import org.json.*;
 import org.junit.*;
 
 public class DeviceTest {
   Context c;
   MemoryStore s;
-  String db;
+  HistoryStore h;
+  String db, historyDb;
 
   @Before
   public void before() {
     c = InstrumentationRegistry.getInstrumentation().getTargetContext();
     db = "test-" + System.nanoTime() + ".db";
+    historyDb = db + "-history";
     s = new MemoryStore(c, db);
+    h = new HistoryStore(c, historyDb);
   }
 
   @After
   public void after() {
+    h.clear();
+    h.close();
     s.close();
     c.deleteDatabase(db);
+    c.deleteDatabase(historyDb);
+  }
+
+  private JSONObject memory() throws Exception {
+    return new JSONObject("{\"hotwords\":[],\"styles\":[],\"people\":[],\"candidates\":[]}");
+  }
+
+  private JSONObject word(String id, String text) throws Exception {
+    return new JSONObject().put("id", id).put("text", text).put("variants", new JSONArray());
   }
 
   @Test
-  public void persistsAndRejectsStaleRevision() {
-    long id = s.save(0, 0, "word", 0, "豆豆", "doudou", "", "manual");
-    MemoryStore.Item old = s.get(id);
-    s.save(id, old.revision, "word", 0, "豆豆输入法", "doudoushurufa", "", "manual");
-    boolean rejected = false;
+  public void cloudCacheKeepsStableLocalIdsAndSeparatesAccounts() throws Exception {
+    String id = UUID.randomUUID().toString();
+    JSONObject m = memory();
+    m.getJSONArray("hotwords").put(word(id, "豆豆输入法"));
+    s.cache("a", 1, m);
+    long localId = s.list("word", 0).get(0).id;
+    assertEquals("doudoushurufa", s.get(localId).body);
+    s.cache("a", 2, m);
+    assertEquals(localId, s.list("word", 0).get(0).id);
+    s.cache("b", 0, memory());
+    assertTrue(s.list("word", 0).isEmpty());
+    s.cache("a", s.cacheVersion("a"), s.cache("a"));
+    assertEquals("豆豆输入法", s.list("word", 0).get(0).title);
+  }
+
+  @Test
+  public void invalidCacheRollsBackAndPreservesPreviousVersion() throws Exception {
+    JSONObject m = memory();
+    m.getJSONArray("hotwords").put(word(UUID.randomUUID().toString(), "豆豆"));
+    s.cache("a", 1, m);
+    JSONObject bad = memory();
+    bad.getJSONArray("people").put(new JSONObject().put("id", "missing-name"));
     try {
-      s.save(id, old.revision, "word", 0, "旧值", "", "", "manual");
-    } catch (IllegalStateException e) {
-      rejected = true;
-    }
-    assertTrue(rejected);
-    s.close();
-    s = new MemoryStore(c, db);
-    assertEquals("豆豆输入法", s.get(id).title);
-  }
-
-  @Test
-  public void deleteRestoresOnlyItsOwnMemory() {
-    long p = s.save(0, 0, "person", 0, "测试人物", "", "chat.a", "manual"),
-        q = s.save(0, 0, "person", 0, "另一个人", "", "chat.b", "manual");
-    long a = s.save(0, 0, "memory", p, "事件", "约下次见", "event", "manual"),
-        b = s.save(0, 0, "memory", q, "偏好", "不喝咖啡", "preference", "manual");
-    s.delete(p);
-    assertTrue(s.get(a).deleted);
-    assertFalse(s.get(b).deleted);
-    s.restore(p);
-    assertFalse(s.get(a).deleted);
-    assertEquals(1, s.list("memory", p).size());
-  }
-
-  @Test
-  public void backupRemapsPeopleAndDoesNotOverwrite() throws Exception {
-    long p = s.save(0, 0, "person", 0, "测试人物", "本机资料", "chat.a", "manual");
-    s.save(0, 0, "memory", p, "事实", "只是一条测试资料", "fact", "manual");
-    JSONObject backup = s.exportData();
-    int imported = s.importData(backup);
-    assertEquals(2, imported);
-    assertEquals(2, s.list("person", 0).size());
-    for (MemoryStore.Item person : s.list("person", 0))
-      assertEquals(1, s.list("memory", person.id).size());
-    assertEquals("本机资料", s.get(p).body);
-  }
-
-  @Test
-  public void invalidBackupRollsBack() throws Exception {
-    JSONObject doc =
-        new JSONObject()
-            .put("schema", 2)
-            .put(
-                "items",
-                new JSONArray()
-                    .put(new JSONObject().put("id", 1).put("kind", "person").put("title", "新人物"))
-                    .put(new JSONObject().put("id", 2).put("kind", "word")));
-    try {
-      s.importData(doc);
-      fail("invalid input accepted");
+      s.cache("a", 2, bad);
+      fail();
     } catch (JSONException expected) {
     }
-    assertTrue(s.list("person", 0).isEmpty());
+    assertEquals(1, s.cacheVersion("a"));
+    assertEquals("豆豆", s.list("word", 0).get(0).title);
   }
 
   @Test
-  public void historyRetentionPreservesMemories() {
-    long word = s.save(0, 0, "word", 0, "热词", "reci", "", "manual");
-    s.save(0, 0, "history", 0, "历史", "过去记录", "", "voice");
-    s.getWritableDatabase().execSQL("UPDATE items SET created=1 WHERE kind='history'");
-    s.pruneHistory(7);
-    assertTrue(s.list("history", 0).isEmpty());
-    assertNotNull(s.get(word));
+  public void changedHistoryUsesOneRecordAndUploadAcknowledgementCannotEatLaterEdits()
+      throws Exception {
+    String id = h.create("voice", "豆包");
+    h.inserted(id, "豆包", "chat:person");
+    assertEquals("豆包", h.get(id).resultText);
+    List<HistoryStore.Entry> batch = h.pending("account-a");
+    h.observed(id, "豆豆");
+    h.accepted("account-a", batch);
+    assertEquals("豆包", h.get(id).asrText);
+    assertEquals("豆包", h.get(id).insertedText);
+    assertEquals("豆豆", h.get(id).resultText);
+    assertEquals(1, h.pending("account-a").size());
+    assertTrue(h.pending("account-b").isEmpty());
+    h.accepted("account-a", h.pending("account-a"));
+    assertTrue(h.pending("account-a").isEmpty());
+    h.remove(id);
+    assertTrue(h.get(id).deleted);
+    assertEquals("", h.get(id).resultText);
+    assertEquals(1, h.pending("account-a").size());
   }
 
   @Test
-  public void syncRemapsGlobalPeoplePreservesManualEditsAndTombstones() throws Exception {
-    String otherName = "sync-" + System.nanoTime() + ".db";
-    MemoryStore other = new MemoryStore(c, otherName);
+  public void clearDoesNotMeanSentAndUndoRemovesTheInsertedResult() {
+    String id = h.create("voice", "你好");
+    h.inserted(id, "你好", "");
+    h.observed(id, "");
+    assertEquals("你好", h.get(id).resultText);
+    h.withdraw(id);
+    assertEquals("", h.get(id).resultText);
+    assertEquals("你好", h.get(id).asrText);
+  }
+
+  @Test
+  public void screenshotsStayLocalAndBackupIsIdempotent() throws Exception {
+    String id = h.create("advisor", "");
+    Bitmap b = Bitmap.createBitmap(30, 30, Bitmap.Config.ARGB_8888);
+    String ref;
     try {
-      long person = s.save(0, 0, "person", 0, "示例联系人", "", "", "manual");
-      long memory = s.save(0, 0, "memory", person, "偏好", "茶", "fact", "manual");
-      assertEquals(2, other.mergeSync(s.syncSnapshot()));
-      MemoryStore.Item p2 = other.byGlobal(s.get(person).globalId),
-          m2 = other.byGlobal(s.get(memory).globalId);
-      assertNotNull(p2);
-      assertEquals(p2.id, m2.owner);
-      other.save(m2.id, m2.revision, "memory", p2.id, "偏好", "本机手动改成咖啡", "fact", "manual");
-      s.save(
-          memory,
-          s.get(memory).revision,
-          "memory",
-          person,
-          "偏好",
-          "模型改成汽水",
-          "fact",
-          "cloud-learning");
-      other.mergeSync(s.syncSnapshot());
-      assertEquals("本机手动改成咖啡", other.get(m2.id).body);
-      other.delete(m2.id);
-      other.mergeSync(s.syncSnapshot());
-      assertTrue(other.get(m2.id).deleted);
-      assertEquals(0, other.mergeSync(other.syncSnapshot()));
-      s.mergeSync(other.syncSnapshot());
-      assertTrue(s.get(memory).deleted);
-      other.restore(m2.id);
-      s.mergeSync(other.syncSnapshot());
-      assertFalse(s.get(memory).deleted);
+      ref = h.screenshot(id, b);
+    } finally {
+      b.recycle();
+    }
+    h.inserted(id, "下次见", "chat:person");
+    assertFalse(h.get(id).increment().has("screenshots"));
+    JSONObject backup = h.backup(100000, "");
+    String otherDb = db + "-restore";
+    HistoryStore other = new HistoryStore(c, otherDb);
+    try {
+      other.restore(backup, "");
+      other.observed(id, "周末见");
+      other.restore(backup, "");
+      assertEquals("周末见", other.get(id).resultText);
+      assertTrue(other.imageFile(ref).exists());
+      try {
+        h.backup(8, "");
+        fail();
+      } catch (java.io.IOException expected) {
+      }
     } finally {
       other.close();
-      c.deleteDatabase(otherName);
+      c.deleteDatabase(otherDb);
     }
   }
 
   @Test
-  public void incrementalHistoryIsProcessedOnceAndEvidenceCanBeRevoked() throws Exception {
-    long h = s.save(0, 0, "history", 0, "语音", "豆豆", "transcript", "asr:test");
-    java.util.List<MemoryStore.Item> batch = s.unprocessed(12, 8000);
-    assertEquals(1, batch.size());
-    s.markProcessed(batch);
-    assertTrue(s.unprocessed(12, 8000).isEmpty());
-    JSONObject p =
-        new JSONObject()
-            .put("category", "vocabulary_correction")
-            .put("scope", "self")
-            .put("subject", "")
-            .put("content", "豆豆")
-            .put("baseRevision", 0)
-            .put("sourceIds", new JSONArray().put(s.get(h).globalId));
-    long id = s.save(0, 0, "proposal", 0, "词汇候选", p.toString(), "", "cloud-learning");
-    s.delete(h);
-    try {
-      s.acceptProposal(s.get(id));
-      fail("deleted evidence was learned");
-    } catch (IllegalStateException expected) {
-    }
-    assertTrue(s.list("word", 0).isEmpty());
+  public void recentContextUsesOnlyOwnLastResultInTheSameConversation() {
+    String a = h.create("voice", "错误原文");
+    h.inserted(a, "初稿", "same");
+    h.observed(a, "修改后的结果");
+    String b = h.create("voice", "别人的上下文");
+    h.inserted(b, "其他聊天", "different");
+    assertEquals("修改后的结果", h.recent("same", 400));
+    assertEquals("", h.recent("", 400));
   }
 
   @Test
-  public void longHistoryResumesItsNextFragmentIncludingEmoji() {
-    StringBuilder text = new StringBuilder();
-    for (int i = 0; i < 1900; i++) text.append("😀");
-    long id = s.save(0, 0, "history", 0, "长历史", text.toString(), "transcript", "asr:test");
-    int total = 0, parts = 0;
-    while (true) {
-      java.util.List<MemoryStore.Item> batch = s.unprocessed(12, 8000);
-      if (batch.isEmpty()) break;
-      MemoryStore.Item item = batch.get(0);
-      assertEquals(id, item.id);
-      assertEquals(total, item.learningOffset);
-      String piece = s.learningFragment(item);
-      assertFalse(Character.isHighSurrogate(piece.charAt(piece.length() - 1)));
-      total += piece.length();
-      parts++;
-      s.markProcessed(batch);
-    }
-    assertEquals(text.length(), total);
-    assertEquals(3, parts);
-  }
-
-  @Test
-  public void migratesExistingV1RecordsWithoutLosingTheirIdentityOrText() throws Exception {
+  public void migratesV1BeforeRemovingTheOldLearningPath() throws Exception {
     String name = "migration-" + System.nanoTime() + ".db";
     android.database.sqlite.SQLiteDatabase old = c.openOrCreateDatabase(name, 0, null);
     old.execSQL(
@@ -201,16 +165,18 @@ public class DeviceTest {
         "CREATE TABLE versions(item_id INTEGER NOT NULL,revision INTEGER NOT NULL,snapshot TEXT NOT"
             + " NULL,PRIMARY KEY(item_id,revision))");
     old.execSQL(
-        "INSERT INTO items(kind,title,body,created,updated) VALUES('word','迁移测试','保留原资料',1,1)");
+        "INSERT INTO items(kind,title,body,source,created,updated)"
+            + " VALUES('history','语音','保留原资料','asr:legacy',1,1)");
     old.setVersion(1);
     old.close();
     MemoryStore upgraded = new MemoryStore(c, name);
     try {
-      MemoryStore.Item item = upgraded.get(1);
-      assertEquals("保留原资料", item.body);
-      assertNotNull(item.globalId);
-      assertTrue(item.clock.length() > 10);
-      upgraded.save(1, item.revision, "word", 0, item.title, "继续编辑", "", "manual");
+      JSONObject doc = upgraded.exportData();
+      h.migrateLegacy(doc, "");
+      h.migrateLegacy(doc, "");
+      assertEquals("保留原资料", h.get(upgraded.get(1).globalId).asrText);
+      upgraded.discardLegacy();
+      assertTrue(upgraded.list("history", 0).isEmpty());
     } finally {
       upgraded.close();
       c.deleteDatabase(name);
@@ -218,36 +184,19 @@ public class DeviceTest {
   }
 
   @Test
-  public void configuredIpUsesNormalCertificateValidation() throws Exception {
-    app.doudou.ime.cloud.CloudClient cloud = new app.doudou.ime.cloud.CloudClient(c);
-    JSONObject health = cloud.publicRequest("/healthz", null);
-    assertEquals("ok", health.getString("status"));
+  public void wrongAccountRequestStopsBeforeNetworkOrCredentials() throws Exception {
+    app.doudou.ime.cloud.CloudClient client = new app.doudou.ime.cloud.CloudClient(c);
+    try {
+      client.request("different-account", "/v1/memory/history", "POST", new JSONObject());
+      fail("Cross-account request accepted");
+    } catch (app.doudou.ime.cloud.CloudClient.CloudError error) {
+      assertEquals("ACCOUNT_CHANGED", error.code);
+    }
   }
 
   @Test
-  public void bundledChineseOcrRunsLocally() throws Exception {
-    Bitmap b = Bitmap.createBitmap(1000, 260, Bitmap.Config.ARGB_8888);
-    Canvas canvas = new Canvas(b);
-    canvas.drawColor(Color.WHITE);
-    Paint paint = new Paint(3);
-    paint.setColor(Color.BLACK);
-    paint.setTextSize(70);
-    canvas.drawText("你好，豆豆输入法", 40, 130, paint);
-    CountDownLatch done = new CountDownLatch(1);
-    String[] result = new String[2];
-    InstrumentationRegistry.getInstrumentation()
-        .runOnMainSync(
-            () ->
-                LocalOcr.read(
-                    b,
-                    (text, error) -> {
-                      result[0] = text;
-                      result[1] = error;
-                      done.countDown();
-                    }));
-    assertTrue(done.await(25, TimeUnit.SECONDS));
-    assertNull(result[1]);
-    assertTrue(result[0], result[0].contains("豆豆"));
-    assertTrue(b.isRecycled());
+  public void configuredIpUsesNormalCertificateValidation() throws Exception {
+    JSONObject health = new app.doudou.ime.cloud.CloudClient(c).publicRequest("/healthz", null);
+    assertEquals("ok", health.getString("status"));
   }
 }

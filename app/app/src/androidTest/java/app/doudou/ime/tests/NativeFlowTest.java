@@ -33,6 +33,35 @@ public class NativeFlowTest {
     AccessibilityServiceInfo info = ui.getServiceInfo();
     info.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
     ui.setServiceInfo(info);
+    if (!android.os.Build.HARDWARE.equals("ranchu")
+        && !android.os.Build.HARDWARE.equals("goldfish"))
+      throw new AssertionError("This permission fixture is emulator-only");
+    ui.adoptShellPermissionIdentity(android.Manifest.permission.WRITE_SECURE_SETTINGS);
+    try {
+      Context context = instrumentation.getTargetContext();
+      String existing =
+          android.provider.Settings.Secure.getString(
+              context.getContentResolver(), "enabled_accessibility_services");
+      String own = "app.doudou.ime/app.doudou.ime.capture.CaptureService";
+      if (existing == null || !existing.contains("CaptureService"))
+        android.provider.Settings.Secure.putString(
+            context.getContentResolver(),
+            "enabled_accessibility_services",
+            existing == null || existing.isEmpty() ? own : existing + ":" + own);
+      android.provider.Settings.Secure.putInt(
+          context.getContentResolver(), "accessibility_enabled", 1);
+    } finally {
+      ui.dropShellPermissionIdentity();
+    }
+    try (android.os.ParcelFileDescriptor output =
+        ui.executeShellCommand("ime set app.doudou.ime/.app.KeyboardService")) {
+      try (java.io.FileInputStream in = new java.io.FileInputStream(output.getFileDescriptor())) {
+        byte[] bytes = new byte[1024];
+        while (in.read(bytes) != -1) {}
+      }
+    } catch (java.io.IOException e) {
+      throw new AssertionError("Cannot select isolated emulator IME", e);
+    }
     Intent intent =
         new Intent(instrumentation.getTargetContext(), PracticeActivity.class)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -40,29 +69,29 @@ public class NativeFlowTest {
     editor = field(activity.getWindow().getDecorView());
     assertNotNull(editor);
     instrumentation.waitForIdleSync();
-    int[] position = new int[2];
-    instrumentation.runOnMainSync(() -> editor.getLocationOnScreen(position));
-    long now = SystemClock.uptimeMillis();
-    ui.injectInputEvent(
-        MotionEvent.obtain(
-            now, now, MotionEvent.ACTION_DOWN, position[0] + 30, position[1] + 30, 0),
-        true);
-    ui.injectInputEvent(
-        MotionEvent.obtain(
-            now, now + 50, MotionEvent.ACTION_UP, position[0] + 30, position[1] + 30, 0),
-        true);
+    // The editor moves while adjustResize opens the IME. Never tap its old screen position.
     long keyboardDeadline = SystemClock.uptimeMillis() + 8000;
-    while (node("工具") == null && SystemClock.uptimeMillis() < keyboardDeadline) {
+    do {
       instrumentation.runOnMainSync(
           () -> {
-            editor.requestFocus();
-            ((InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE))
-                .showSoftInput(editor, InputMethodManager.SHOW_IMPLICIT);
+            if (activity.hasWindowFocus()) {
+              editor.requestFocus();
+              ((InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE))
+                  .showSoftInput(editor, InputMethodManager.SHOW_IMPLICIT);
+            }
           });
-      SystemClock.sleep(250);
-    }
+      instrumentation.waitForIdleSync();
+      if (node("工具") != null) break;
+      SystemClock.sleep(100);
+    } while (SystemClock.uptimeMillis() < keyboardDeadline);
     await("工具");
+    try {
+      ui.waitForIdle(200, 3000);
+    } catch (java.util.concurrent.TimeoutException e) {
+      throw new AssertionError("IME layout did not settle", e);
+    }
     if (node("EN") != null) click("EN");
+    await("q");
   }
 
   @After
@@ -147,6 +176,8 @@ public class NativeFlowTest {
     } finally {
       b.recycle();
     }
+    if ("true".equals(InstrumentationRegistry.getArguments().getString("tour")))
+      SystemClock.sleep(1600);
   }
 
   private int keyboardHeight() {
@@ -184,7 +215,9 @@ public class NativeFlowTest {
     String own = "app.doudou.ime/app.doudou.ime.capture.CaptureService";
     assertTrue(
         "Screenshot permission must already be enabled",
-        services != null && services.contains(own));
+        services != null
+            && (services.contains(own)
+                || services.contains("app.doudou.ime/.capture.CaptureService")));
     if (CaptureService.current == null) {
       ui.adoptShellPermissionIdentity(android.Manifest.permission.WRITE_SECURE_SETTINGS);
       try {
@@ -215,7 +248,7 @@ public class NativeFlowTest {
     }
     int normal = keyboardHeight();
     click("军师");
-    await("正在读取当前屏幕…");
+    await("正在截取当前屏幕…");
     int shrunk = keyboardHeight();
     long resizedBy = SystemClock.uptimeMillis() + 2500;
     while (shrunk >= normal - 300 && SystemClock.uptimeMillis() < resizedBy) {
@@ -224,19 +257,14 @@ public class NativeFlowTest {
     }
     System.out.println("IME height px normal=" + normal + " shrunk=" + shrunk);
     assertTrue("Capture must expose more of the host", shrunk < normal - 300);
-    await("创建这个聊天对象");
+    await("选择聊天对象");
     screenshot("advisor");
-    click("查看 / 修正本次识字");
-    String recognized = "";
-    for (AccessibilityWindowInfo w : ui.getWindows())
-      if (w.getType() == AccessibilityWindowInfo.TYPE_INPUT_METHOD) {
-        recognized = editorText(w.getRoot());
-      }
-    assertTrue("OCR must contain the real local practice screen", recognized.contains("本机"));
-    assertNotNull(await("返回"));
-    click("返回");
+    app.doudou.ime.app.KeyboardApp app = (app.doudou.ime.app.KeyboardApp) activity.getApplication();
+    java.util.List<app.doudou.ime.history.HistoryStore.Entry> entries = app.histories.list(10);
+    assertTrue(
+        entries.stream().anyMatch(e -> e.type.equals("advisor") && e.screenshots.length() > 0));
     assertEquals("本机验收草稿", value());
-    click("取消");
+    click("返回");
     await("工具");
     assertEquals("本机验收草稿", value());
   }

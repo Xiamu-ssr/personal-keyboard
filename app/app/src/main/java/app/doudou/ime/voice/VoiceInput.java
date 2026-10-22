@@ -7,7 +7,6 @@ import android.media.*;
 import android.os.*;
 import app.doudou.ime.BuildConfig;
 import app.doudou.ime.app.KeyboardApp;
-import app.doudou.ime.memory.MemoryStore;
 import java.util.UUID;
 import okhttp3.*;
 import okio.ByteString;
@@ -53,7 +52,7 @@ public final class VoiceInput {
         });
   }
 
-  public void start(Listener next) {
+  public void start(Listener next, String conversationRef) {
     cancel();
     listener = next;
     final int token = epoch;
@@ -70,31 +69,18 @@ public final class VoiceInput {
       next.error("请先到设置登录豆豆账户");
       return;
     }
+    final String account = app.cloud.userId();
     next.status("正在连接豆豆语音…");
     app.network.execute(
         () -> {
           try {
-            String access = app.cloud.accessToken();
+            String access = app.cloud.accessToken(account);
             JSONObject config =
                 new JSONObject()
                     .put("type", "configure")
                     .put("requestId", UUID.randomUUID().toString())
                     .put("polish", app.prefs().getBoolean("asrPolish", true));
-            JSONArray words = new JSONArray();
-            for (MemoryStore.Item i : app.store.list("word", 0)) {
-              if (words.length() == 50) break;
-              if (i.title.length() <= 60) words.put(i.title);
-            }
-            config.put("words", words);
-            StringBuilder recent = new StringBuilder();
-            for (MemoryStore.Item i : app.store.list("history", 0)) {
-              if (!app.prefs().getBoolean("history", true)) break;
-              if (!(i.source.startsWith("asr:") || i.source.equals("voice"))) continue;
-              if (recent.length() >= 350) break;
-              String s = i.body.substring(0, Math.min(i.body.length(), 250));
-              recent.append(s).append('\n');
-            }
-            config.put("context", recent.substring(0, Math.min(400, recent.length())));
+            config.put("context", app.histories.recent(conversationRef, 400));
             Request request =
                 new Request.Builder()
                     .url(BuildConfig.API_BASE_URL.replace("https:", "wss:") + "/v1/asr")
@@ -106,7 +92,7 @@ public final class VoiceInput {
                     new WebSocketListener() {
                       @Override
                       public void onOpen(WebSocket ws, Response response) {
-                        if (token != epoch) {
+                        if (token != epoch || !account.equals(app.cloud.userId())) {
                           ws.cancel();
                           return;
                         }
@@ -139,9 +125,6 @@ public final class VoiceInput {
                             if (m.optString("status").equals("succeeded") && result != null) {
                               String text = result.getString("text");
                               jobId = m.getString("id");
-                              if (app.prefs().getBoolean("history", true))
-                                app.store.save(
-                                    0, 0, "history", 0, "语音转写", text, "transcript", "asr:" + jobId);
                               post(token, () -> listener.text(text, true));
                             } else {
                               JSONObject e = m.optJSONObject("error");

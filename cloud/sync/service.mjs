@@ -8,6 +8,7 @@ export class SyncService {
     Object.assign(this, { db, ledger, cfg });
   }
   async allowed(user, c = this.db) {
+    requireValue((await c.query('SELECT status FROM users WHERE id=$1', [user.id])).rows[0]?.status === 'active', 'ACCOUNT_DISABLED', '账号不可用', 403);
     const b = await this.ledger.balance(user.id, c);
     requireValue(
       b.cloudSync,

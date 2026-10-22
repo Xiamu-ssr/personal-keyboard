@@ -107,7 +107,8 @@ public final class CloudClient {
     session = next;
   }
 
-  public synchronized String accessToken() throws Exception {
+  public synchronized String accessToken(String account) throws Exception {
+    requireAccount(account);
     if (!loggedIn()) throw new CloudError("LOGIN_REQUIRED", "请先到设置登录豆豆账户", 401);
     if (session.optLong("accessExpiresAt") > System.currentTimeMillis() + 60000)
       return session.getString("accessToken");
@@ -125,13 +126,27 @@ public final class CloudClient {
     }
   }
 
-  public JSONObject request(String route, String method, JSONObject body) throws Exception {
-    return execute(route, method, body, accessToken());
+  private void requireAccount(String account) throws CloudError {
+    if (account.isEmpty() || !account.equals(userId()) || !loggedIn())
+      throw new CloudError("ACCOUNT_CHANGED", "账户已变化，本次操作已停止", 409);
+  }
+
+  public JSONObject request(String account, String route, String method, JSONObject body)
+      throws Exception {
+    JSONObject result = execute(route, method, body, accessToken(account));
+    synchronized (this) {
+      requireAccount(account);
+    }
+    return result;
   }
 
   public JSONObject account() throws Exception {
-    JSONObject result = request("/v1/account", "GET", null);
-    prefs.edit().putString("account", result.toString()).apply();
+    String account = userId();
+    JSONObject result = request(account, "/v1/account", "GET", null);
+    synchronized (this) {
+      requireAccount(account);
+      prefs.edit().putString("account", result.toString()).apply();
+    }
     return result;
   }
 
@@ -152,10 +167,13 @@ public final class CloudClient {
   }
 
   public void logout() throws Exception {
+    String account = userId();
     try {
-      request("/v1/auth/logout", "POST", new JSONObject());
+      request(account, "/v1/auth/logout", "POST", new JSONObject());
     } finally {
-      clearSession();
+      synchronized (this) {
+        if (account.equals(userId())) clearSession();
+      }
     }
   }
 

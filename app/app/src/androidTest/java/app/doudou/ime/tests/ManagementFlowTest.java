@@ -77,7 +77,7 @@ public final class ManagementFlowTest {
   }
 
   @Test
-  public void managementNavigationRevisionSearchAndUndo() throws Exception {
+  public void managementReadsCanonicalCacheAndSearchesWithoutLocalMutations() throws Exception {
     android.app.Instrumentation ins = InstrumentationRegistry.getInstrumentation();
     ui = ins.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
     android.accessibilityservice.AccessibilityServiceInfo service = ui.getServiceInfo();
@@ -90,36 +90,55 @@ public final class ManagementFlowTest {
                 new Intent(ins.getTargetContext(), MainActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     KeyboardApp app = (KeyboardApp) activity.getApplication();
-    List<Long> rows = new ArrayList<>();
-    long word = app.store.save(0, 0, "word", 0, "豆豆输入法", "doudou", "", "manual");
-    rows.add(word);
-    rows.add(app.store.save(0, 0, "word", 0, "六六六", "lll", "", "manual"));
-    rows.add(app.store.save(0, 0, "word", 0, "林间", "linjian", "", "manual"));
-    rows.add(app.store.save(0, 0, "style", 0, "自然一点", "短句，少用感叹号，保留自己的意思。", "", "manual"));
-    long person = app.store.save(0, 0, "person", 0, "林间", "朋友 · 本机验收示例", "", "manual");
-    rows.add(person);
-    rows.add(app.store.save(0, 0, "memory", person, "周末约球", "周六下午有空；这是验收示例资料。", "event", "manual"));
+    org.json.JSONObject original = app.store.cache(app.cloud.userId());
+    long originalVersion = app.store.cacheVersion(app.cloud.userId());
+    String personId = java.util.UUID.randomUUID().toString();
+    org.json.JSONObject fixture =
+        new org.json.JSONObject()
+            .put(
+                "hotwords",
+                new org.json.JSONArray()
+                    .put(
+                        new org.json.JSONObject()
+                            .put("id", java.util.UUID.randomUUID().toString())
+                            .put("text", "豆豆输入法")
+                            .put("variants", new org.json.JSONArray())))
+            .put(
+                "styles",
+                new org.json.JSONArray()
+                    .put(
+                        new org.json.JSONObject()
+                            .put("id", java.util.UUID.randomUUID().toString())
+                            .put("scene", "自然一点")
+                            .put("rules", new org.json.JSONArray().put("短句，保留自己的意思。"))
+                            .put("examples", new org.json.JSONArray())))
+            .put(
+                "people",
+                new org.json.JSONArray()
+                    .put(
+                        new org.json.JSONObject()
+                            .put("id", personId)
+                            .put("name", "林间")
+                            .put("aliases", new org.json.JSONArray().put("小林"))
+                            .put(
+                                "facts",
+                                new org.json.JSONArray()
+                                    .put(
+                                        new org.json.JSONObject()
+                                            .put("id", java.util.UUID.randomUUID().toString())
+                                            .put("key", "周末约球")
+                                            .put("value", "周六下午有空；这是本机验收资料。")
+                                            .put("scope", "验收")))
+                            .put("relations", new org.json.JSONArray())))
+            .put("candidates", new org.json.JSONArray());
+    app.store.cache(app.cloud.userId(), 1, fixture);
     try {
       click("记忆");
       await("豆豆输入法");
-      click("豆豆输入法");
-      set("豆豆输入法", "豆豆词库");
-      click("保存");
-      await("豆豆词库");
-      assertEquals("豆豆词库", app.store.get(word).title);
-      AccessibilityNodeInfo row = await("豆豆词库");
-      while (row != null && !row.isLongClickable()) row = row.getParent();
-      assertNotNull(row);
-      assertTrue(row.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK));
-      click("删除");
-      assertTrue(app.store.get(word).deleted);
-      click("撤销");
-      await("豆豆词库");
-      assertFalse(app.store.get(word).deleted);
       set("搜索这份记忆", "没有这个热词");
       await("没有找到");
       set("没有这个热词", "");
-      await("豆豆词库");
+      await("豆豆输入法");
       shot("memory");
       click("文风");
       await("自然一点");
@@ -137,7 +156,7 @@ public final class ManagementFlowTest {
       await("试试豆豆");
       shot("home");
     } finally {
-      for (long id : rows) app.store.delete(id);
+      app.store.cache(app.cloud.userId(), originalVersion, original);
       ins.runOnMainSync(() -> activity.finish());
     }
   }

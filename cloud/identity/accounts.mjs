@@ -224,7 +224,7 @@ export class Accounts {
     ]);
     return { ok: true };
   }
-  async delete(user) {
+  async delete(user, erasePersonalData) {
     await this.db.transaction(async (c) => {
       await this.db.accountLock(c, user.id);
       await c.query(
@@ -239,6 +239,7 @@ export class Accounts {
         [user.id],
       );
       await c.query("DELETE FROM sync_keys WHERE user_id=$1", [user.id]);
+      await erasePersonalData(c);
       await this.db.audit(c, "user:" + user.id, "account.delete", user.id);
     });
     return { ok: true };

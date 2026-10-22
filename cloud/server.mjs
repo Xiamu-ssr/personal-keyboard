@@ -12,6 +12,8 @@ import { TextModels } from "./models/text.mjs";
 import { connectAsr } from "./models/asr.mjs";
 import { Jobs } from "./jobs/service.mjs";
 import { SyncService } from "./sync/service.mjs";
+import { PersonalMemory } from './memory/service.mjs';
+import { MemoryModel } from './memory/model.mjs';
 import { Admin } from "./operator/admin.mjs";
 import { randomToken, digest } from "./security.mjs";
 import { requireValue } from "./http/errors.mjs";
@@ -31,12 +33,15 @@ export async function createCloudServer({
   sms = new AliyunSms(cfg),
   models = new TextModels(cfg),
   asrSocket,
+  memoryModel = new MemoryModel(cfg),
 } = {}) {
   await db.migrate(cfg.plans);
   await models.init();
+  await memoryModel.init();
   const ledger = new Ledger(db, cfg),
     accounts = new Accounts(db, ledger, cfg, sms),
-    jobs = new Jobs(db, ledger, models, cfg),
+    memory = new PersonalMemory(db, memoryModel, cfg),
+    jobs = new Jobs(db, ledger, models, cfg, memory),
     sync = new SyncService(db, ledger, cfg),
     admin = new Admin(db, ledger, cfg, models);
   await ledger.recover();
@@ -62,7 +67,7 @@ export async function createCloudServer({
         await db.query("SELECT 1");
         return json(res, {
           status: "ok",
-          version: "0.4.0-alpha.1",
+          version: "0.5.0-alpha.1",
           readiness: {
             sms: cfg.smsReady,
             asr: cfg.asrReady,
@@ -224,6 +229,7 @@ export async function createCloudServer({
             "注销前请重新验证手机号",
             401,
           );
+          const result = await accounts.delete(user, c => memory.remove(user, c));
           await sync.remove(user);
           const active = (
             await db.query(
@@ -232,7 +238,7 @@ export async function createCloudServer({
             )
           ).rows;
           for (const j of active) await jobs.cancel(user, j.id);
-          return json(res, await accounts.delete(user));
+          return json(res, result);
         }
         if (method === "POST" && route === "/v1/jobs")
           return json(
@@ -240,6 +246,12 @@ export async function createCloudServer({
             await jobs.submit(user, await jsonBody(req, 2600000)),
             202,
           );
+        if (method === 'GET' && route === '/v1/memory')
+          return json(res, await memory.sync(user, Number(new URL(req.url, 'http://local').searchParams.get('after') || 0)));
+        if (method === 'POST' && route === '/v1/memory')
+          return json(res, await memory.mutate(user, await jsonBody(req, 300000)));
+        if (method === 'POST' && route === '/v1/memory/history')
+          return json(res, await memory.ingest(user, await jsonBody(req, 2000000)), 202);
         const match = /^\/v1\/jobs\/([0-9a-f-]+)(\/cancel)?$/.exec(route);
         if (match && method === "GET" && !match[2])
           return json(res, await jobs.get(user, match[1]));
@@ -301,13 +313,13 @@ export async function createCloudServer({
         user = await accounts.authenticate(token);
       user.accessToken = token;
       sockets.handleUpgrade(req, socket, head, (ws) =>
-        connectAsr(ws, user, { cfg, ledger, accounts, makeSocket: asrSocket }),
+        connectAsr(ws, user, { cfg, ledger, accounts, memory, makeSocket: asrSocket }),
       );
     })().catch(() => {
       socket.end("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
     });
   });
-  const queue = setInterval(() => jobs.pump(), 1000),
+  const queue = setInterval(() => { jobs.pump(); void memory.pump(); }, 1000),
     clean = setInterval(
       () => db.cleanup().catch(() => console.error("Cleanup pending")),
       600000,
@@ -321,12 +333,14 @@ export async function createCloudServer({
     accounts,
     jobs,
     sync,
+    memory,
     admin,
     async close() {
       clearInterval(queue);
       clearInterval(clean);
       for (const ws of sockets.clients) ws.close(1001, "Service closing");
       await jobs.stop();
+      await memory.stop();
       await new Promise((r) => server.close(r));
       await db.close();
     },

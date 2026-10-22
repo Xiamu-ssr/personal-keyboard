@@ -3,8 +3,8 @@ import { unseal } from "../security.mjs";
 import { isUuid } from "../billing/ledger.mjs";
 import { requireValue, ServiceError } from "../http/errors.mjs";
 export class Jobs {
-  constructor(db, ledger, models, cfg) {
-    Object.assign(this, { db, ledger, models, cfg });
+  constructor(db, ledger, models, cfg, memory) {
+    Object.assign(this, { db, ledger, models, cfg, memory });
     this.images = new Map();
     this.controllers = new Map();
     this.running = 0;
@@ -12,7 +12,7 @@ export class Jobs {
   }
   async submit(user, request) {
     requireValue(
-      ["rewrite", "advisor", "memory"].includes(request.kind),
+      ["rewrite", "advisor"].includes(request.kind),
       "INVALID_KIND",
       "未知模型任务",
     );
@@ -104,7 +104,7 @@ export class Jobs {
       );
       const { result, provider } = await this.models.run(
         job.kind,
-        input,
+        await this.memory.forTask(job.user_id, job.kind, input),
         images,
         controller.signal,
       );

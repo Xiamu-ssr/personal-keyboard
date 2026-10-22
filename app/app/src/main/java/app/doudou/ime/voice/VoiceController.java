@@ -15,7 +15,7 @@ public final class VoiceController extends PanelController {
   private TextView status, voiceText, insertAction;
   private VoiceButton microphone;
   private boolean recording;
-  private String transcript = "";
+  private String transcript = "", rawTranscript = "", historyId = "";
 
   public VoiceController(EditorHost host) {
     super(host);
@@ -28,6 +28,8 @@ public final class VoiceController extends PanelController {
     model.cancel();
     recording = false;
     transcript = "";
+    rawTranscript = "";
+    historyId = "";
     if (microphone != null) microphone.setState(VoiceButton.State.IDLE);
   }
 
@@ -161,7 +163,13 @@ public final class VoiceController extends PanelController {
     voice.cancel();
     model.cancel();
     if (protectedInsert(transcript.trim())) {
-      history("语音输入", transcript.trim(), "voice");
+      if (app.prefs().getBoolean("history", true)) {
+        if (historyId.isEmpty()) historyId = app.histories.create("voice", rawTranscript);
+        app.histories.inserted(historyId, transcript.trim(), host.conversationRef());
+        host.trackHistory(historyId);
+      }
+      historyId = "";
+      rawTranscript = "";
       transcript = "";
       typing();
     }
@@ -173,6 +181,7 @@ public final class VoiceController extends PanelController {
     microphone.setState(VoiceButton.State.LISTENING);
     final long gen = host.generation();
     final String prefix = transcript.isEmpty() ? "" : transcript + " ";
+    final String rawPrefix = rawTranscript.isEmpty() ? "" : rawTranscript + " ";
     voice.start(
         new VoiceInput.Listener() {
           boolean active() {
@@ -184,6 +193,11 @@ public final class VoiceController extends PanelController {
             transcript = prefix + value;
             renderTranscript();
             if (fin) {
+              rawTranscript = rawPrefix + value;
+              if (app.prefs().getBoolean("history", true)) {
+                if (historyId.isEmpty()) historyId = app.histories.create("voice", rawTranscript);
+                else app.histories.transcript(historyId, rawTranscript);
+              }
               recording = false;
               microphone.setState(VoiceButton.State.IDLE);
               status.setText("说完了 · 可修正、整理或填入");
@@ -212,7 +226,8 @@ public final class VoiceController extends PanelController {
             microphone.setState(VoiceButton.State.IDLE);
             status.setText(value);
           }
-        });
+        },
+        host.conversationRef());
   }
 
   private void polishVoice() {
@@ -234,6 +249,7 @@ public final class VoiceController extends PanelController {
     model.polish(
         original,
         voice.sourceJob(),
+        host.conversationRef(),
         (text, error) -> {
           if (gen != host.generation() || !host.mode().equals("voice")) return;
           microphone.setState(VoiceButton.State.IDLE);

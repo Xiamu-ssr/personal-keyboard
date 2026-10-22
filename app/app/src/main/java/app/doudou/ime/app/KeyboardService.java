@@ -21,6 +21,10 @@ public final class KeyboardService extends InputMethodService
   private final Handler main = new Handler(Looper.getMainLooper());
   private final StringBuilder composing = new StringBuilder();
   private final EditTracker edits = new EditTracker();
+  private final EditTracker historyEdits = new EditTracker();
+  private String trackedHistory = "", activeConversation = "", insertionBefore, insertionText;
+  private int insertionStart, insertionEnd;
+  private long insertionSerial, trackedInsertionSerial;
   private app.doudou.ime.voice.VoiceController voice;
   private app.doudou.ime.advisor.AdvisorController advisorController;
   private app.doudou.ime.input.ToolsPanel toolkit;
@@ -72,6 +76,9 @@ public final class KeyboardService extends InputMethodService
     candidateSerial++;
     composing.setLength(0);
     edits.clear();
+    historyEdits.clear();
+    trackedHistory = "";
+    activeConversation = "";
     lastFeedback = "";
     pkg = info.packageName == null ? "" : info.packageName;
     int variation = info.inputType & android.text.InputType.TYPE_MASK_VARIATION;
@@ -100,16 +107,21 @@ public final class KeyboardService extends InputMethodService
 
   @Override
   public void onFinishInput() {
+    observeHistory();
     cancelJobs();
     generation++;
     candidateSerial++;
     edits.clear();
+    historyEdits.clear();
+    trackedHistory = "";
+    activeConversation = "";
     composing.setLength(0);
     super.onFinishInput();
   }
 
   @Override
   public void onFinishInputView(boolean finishing) {
+    observeHistory();
     cancelJobs();
     super.onFinishInputView(finishing);
   }
@@ -456,9 +468,14 @@ public final class KeyboardService extends InputMethodService
     String now = full();
     int[] s = selection();
     if (text.isEmpty()) return false;
+    insertionSerial++;
     edits.clear();
     if (now != null && s != null)
       edits.begin(now, Math.min(s[0], s[1]), Math.max(s[0], s[1]), text, generation);
+    insertionBefore = now;
+    insertionText = text;
+    insertionStart = s == null ? -1 : Math.min(s[0], s[1]);
+    insertionEnd = s == null ? -1 : Math.max(s[0], s[1]);
     ic.beginBatchEdit();
     try {
       ic.commitText(text, 1);
@@ -488,6 +505,11 @@ public final class KeyboardService extends InputMethodService
     } finally {
       ic.endBatchEdit();
     }
+    if (!trackedHistory.isEmpty() && trackedInsertionSerial == insertionSerial) {
+      app.histories.withdraw(trackedHistory);
+      trackedHistory = "";
+      historyEdits.clear();
+    } else observeHistory();
     typing();
   }
 
@@ -509,29 +531,17 @@ public final class KeyboardService extends InputMethodService
             if (root != null && mode.equals("typing")) typing();
           });
     }
-    if (!privateMode() && edits.active() && app.prefs().getBoolean("learning", true)) {
+    if (!trackedHistory.isEmpty() && "".equals(full())) {
+      historyEdits.clear();
+      trackedHistory = "";
+      activeConversation = "";
+    }
+    if (!privateMode() && historyEdits.active()) {
       final long gen = generation;
       main.postDelayed(
           () -> {
             if (gen != generation || privateMode() || localEditor != null) return;
-            EditTracker.Change c = edits.observe(full(), gen);
-            if (c != null
-                && !c.before.isEmpty()
-                && !c.after.isEmpty()
-                && c.before.length() <= 64
-                && c.after.length() <= 64
-                && !lastFeedback.equals(c.before + "→" + c.after)) {
-              lastFeedback = c.before + "→" + c.after;
-              app.store.save(
-                  0,
-                  0,
-                  "feedback",
-                  0,
-                  "一次表达修改",
-                  c.before + " → " + c.after,
-                  c.after,
-                  "input:" + pkg);
-            }
+            observeHistory();
           },
           1200);
     }
@@ -617,9 +627,23 @@ public final class KeyboardService extends InputMethodService
     return insert(value);
   }
 
-  public void history(String title, String text, String source) {
+  public void trackHistory(String id) {
     if (privateMode() || !app.prefs().getBoolean("history", true)) return;
-    app.store.save(0, 0, "history", 0, title, text, "draft", source);
+    trackedHistory = id;
+    trackedInsertionSerial = insertionSerial;
+    historyEdits.begin(insertionBefore, insertionStart, insertionEnd, insertionText, generation);
+    app.doudou.ime.history.HistoryStore.Entry entry = app.histories.get(id);
+    if (entry != null) activeConversation = entry.conversationRef;
+  }
+
+  public String conversationRef() {
+    return activeConversation;
+  }
+
+  private void observeHistory() {
+    if (app == null || privateMode() || localEditor != null || trackedHistory.isEmpty()) return;
+    String value = historyEdits.observedText(full(), generation);
+    if (value != null) app.histories.observed(trackedHistory, value);
   }
 
   public android.content.Context context() {
@@ -668,7 +692,11 @@ public final class KeyboardService extends InputMethodService
   }
 
   public void togglePrivacy() {
+    observeHistory();
     incognito = !incognito;
+    historyEdits.clear();
+    trackedHistory = "";
+    activeConversation = "";
     edits.clear();
     typing();
   }

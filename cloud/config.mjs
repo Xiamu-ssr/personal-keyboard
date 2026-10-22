@@ -15,7 +15,7 @@ export async function configuration(env = process.env) {
     host: env.HOST || "127.0.0.1",
     port: Number(env.PORT || 8080),
     databaseUrl: env.DATABASE_URL,
-    publicBase: env.PUBLIC_BASE_URL || "https://106.14.73.99/keyboard-api",
+    publicBase: env.PUBLIC_BASE_URL || "https://106.14.88.147/keyboard-api",
     pathPrefix: env.PATH_PREFIX || "",
     masterKey: env.MASTER_KEY ? Buffer.from(env.MASTER_KEY, "hex") : null,
     tokenKey: env.TOKEN_SECRET,
@@ -40,6 +40,10 @@ export async function configuration(env = process.env) {
     maxAsrCharacters: 2000,
     maxJobs: 3,
     workerConcurrency: 2,
+    tokenizerUrl: env.BAILIAN_TOKENIZER_URL || 'https://dashscope.aliyuncs.com/api/v1/tokenizer',
+    memoryMaxInputTokens: Number(env.MEMORY_MAX_INPUT_TOKENS || 997952),
+    memoryContextTokens: Number(env.MEMORY_CONTEXT_TOKENS || 1000000),
+    memoryOutputTokens: Number(env.MEMORY_OUTPUT_TOKENS || 8192),
     plans,
     wechat: {
       appId: env.WECHAT_APP_ID || "",
@@ -75,5 +79,8 @@ export async function configuration(env = process.env) {
   cfg.asrReady = !!(cfg.modelKey && cfg.workspace);
   cfg.textReady = !!(cfg.modelKey && cfg.textBase && cfg.textModel);
   cfg.visionReady = cfg.textReady && !!cfg.visionModel;
+  for (const key of ['memoryMaxInputTokens', 'memoryContextTokens', 'memoryOutputTokens'])
+    requireValue(Number.isSafeInteger(cfg[key]) && cfg[key] > 0, 'CONFIGURATION', 'Memory model capacity is invalid', 503);
+  requireValue(new URL(cfg.tokenizerUrl).protocol === 'https:', 'CONFIGURATION', 'Tokenizer endpoint must use HTTPS', 503);
   return cfg;
 }

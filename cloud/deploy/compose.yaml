@@ -13,7 +13,11 @@ services:
     tmpfs: ["/tmp:rw,noexec,nosuid,size=16m"]
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
-    pids_limit: 96
+    cpus: 1.0
+    environment:
+      UV_THREADPOOL_SIZE: "2"
+      NODE_OPTIONS: "--max-old-space-size=128 --v8-pool-size=2"
+    pids_limit: 128
     mem_limit: 192m
     restart: unless-stopped
     logging:

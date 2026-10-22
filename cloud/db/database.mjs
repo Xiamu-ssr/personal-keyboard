@@ -42,7 +42,7 @@ export class Database {
           [p.id, p.version, p.status, p],
         );
       await c.query(
-        "INSERT INTO schema_migrations(version) VALUES(1) ON CONFLICT DO NOTHING",
+        "INSERT INTO schema_migrations(version) VALUES(1),(2) ON CONFLICT DO NOTHING",
       );
     });
   }

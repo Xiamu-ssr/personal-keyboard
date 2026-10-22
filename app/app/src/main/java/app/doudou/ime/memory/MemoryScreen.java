@@ -72,10 +72,10 @@ public final class MemoryScreen extends Screen {
     add(tools);
     String detail =
         tab.equals("word")
-            ? "热词与快捷码，同时帮助打字和语音整理。"
+            ? "热词同时帮助打字和语音识别。"
             : tab.equals("style")
                 ? "这里是你的表达习惯，不混入某个人的偏好。"
-                : tab.equals("history") ? "只保存主动使用的结果，不归档普通逐字输入。" : "能对应到自己上屏文字的修改，确认后再学习。";
+                : tab.equals("history") ? "语音、截图与结果稿，保存在手机。" : "核对文风和人物资料的更新建议。";
     caption(detail);
     results = Ui.col(activity);
     body.addView(results);
@@ -95,9 +95,13 @@ public final class MemoryScreen extends Screen {
 
   private void fill() {
     results.removeAllViews();
+    if (tab.equals("history")) {
+      new app.doudou.ime.history.HistoryView(activity, app, nav).draw(results, query);
+      return;
+    }
     List<MemoryStore.Item> found = new ArrayList<>();
-    List<MemoryStore.Item> candidates = new ArrayList<>(app.store.list(tab, 0));
-    if (tab.equals("feedback")) candidates.addAll(app.store.list("proposal", 0));
+    List<MemoryStore.Item> candidates =
+        new ArrayList<>(app.store.list(tab.equals("feedback") ? "proposal" : tab, 0));
     for (MemoryStore.Item item : candidates)
       if ((item.title + item.body)
           .toLowerCase(Locale.ROOT)
@@ -139,22 +143,16 @@ public final class MemoryScreen extends Screen {
         org.json.JSONObject p = new org.json.JSONObject(item.body);
         new AlertDialog.Builder(activity)
             .setTitle("确认学习建议")
-            .setMessage(p.getString("content") + "\n\n" + p.optString("reason") + "\n仅新增，不覆盖手动修订。")
+            .setMessage(candidateText(p))
             .setPositiveButton(
                 "采纳",
                 (d, w) -> {
-                  try {
-                    app.store.acceptProposal(item);
-                    nav.refresh();
-                  } catch (Exception e) {
-                    Ui.toast(activity, e.getMessage());
-                  }
+                  confirm(item.globalId, true);
                 })
             .setNeutralButton(
                 "忽略",
                 (d, w) -> {
-                  app.store.delete(item.id);
-                  nav.refresh();
+                  confirm(item.globalId, false);
                 })
             .setNegativeButton("返回", null)
             .show();
@@ -196,9 +194,37 @@ public final class MemoryScreen extends Screen {
         .add("删除")
         .setOnMenuItemClickListener(
             i -> {
-              editor.remove(item);
+              if (item.kind.equals("proposal")) confirm(item.globalId, false);
+              else editor.remove(item);
               return true;
             });
     menu.show();
+  }
+
+  private void confirm(String id, boolean accept) {
+    app.network.execute(
+        () -> {
+          try {
+            app.personalization.candidate(id, accept);
+            activity.runOnUiThread(nav::refresh);
+          } catch (Exception e) {
+            activity.runOnUiThread(() -> Ui.toast(activity, e.getMessage()));
+          }
+        });
+  }
+
+  private String candidateText(org.json.JSONObject candidate) throws org.json.JSONException {
+    org.json.JSONObject op = candidate.getJSONObject("operation"),
+        value = op.optJSONObject("value");
+    if (op.optString("action").equals("delete"))
+      return "建议移除这项资料。\n\n" + candidate.optString("reason");
+    String text =
+        value.optString(
+            "text",
+            value.optString("name", value.optString("scene", value.optString("key", "关系"))));
+    if (value.has("value")) text += "：" + value.getString("value");
+    if (value.has("rules")) text += "\n" + value.getJSONArray("rules").join("、");
+    if (value.has("type")) text += "：" + value.getString("type");
+    return text + "\n\n" + candidate.optString("reason");
   }
 }

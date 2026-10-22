@@ -4,14 +4,13 @@ import android.content.Context;
 import android.os.*;
 import app.doudou.ime.app.KeyboardApp;
 import app.doudou.ime.cloud.CloudTask;
-import app.doudou.ime.memory.MemoryStore;
 import java.util.*;
 import org.json.*;
 
-/** Product model jobs; prompt assembly and supplier routing belong to Cloud. */
+/** Phone requests contain current evidence and references; Cloud assembles personal memory. */
 public final class TextModelClient {
   public interface Result {
-    void done(List<String> replies, String error);
+    void done(JSONObject result, String error);
   }
 
   public interface TextResult {
@@ -36,26 +35,11 @@ public final class TextModelClient {
     task = null;
   }
 
-  private JSONObject memory() throws Exception {
-    JSONObject input = new JSONObject();
-    JSONArray words = new JSONArray(), styles = new JSONArray();
-    for (MemoryStore.Item i : app.store.list("word", 0)) {
-      if (words.length() == 50) break;
-      words.put(i.title);
-    }
-    for (MemoryStore.Item i : app.store.list("style", 0)) {
-      if (styles.length() == 12) break;
-      styles.put(i.body.substring(0, Math.min(600, i.body.length())));
-    }
-    return input.put("words", words).put("styles", styles);
-  }
-
   public void reply(
-      String pkg,
-      long person,
-      String context,
+      String person,
+      String conversation,
       String intent,
-      String refine,
+      String style,
       List<String> images,
       Result result) {
     final int token = ++epoch;
@@ -65,24 +49,17 @@ public final class TextModelClient {
         () -> {
           try {
             JSONObject input =
-                memory().put("context", context).put("intent", intent).put("style", refine);
-            MemoryStore.Item subject = app.store.get(person);
-            input.put("subject", subject == null ? "" : subject.title);
-            JSONArray memories = new JSONArray();
-            for (MemoryStore.Item i : app.store.list("memory", person)) {
-              if (memories.length() == 30) break;
-              memories.put(i.body.substring(0, Math.min(600, i.body.length())));
-            }
-            input.put("contactMemories", memories);
-            if (images != null && !images.isEmpty()) input.put("images", new JSONArray(images));
+                new JSONObject()
+                    .put("personId", person)
+                    .put("conversationRef", conversation)
+                    .put("recentContext", app.histories.recent(conversation, 12000))
+                    .put("intent", intent)
+                    .put("style", style)
+                    .put("images", new JSONArray(images));
             JSONObject output = current.run("advisor", input, null);
-            JSONArray replies = output.getJSONArray("replies");
-            List<String> values = new ArrayList<>();
-            for (int i = 0; i < replies.length(); i++)
-              values.add(replies.getJSONObject(i).getString("text"));
             main.post(
                 () -> {
-                  if (token == epoch) result.done(values, null);
+                  if (token == epoch) result.done(output, null);
                 });
           } catch (Exception e) {
             main.post(
@@ -93,15 +70,19 @@ public final class TextModelClient {
         });
   }
 
-  public void polish(String text, String source, TextResult result) {
+  public void polish(String text, String source, String conversation, TextResult result) {
     final int token = ++epoch;
     CloudTask current = new CloudTask(app.cloud);
     task = current;
     app.network.execute(
         () -> {
           try {
-            String value =
-                current.run("rewrite", memory().put("transcript", text), source).getString("text");
+            JSONObject input =
+                new JSONObject()
+                    .put("transcript", text)
+                    .put("conversationRef", conversation)
+                    .put("recentContext", app.histories.recent(conversation, 12000));
+            String value = current.run("rewrite", input, source).getString("text");
             main.post(
                 () -> {
                   if (token == epoch) result.done(value, null);

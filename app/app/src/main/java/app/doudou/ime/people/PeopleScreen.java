@@ -54,7 +54,7 @@ public final class PeopleScreen extends Screen {
       }
       add(list);
     }
-    caption("人物资料按应用和身份隔离，读到的文字不自动变成事实。");
+    caption("人物使用独立身份记录；新发现和资料冲突先核对。");
   }
 
   private void detail() {
@@ -93,18 +93,12 @@ public final class PeopleScreen extends Screen {
             () ->
                 new AlertDialog.Builder(activity)
                     .setTitle("删除这个人物？")
-                    .setMessage("人物与所属记忆一起移出，可立即撤销。")
+                    .setMessage("人物与所属记忆将从云端删除。")
                     .setPositiveButton(
                         "删除",
                         (d, w) -> {
-                          app.store.delete(item.id);
+                          editor.remove(item);
                           nav.open("people", 0);
-                          nav.notice(
-                              "已删除",
-                              () -> {
-                                app.store.restore(item.id);
-                                nav.refresh();
-                              });
                         })
                     .setNegativeButton("取消", null)
                     .show());
@@ -113,6 +107,7 @@ public final class PeopleScreen extends Screen {
   }
 
   private String type(String key) {
+    if (key.startsWith("relation:")) return "关系";
     return key.equals("event")
         ? "事件"
         : key.equals("preference") ? "偏好" : key.equals("inference") ? "推断" : "事实";

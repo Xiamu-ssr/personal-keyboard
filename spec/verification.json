@@ -1,7 +1,7 @@
 {
-  "reviewedAt": "2026-10-21T11:58:57.274146+00:00",
-  "version": "0.4.0-alpha.1",
-  "status": "App and PostgreSQL Cloud implemented and deployed; external services and payments pending.",
+  "reviewedAt": "2026-10-22T11:17:03.517Z",
+  "version": "0.5.0-alpha.1",
+  "status": "App and Light Cloud implemented; real supplier, SMS and payment acceptance pending",
   "checks": [
     {
       "name": "JVM and JNI state",
@@ -10,13 +10,13 @@
       "failures": 0
     },
     {
-      "name": "Android build, signing and lint",
+      "name": "Android build, lint and signing",
       "status": "passed",
       "artifact": {
         "package": "app.doudou.ime",
-        "version": "0.4.0-alpha.1",
-        "sha256": "2fdd58cf38c097ddac7be412edad0f148fc7640b01c6c7654b5943179c3c631b",
-        "bytes": 39523452,
+        "version": "0.5.0-alpha.1",
+        "sha256": "bdad17db2615e044527280a690bee7fdf9d1e1093009f02ea486b91ec65961d9",
+        "bytes": 9856504,
         "buildType": "debug",
         "production": false,
         "modelsBundled": false
@@ -27,43 +27,35 @@
     {
       "name": "Android 15 API 35 instrumentation",
       "status": "passed",
-      "tests": 18,
+      "tests": 16,
       "failures": 0,
       "realDevice": false,
       "realModel": false,
       "normalPublicIpTlsVerified": true
     },
     {
-      "name": "Cloud with isolated PostgreSQL and test providers",
+      "name": "Cloud and domain graph",
       "status": "passed",
-      "tests": 5,
-      "failures": 0,
-      "realDatabase": true,
-      "realSuppliers": false
-    },
-    {
-      "name": "Domain graph and local host",
-      "status": "passed",
-      "tests": 5,
-      "graphs": 2,
+      "nodeTests": 17,
+      "postgresqlIntegration": true,
+      "realSuppliers": false,
+      "graphs": 3,
       "domains": 5,
-      "domainPairsPerGraph": 4,
-      "maxDirectedLinesPerPair": 2,
-      "mobileWidth": 390
+      "maxDirectedLinesPerPair": 2
     },
     {
-      "name": "Owned local resources cleanup",
+      "name": "Owned local resource cleanup",
       "status": "passed",
       "emulatorStopped": true,
       "emulatorPortsCleared": [
-        5580,
-        5581
+        5554,
+        5555
       ],
       "disposableDatabaseRemoved": true,
       "realPhoneTouched": false
     },
     {
-      "name": "ECS production deployment",
+      "name": "Light Cloud deployment",
       "status": "passed",
       "containers": [
         "api",
@@ -72,7 +64,8 @@
       "tls": true,
       "supplierCredentialsConfigured": false,
       "smsConfigured": false,
-      "purchasesEnabled": false
+      "purchasesEnabled": false,
+      "liveTokenizerVerified": false
     },
     {
       "name": "Native media",
@@ -80,19 +73,19 @@
       "screenshots": 9,
       "recordings": {
         "keyboard-tour.mp4": {
-          "sha256": "a3f83a69a66e03d6dab0004bbf8f84d772ca8da910048e648eb4fe4d4a8fbc0b",
-          "bytes": 176280,
-          "durationSeconds": 7.53,
+          "sha256": "f8bcd7513689a1e80f2e50914170e32d8e7d627a4ffab47ff0f0a11cc2b8d048",
+          "bytes": 128583,
+          "durationSeconds": 10.282471,
           "width": 720,
-          "height": 1560,
+          "height": 1600,
           "codec": "h264"
         },
         "advisor-tour.mp4": {
-          "sha256": "bcf01f5f12ea004bf8922384ea0fcaf975cec0b6aa776add8bc09d521aa94101",
-          "bytes": 96258,
-          "durationSeconds": 2.388,
+          "sha256": "23513eccecbfd857da93d354e6585cbb7146ceb18075cb8d33bcfab1329e637c",
+          "bytes": 57039,
+          "durationSeconds": 2.922597,
           "width": 720,
-          "height": 1560,
+          "height": 1600,
           "codec": "h264"
         }
       },
@@ -100,9 +93,9 @@
       "publicAndroidHost": false
     },
     {
-      "name": "Phone, actual suppliers and payments",
+      "name": "Phone, suppliers and payments",
       "status": "pending",
-      "reason": "Enterprise SMS qualification, supplier configuration, merchant setup and physical phone acceptance remain."
+      "reason": "Phone SMS qualification and credentials, live ASR/text/vision/token counter acceptance and merchant configuration remain"
     }
   ]
 }

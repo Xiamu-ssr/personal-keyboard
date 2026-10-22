@@ -21,7 +21,7 @@ public final class ManagedSync {
   private byte[] key(String user) throws Exception {
     String name = "sync:" + user, value = app.cloud.secrets().get(name);
     if (value.isEmpty()) {
-      value = app.cloud.request("/v1/sync/key", "POST", new JSONObject()).getString("key");
+      value = app.cloud.request(user, "/v1/sync/key", "POST", new JSONObject()).getString("key");
       app.cloud.secrets().set(name, value);
     }
     return Base64.decode(value, Base64.NO_WRAP);
@@ -53,15 +53,29 @@ public final class ManagedSync {
     String user = app.cloud.userId();
     byte[] key = key(user);
     for (int attempt = 0; attempt < 3; attempt++) {
-      JSONObject remote = app.cloud.request("/v1/sync", "GET", null);
+      JSONObject remote = app.cloud.request(user, "/v1/sync", "GET", null);
       if (!remote.isNull("blob")) {
         byte[] clear = decrypt(key, Base64.decode(remote.getString("blob"), Base64.NO_WRAP), user);
-        app.store.mergeSync(new JSONObject(new String(clear, "UTF-8")));
+        JSONObject document = new JSONObject(new String(clear, "UTF-8"));
+        if (document.optInt("schema") == 2) {
+          app.histories.migrateLegacy(document, user);
+          app.store.setMeta("profile.migration", document.toString());
+          app.store.setMeta("profile.migration.owner", user);
+          app.personalization.sync();
+        } else app.histories.restore(document, user);
       }
       if (!app.cloud.userId().equals(user)) throw new IllegalStateException("账号已切换，同步停止");
-      byte[] encrypted = encrypt(key, app.store.syncSnapshot().toString().getBytes("UTF-8"), user);
+      long quota =
+          app.cloud.cachedAccount().optJSONObject("entitlements") == null
+              ? 0
+              : app.cloud.cachedAccount().getJSONObject("entitlements").optLong("syncMaxBytes");
+      if (quota <= 1024) throw new IllegalStateException("账户尚未开通历史备份空间");
+      byte[] encrypted =
+          encrypt(key, app.histories.backup(quota - 1024, user).toString().getBytes("UTF-8"), user);
+      if (encrypted.length > quota) throw new IllegalStateException("云备份空间不足，原资料保留在手机");
       try {
         app.cloud.request(
+            user,
             "/v1/sync",
             "PUT",
             new JSONObject()
