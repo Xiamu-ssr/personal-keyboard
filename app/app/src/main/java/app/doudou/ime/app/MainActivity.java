@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.*;
 import android.widget.*;
+import app.doudou.ime.BuildConfig;
 import app.doudou.ime.design.Ui;
 import app.doudou.ime.home.HomeScreen;
 import app.doudou.ime.memory.MemoryScreen;
@@ -106,7 +107,7 @@ public final class MainActivity extends Activity implements Navigator {
     heading.addView(label, new LinearLayout.LayoutParams(0, Ui.dp(this, 54), 1));
     label.setGravity(Gravity.CENTER_VERTICAL);
     if (page.equals("home")) {
-      TextView mark = Ui.text(this, "0.4", 11, Ui.ACCENT);
+      TextView mark = Ui.text(this, BuildConfig.VERSION_NAME.split("-", 2)[0], 11, Ui.ACCENT);
       Ui.pad(this, mark, 10, 6);
       mark.setBackground(Ui.bg(this, Ui.SELECTED, 20));
       heading.addView(mark);
