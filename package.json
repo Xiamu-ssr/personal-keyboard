@@ -25,7 +25,6 @@
     "@yume-chan/adb-scrcpy": "2.3.2",
     "@yume-chan/adb-server-node-tcp": "2.5.2",
     "@yume-chan/scrcpy-decoder-webcodecs": "2.5.3",
-    "marked": "18.1.1",
     "ws": "8.22.0",
     "yaml": "2.9.1"
   },

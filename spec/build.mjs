@@ -2,56 +2,11 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import YAML from "yaml";
-import { marked, Renderer } from "marked";
 import { validateWorld } from "./world.mjs";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
-const promptRoot = path.resolve(dir, "../cloud/prompts") + path.sep;
 const spec = YAML.parse(await fs.readFile(path.join(dir, "spec.yaml"), "utf8"));
 const counts = validateWorld(spec);
-const ids = new Set();
-const documents = {};
-for (const doc of spec.documents) {
-  if (ids.has(doc.id)) throw Error("Duplicate document");
-  ids.add(doc.id);
-  const resolved = await fs.realpath(path.resolve(dir, doc.file));
-  if (
-    (!resolved.startsWith(dir + path.sep) &&
-      !resolved.startsWith(promptRoot)) ||
-    !doc.file.endsWith(".md")
-  )
-    throw Error("Document escaped spec directory");
-  const source = await fs.readFile(resolved, "utf8");
-  const renderer = new Renderer();
-  // The inspector already supplies the document title.
-  renderer.heading = function ({ tokens, depth }) {
-    return depth === 1
-      ? ""
-      : `<h${depth}>${this.parser.parseInline(tokens)}</h${depth}>`;
-  };
-  renderer.html = ({ text }) =>
-    text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  renderer.link = function ({ href, title, tokens }) {
-    const internal = spec.documents.find((d) => d.file === href);
-    const target = internal ? "#doc/" + internal.id : href;
-    const escape = (value) =>
-      String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/"/g, "&quot;")
-        .replace(/</g, "&lt;");
-    if (!internal && !/^https?:\/\//.test(target))
-      return this.parser.parseInline(tokens);
-    return `<a href="${escape(target)}"${title ? ` title="${escape(title)}"` : ""}>${this.parser.parseInline(tokens)}</a>`;
-  };
-  const html = marked.parse(source, { renderer });
-  documents[doc.id] = { title: doc.title, html };
-}
-let verification = { status: "pending", checks: [] };
-try {
-  verification = JSON.parse(
-    await fs.readFile(path.join(dir, "verification.json"), "utf8"),
-  );
-} catch {}
 const [template, css, script, world, panels, catalog] = await Promise.all([
   ...["template.html", "style.css", "runtime.js", "world.mjs", "panels.js"].map(
     (f) => fs.readFile(path.join(dir, f), "utf8"),
@@ -61,8 +16,6 @@ const [template, css, script, world, panels, catalog] = await Promise.all([
 const json = JSON.stringify({
   ...spec,
   catalog: JSON.parse(catalog),
-  sources: documents,
-  verification,
 })
   .replace(/</g, "\\u003c")
   .replace(/\u2028/g, "\\u2028")
@@ -94,6 +47,6 @@ console.log(
     " business views, " +
     counts.lanes +
     " domain lanes, " +
-    ids.size +
-    " documents.",
+    counts.prompts +
+    " YAML prompts.",
 );

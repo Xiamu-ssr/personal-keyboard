@@ -30,15 +30,13 @@ export function validateWorld(spec) {
     if (!v) throw Error(m);
   };
   need(
-    spec.schemaVersion === 5 && spec.meta?.title,
+    spec.schemaVersion === 6 && spec.meta?.title,
     "Unsupported domain schema",
   );
-  const docs = new Set(spec.documents.map((d) => d.id));
-  need(docs.size === spec.documents.length, "Duplicate document");
-  const refs = (x) => {
-    for (const id of x.documents || [])
-      need(docs.has(id), "Unknown document " + id);
-  };
+  need(
+    !spec.documents && !spec.sources,
+    "Spec is a YAML graph, not a document registry",
+  );
   const domains = new Map(),
     colors = new Set();
   for (const d of spec.domains) {
@@ -52,7 +50,7 @@ export function validateWorld(spec) {
     );
     domains.set(d.id, d);
     colors.add(d.color);
-    refs(d);
+    need(!d.documents, "Domain details belong in YAML");
     const ids = new Set();
     for (const n of d.nodes || []) {
       need(
@@ -61,7 +59,7 @@ export function validateWorld(spec) {
       );
       need(!n.ports, "Entity nodes do not have workflow ports");
       ids.add(n.id);
-      refs(n);
+      need(!n.documents, "Entity details belong in YAML");
     }
   }
   const w = spec.world,
@@ -105,10 +103,15 @@ export function validateWorld(spec) {
   }
   const nodes = nodeIndex(spec),
     prompts = new Set(spec.prompts.map((p) => p.id));
+  need(prompts.size === spec.prompts.length, "Unique prompts required");
   for (const p of spec.prompts)
     need(
       p.owner === "cloud" &&
-        docs.has(p.document) &&
+        p.target === "provider.language" &&
+        ["text", "multimodal"].includes(p.mode) &&
+        p.system?.trim() &&
+        !p.source &&
+        !p.document &&
         p.contract?.input &&
         p.contract?.output,
       "Cloud owns prompt contracts",
@@ -160,9 +163,9 @@ export function validateWorld(spec) {
   }
   need(!w.edges, "No internal workflow wiring");
   need(
-    spec.businesses.length === 2 &&
-      spec.businesses.map((v) => v.id).join(",") === "voice,advisor",
-    "Two business views required",
+    spec.businesses.length === 3 &&
+      spec.businesses.map((v) => v.id).join(",") === "voice,advisor,learning",
+    "Voice, advisor and memory business views required",
   );
   for (const view of spec.businesses) {
     const seen = new Set();
@@ -183,8 +186,18 @@ export function validateWorld(spec) {
       );
       for (const id of Object.keys(e.status || {}))
         need(nodes.has(id), "Unknown state owner");
-      if (e.proposal)
-        need(docs.has(e.proposal), "Proposals need a reviewable explanation");
+      need(!e.proposal, "Business packets are data, not document links");
+      if (e.prompt)
+        need(
+          prompts.has(e.prompt) &&
+            e.channel === "cloud-provider" && e.direction === "ab",
+          "Prompts travel from Cloud to the model",
+        );
+      if (e.fields)
+        need(
+          Object.values(e.fields).every((v) => typeof v === "string" && v.length),
+          "Packet fields must be readable data contracts",
+        );
       for (const id of [...(e.startStreams || []), ...(e.stopStreams || [])]) {
         const [channel, dir] = id.split(":");
         need(
@@ -195,9 +208,9 @@ export function validateWorld(spec) {
       seen.add(e.id);
     }
     need(
-      view.events[0]?.channel === "phone-app" &&
+      view.events[0]?.channel === (view.id === "learning" ? "app-cloud" : "phone-app") &&
         view.events[0].direction === "ab",
-      "Examples begin with a user action",
+      "Examples begin at their data owner",
     );
   }
   return {

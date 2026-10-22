@@ -4,10 +4,12 @@ Android 输入法：离线拼音、个性语音、原地军师，以及热词、
 
 当前 **0.4.0-alpha.1 · 开发预览版**。App / PostgreSQL Cloud / 后台已有实现；企业短信和服务端模型凭据尚待配置，付费购买未开放。不会用演示回复冒充在线能力。
 
-- [产品 SPEC](https://xiamu-ssr.github.io/personal-keyboard/) · [ECS镜像](https://106.14.73.99/keyboard-spec/)：基础域卡片和语音 / 军师两张域图。
+- [产品 SPEC](https://xiamu-ssr.github.io/personal-keyboard/) · [ECS镜像](https://106.14.73.99/keyboard-spec/)：基础域卡片和语音 / 军师 / 记忆更新三张域图。
 - [下载 APK](https://xiamu-ssr.github.io/personal-keyboard/demo/doudou-keyboard.apk)：Android11+，arm64 / x86_64，debug签名；无供应商密钥。
 - [Cloud后台](https://106.14.73.99/keyboard-api/admin/)：独立认证，用户 / 权益 / 套餐 / 任务 / 审计。
-- [当前实现](spec/implementation.md) · [验收记录](spec/acceptance.md)。
+- [规格源](spec/spec.yaml) · [原生验证摘要](spec/verification.json)。
+
+当前运行实现仍是本地记忆及 OCR / 可选图文军师；Spec 的 Cloud 主本与直接多模态是下一次迁移目标。
 
 ## 三个目录
 
@@ -38,10 +40,10 @@ APK输出 `spec/demo/doudou-keyboard.apk`，摘要见 `artifact.json`。安装�
 
 ## SPEC 与部署
 
-`npm run spec:serve` 后打开 `http://127.0.0.1:8560`。大域内有子能力，域之间一来一回，数据卡片按时间自动上翻，可滚动查看旧记录。卡片是明确标识的模拟数据，提示词来自Cloud同一份源文件。
+`npm run spec:serve` 后打开 `http://127.0.0.1:8560`。大域内有子能力，域之间一来一回，数据卡片按时间自动上翻，可滚动查看旧记录。卡片是明确标识的模拟数据。域、实体、传输约定与提示词均来自 `spec/spec.yaml`；简短详情在点击节点后展开，没有 Markdown 文档层。
 
 公开页面只提供真实APK截图、录屏和下载，不启动或连接个人Mac / ADB；旧在线Android桥接代码已移除。GitHub Pages与ECS发布同一份验收APK并校验摘要。
 
 ECS 静态路由见 [Nginx 配置](spec/deploy/nginx-location.inc)，媒体使用明确白名单；旧在线演示路径固定返回 410。
 
-Cloud通过独立API / PostgreSQL容器部署，宿主仅监听loopback8088，再经HTTPS反代。[运行说明](cloud/README.md) · [商业状态](spec/commercial.md) · [模型与成本](spec/models-and-cost.md) · [历史与同步](spec/memory-and-sync.md)。
+Cloud通过独立API / PostgreSQL容器部署，宿主仅监听loopback8088，再经HTTPS反代。[运行说明](cloud/README.md)。

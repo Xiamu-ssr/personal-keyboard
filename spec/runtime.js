@@ -36,8 +36,6 @@
     `<section class="detail-section"><h3>${esc(name)}</h3>${body}</section>`;
   const list = (items) =>
     `<ul>${items.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`;
-  const docs = (ids) =>
-    `<div class="related">${(ids || []).map((id) => `<button data-doc="${id}">${id.endsWith("-prompt") ? "0.4 源码 · " : ""}${esc(data.sources[id].title)} ↗</button>`).join("")}</div>`;
   const welcome = data.catalog.plans.find(
     (p) => p.id === data.catalog.activeWelcomePlan,
   );
@@ -48,7 +46,7 @@
           `<button class="domain-card" data-domain="${d.id}" style="--domain:${d.color}"><span class="card-heading">${icon(d)}<strong>${esc(d.name)}</strong><span>${String(i + 1).padStart(2, "0")}</span></span><p class="card-summary">${esc(d.summary)}</p><ul>${d.responsibilities.map((s) => `<li>${esc(s)}</li>`).join("")}</ul><span class="card-more">数据与约定 ↗</span></button>`,
       )
       .join("") +
-    `<button class="domain-card offer-card" data-doc="commercial" style="--domain:#5b807c"><span class="card-heading"><strong>新账号赠送</strong><span>一次性</span></span><div class="offer-number"><strong>${welcome.limits.asr_characters.toLocaleString("en-US")}</strong><span>转写字符</span></div><div class="offer-number"><strong>${welcome.limits.advisor_generations}</strong><span>次军师生成</span></div><p>免费资料留本机 · 价格与权益由后台配置</p><span class="card-more">账户权益 ↗</span></button>`;
+    `<button class="domain-card offer-card" data-open-node="cloud.accounts" style="--domain:#5b807c"><span class="card-heading"><strong>新账号赠送</strong><span>一次性</span></span><div class="offer-number"><strong>${welcome.limits.asr_characters.toLocaleString("en-US")}</strong><span>转写字符</span></div><div class="offer-number"><strong>${welcome.limits.advisor_generations}</strong><span>次军师生成</span></div><p>历史在手机 · 个人记忆在 Cloud</p><span class="card-more">账户权益 ↗</span></button>`;
   el("workflow-tabs").innerHTML = data.businesses
     .map(
       (f) =>
@@ -134,7 +132,7 @@
       .map((p) => {
         const from = domains.get(p.from),
           to = domains.get(p.to);
-        return `<button class="packet-card" data-packet="${c.id}:${p.sequence}" tabindex="${p.offset === 0 ? 0 : -1}" aria-hidden="${p.offset !== 0}" style="--offset:${p.offset};--distance:${Math.abs(p.offset)};--packet-color:${from.color}"><span>${esc(from.shortName)} → ${esc(to.shortName)}<i>${p.proposal ? "待选 · " : ""}${p.sequence}</i></span><strong>${esc(p.title)}</strong><p>${esc(p.body)}</p></button>`;
+        return `<button class="packet-card" data-packet="${c.id}:${p.sequence}" tabindex="${p.offset === 0 ? 0 : -1}" aria-hidden="${p.offset !== 0}" style="--offset:${p.offset};--distance:${Math.abs(p.offset)};--packet-color:${from.color}"><span>${esc(from.shortName)} → ${esc(to.shortName)}<i>${p.sequence}</i></span><strong>${esc(p.title)}</strong><p>${esc(p.body)}</p></button>`;
       })
       .join("");
   }
@@ -305,7 +303,6 @@
     el("world-event").title = world.current?.body || flowData().summary;
     el("event-count").textContent =
       `${world.cursor} / ${flowData().events.length}`;
-    el("proposal-status").hidden = !world.current?.proposal;
     el("pause-streams").textContent = state.running
       ? "Ⅱ 暂停"
       : world.done
@@ -402,8 +399,7 @@
         section(
           "代码域",
           `<div class="code-list">${d.code.map((c) => `<code>${esc(c)}</code>`).join("")}</div>`,
-        ) +
-        docs(d.documents),
+        ) + section("规格状态", `<p>${esc(data.meta.status)}</p>`),
       "基础域",
     );
   }
@@ -414,7 +410,7 @@
       n.title,
       n.summary,
       section("职责与数据", list(n.details)) +
-        (world.status[id]
+        (world?.status[id]
           ? section("本次示例", `<p>${esc(world.status[id])}</p>`)
           : "") +
         (n.prompts?.length
@@ -427,8 +423,7 @@
                 )
                 .join(" "),
             )
-          : "") +
-        docs(n.documents),
+          : ""),
       domains.get(n.domain).name + " / " + (n.eyebrow || "子节点"),
     );
   }
@@ -445,11 +440,10 @@
         "域之间的数据",
         `<p>${esc(domains.get(p.from).name)} → ${esc(domains.get(p.to).name)}</p>`,
       ) +
-        (p.proposal
+        (p.fields
           ? section(
-              "推荐方案 · 尚未确认",
-              `<p>这是方案演示，不代表已经确定或完成实现。</p>` +
-                docs([p.proposal]),
+              "携带的数据",
+              `<dl class="packet-fields">${Object.entries(p.fields).map(([key, value]) => `<div><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join("")}</dl>`,
             )
           : "") +
         (p.prompt
@@ -461,44 +455,25 @@
       "数据卡片 / #" + p.sequence,
     );
   }
-  function openDoc(id) {
-    const d = data.sources[id];
-    if (!d) return;
-    openPanel(
-      d.title,
-      "",
-      `<article class="document-body">${d.html}</article>`,
-      "约定与实现",
-    );
-    el("inspector-content").scrollTop = 0;
-  }
   function openPrompt(id) {
     const p = prompts.get(id);
     if (!p) return;
     openPanel(
       p.name,
-      "提示词由 Cloud 持有；具体方案状态见输入约定。",
-      section("输入 → Cloud 组装 → 供应商", `<p>${esc(p.contract.input)}</p>`) +
-        section("约束", list(p.contract.rules)) +
-        section("模型必须返回", `<p>${esc(p.contract.output)}</p>`) +
-        section(
-          "实现对照",
-          `<p class="muted">以上区分推荐和既定约定；已发布 0.4 源码另列：</p><code>${esc(p.source)}</code>` +
-            docs([p.document, "implementation"]),
-        ),
-      "Cloud → 模型",
+      `Cloud → ${p.mode === "multimodal" ? "多模态模型" : "文本模型"}`,
+      section("提示词正文", `<p class="prompt-text">${esc(p.system)}</p>`) +
+        section("输入", `<p>${esc(p.contract.input)}</p>`) +
+        section("输出", `<p>${esc(p.contract.output)}</p>`) +
+        section("约束", list(p.contract.rules)),
+      "Cloud / 提示词",
     );
   }
   function route() {
     const parts = location.hash.slice(1).split("/");
-    if (parts[0] === "doc") {
-      openDoc(parts[1]);
-      return;
-    }
     const sectionId = parts[0] === "business" ? "business" : "domains";
     const changed = state.flow !== (parts[1] || "voice");
     state.section = sectionId;
-    if (["voice", "advisor"].includes(parts[1])) state.flow = parts[1];
+    if (data.businesses.some((v) => v.id === parts[1])) state.flow = parts[1];
     el("domains-section").hidden = state.section !== "domains";
     el("business-section").hidden = state.section !== "business";
     el("workflow-tabs").hidden = state.section !== "business";
@@ -531,7 +506,6 @@
       closePanel();
     } else if (b.dataset.domain) openDomain(b.dataset.domain);
     else if (b.dataset.openNode) openNode(b.dataset.openNode);
-    else if (b.dataset.doc) openDoc(b.dataset.doc);
     else if (b.dataset.prompt) openPrompt(b.dataset.prompt);
     else if (b.dataset.packet) openPacket(b.dataset.packet);
     else if (b.dataset.history) {

@@ -13,10 +13,10 @@ const source = YAML.parse(
   await fs.readFile(new URL("../spec/spec.yaml", import.meta.url), "utf8"),
 );
 
-test("both business views share entities, never duplicate processing steps as nodes", () => {
+test("three business views share entities, never duplicate processing steps as nodes", () => {
   assert.deepEqual(validateWorld(source), {
     domains: 5,
-    businesses: 2,
+    businesses: 3,
     nodes: 11,
     channels: 3,
     lanes: 6,
@@ -64,7 +64,9 @@ test("malformed topology, supplier bypass, workflow ports and future data are re
     (s) => (s.domains[1].color = s.domains[0].color),
     (s) => (s.businesses[0].events[0].after = ["future"]),
     (s) => (s.businesses[0].events[0].status = { "app.imaginary": "x" }),
-    (s) => (s.businesses[0].events[0].proposal = "missing-decision"),
+    (s) => (s.businesses[0].events[0].prompt = "learn"),
+    (s) => (s.prompts[0].target = "app.history"),
+    (s) => (s.documents = [{ id: "unstructured-notes" }]),
     (s) => (s.world.channels[0].stack[2] = 600),
     (s) => s.world.groups[1].nodes.pop(),
   ]) {
@@ -73,29 +75,23 @@ test("malformed topology, supplier bypass, workflow ports and future data are re
     assert.throws(() => validateWorld(s));
   }
 });
-test("example clock preserves chronological packets and visibly distinguishes proposals", () => {
+test("example clock preserves chronological packets and Cloud-owned prompt delivery", () => {
   for (const v of source.businesses) {
     const w = new ProductWorld(source.world, v);
     assert([...w.channels.values()].every((h) => h.items.length === 0));
-    let proposals = 0;
     while (!w.done) {
       const e = w.step();
       assert(e.after.every((id) => w.seen.has(id)));
-      if (e.proposal) {
-        assert.equal(e.proposal, "design-options");
-        proposals++;
-      }
       if (e.prompt) {
         assert.equal(e.channel, "cloud-provider");
         assert.equal(e.direction, "ab");
       }
     }
-    assert(proposals > 0);
     assert.equal(w.activeStreams.size, 0);
     assert.equal(w.journal.length, v.events.length);
     assert.equal(w.step(), null);
     assert.equal(w.journal.length, v.events.length);
-    for (const h of w.channels.values())
+    for (const h of w.channels.values()) if (h.items.length)
       assert(
         h.items.some((p) => p.direction === "ab") &&
           h.items.some((p) => p.direction === "ba"),
@@ -120,7 +116,7 @@ test("packet history is bounded and arrivals do not displace a card being read",
   assert.equal(h.items.length, 20);
   assert(h.visible().every((p) => Math.abs(p.offset) <= 2));
 });
-test("compiled public Spec retains sources, pending decisions and released-runtime boundary", async () => {
+test("compiled Spec uses YAML details and prompts without a Markdown document layer", async () => {
   const html = await fs.readFile(
     new URL("../spec/index.html", import.meta.url),
     "utf8",
@@ -140,15 +136,36 @@ test("compiled public Spec retains sources, pending decisions and released-runti
       ),
     ),
   );
-  for (const p of source.prompts)
-    assert(compiled.sources[p.document].html.length);
-  assert(
-    compiled.sources["design-options"].html.includes('href="#doc/research"'),
-  );
-  assert(compiled.sources["design-options"].html.includes("仍未定"));
-  assert(compiled.sources.implementation.html.includes("没有重新发布 APK"));
+  assert.equal(compiled.sources, undefined);
+  assert.equal(compiled.documents, undefined);
+  for (const p of source.prompts) {
+    assert.equal(compiled.prompts.find((c) => c.id === p.id).system, p.system);
+    assert.equal(p.document, undefined);
+  }
+  assert(compiled.meta.status.includes("尚未迁移"));
+  assert(!html.includes("data-doc="));
+  assert(!html.includes("#doc/"));
+  const markdownFiles = (await fs.readdir(new URL("../spec/", import.meta.url), { recursive: true }))
+    .filter((name) => name.endsWith(".md"));
+  assert.deepEqual(markdownFiles, []);
   assert(!html.includes('id="phase-tabs"'));
   assert(!html.includes('class="node-branch"'));
   assert(!html.includes('id="library-dialog"'));
   assert(!/<script[^>]+src=/.test(html));
+});
+test("advisor payload uses Cloud memory and learning scopes updates to retrieved evidence", () => {
+  const advisor = source.businesses.find((v) => v.id === "advisor");
+  const upload = advisor.events.find((e) => e.channel === "app-cloud" && e.direction === "ab");
+  assert.deepEqual(Object.keys(upload.fields), ["截图", "会话标识", "近期上下文", "意图"]);
+  const request = advisor.events.find((e) => e.prompt === "reply");
+  assert(request.fields.来自Cloud.includes("人物资料"));
+  assert(request.fields.来自Cloud.includes("文风"));
+  const learning = source.businesses.find((v) => v.id === "learning");
+  assert.equal(learning.events[0].channel, "app-cloud");
+  const learn = source.prompts.find((p) => p.id === "learn");
+  assert.equal(learn.mode, "text");
+  assert(learn.system.includes("不得删除未提供的资料"));
+  assert(learn.system.includes("预期版本"));
+  const specText = JSON.stringify(source);
+  assert(!/近期表达|识别上下文|五小时任务/.test(specText));
 });

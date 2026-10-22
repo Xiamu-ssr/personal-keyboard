@@ -639,14 +639,6 @@ p {
   color: #7b8da0;
   z-index: 6;
 }
-#proposal-status {
-  border: 0;
-  padding: 3px 6px;
-  color: #8b6b34;
-  font-size: 11px;
-  background: #fff7e8;
-  white-space: nowrap;
-}
 #world-event {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -748,62 +740,11 @@ p {
   display: grid;
   gap: 8px;
 }
-.related {
-  display: flex;
-  gap: 7px;
-  flex-wrap: wrap;
-}
-.related button {
-  font-size: 13px;
-  text-align: left;
-  padding: 8px 11px;
-  background: #fff;
-}
-.document-body {
-  font-size: 14px;
-  line-height: 1.9;
-  overflow-wrap: anywhere;
-}
-.document-body h1 {
-  font-size: 21px;
-  margin-bottom: 18px;
-}
-.document-body h2 {
-  font-size: 18px;
-  margin: 25px 0 12px;
-}
-.document-body h3 {
-  font-size: 15px;
-  margin: 18px 0 9px;
-}
-.document-body p {
-  margin: 13px 0;
-}
-.document-body pre {
-  background: #eef2f6;
-  padding: 14px;
-  border-radius: 10px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 12px;
-}
-.document-body table {
-  display: block;
-  max-width: 100%;
-  overflow-x: auto;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-.document-body th,
-.document-body td {
-  padding: 9px;
-  min-width: 80px;
-  border: 1px solid #dce4eb;
-}
-.document-body ul,
-.document-body ol {
-  padding-left: 20px;
-}
+.packet-fields { margin: 0; }
+.packet-fields > div { display: grid; grid-template-columns: 70px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.packet-fields dt { color: var(--muted); font-size: 12px; }
+.packet-fields dd { margin: 0; }
+.prompt-text { padding: 14px; border-radius: 12px; background: #eef2f8; }
 .modal {
   width: min(1100px, calc(100% - 36px));
   max-height: calc(100dvh - 36px);
