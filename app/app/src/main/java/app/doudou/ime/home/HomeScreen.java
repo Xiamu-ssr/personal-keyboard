@@ -67,7 +67,7 @@ public final class HomeScreen extends Screen {
             activity,
             "人物",
             "人物与记忆",
-            app.store.list("person", 0).size() + " 位人物 · 资料留在本机",
+            app.store.list("person", 0).size() + " 位人物",
             "",
             () -> nav.open("people", 0)));
     add(people);

@@ -2,44 +2,44 @@
   "version": "0.5.0-alpha.1",
   "files": {
     "doudou-keyboard.apk": {
-      "sha256": "53d25b789050b3d764224bedb788e5c9f9b7502bb14b4de94bfa0336d307b3cc",
+      "sha256": "01b86be5784791e698860fe3a24682ade26b39c62ff5a3f3a53851a55f1c0c60",
       "bytes": 9856504
     },
     "home.png": {
-      "sha256": "d685fad33c0cfb1fa1d1f3b276431205676a6afbba0948f82df4378dec229068",
-      "bytes": 157936
+      "sha256": "92bdef7ee5fe7217de8f0f1955647175963d6f3849d7e3a420b34909388fabdf",
+      "bytes": 153107
     },
     "typing.png": {
-      "sha256": "2511ae92e9b06f63a25bb9779d8d0c1742324844cae961075138a697dfac43a7",
-      "bytes": 119295
+      "sha256": "a3878815a2d61ce3bd611906728b40a5d54baae6c7c38630b33245669ff82446",
+      "bytes": 119211
     },
     "tools.png": {
-      "sha256": "64b3c8484902ecf266bc226b5fcb01c6512f0ee10160de01b55b99d4e8b40f34",
-      "bytes": 115105
+      "sha256": "a150c7672a1540eae527de2ce0ce04af4484f1a48aad6c190e9e8b8dd8b8eabd",
+      "bytes": 115059
     },
     "voice.png": {
-      "sha256": "7dd7a722fffad3ce43455c0b8da946786a903192feb8fbb105f16b1256370973",
-      "bytes": 91863
+      "sha256": "a7834adc8e3f8b837a6690394eb7fa788b224f49b33296c980a3e23c6c59b45f",
+      "bytes": 91770
     },
     "memory.png": {
-      "sha256": "3e2eb82ec7350e229dca64a77f4ed45316e585ab820b59725c7856d4bd3ae64d",
-      "bytes": 83074
+      "sha256": "ad1b22fe9176054ad140541a9e543810a07af916e0d01320c3fb58f644bbfde1",
+      "bytes": 83024
     },
     "people.png": {
-      "sha256": "55811917b846ac02a0a6466b48cb8b05dae8ac22581ec4155fe982b88cd369bc",
-      "bytes": 88451
+      "sha256": "5ec5617d1164f3aab73717bae697aeecc7e9edda19ef3e2ad9c5aca6d77c5447",
+      "bytes": 88651
     },
     "advisor.png": {
-      "sha256": "fef3521ec54c741cdb766dfd006b64b7ba2bb8653755a60d9846f8e3abf7a5ce",
-      "bytes": 111028
+      "sha256": "45a349a5af369b3d10dfc1a039669114a6178d4a13055effec7792e1356149c5",
+      "bytes": 110947
     },
     "settings.png": {
-      "sha256": "65114bf825e941fe512fd34a3f070bc1906a4e64611a56efcefd72f6362edf2d",
-      "bytes": 165918
+      "sha256": "df8f51cb46e1c0fb002bb3165ac2341fc66365ea67e6752b6a0c5a1b839c05e9",
+      "bytes": 166224
     },
     "account.png": {
-      "sha256": "3fdc44aaf8e18a715c4f9b9cef718d9fc7c66997bc337aade04ac9cb73b2dd71",
-      "bytes": 108297
+      "sha256": "da127fc8871475c01ae505cf63f674386316c8f692a6bcb4b7598093e88027ba",
+      "bytes": 108609
     }
   }
 }

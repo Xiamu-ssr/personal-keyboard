@@ -15,7 +15,7 @@
       "artifact": {
         "package": "app.doudou.ime",
         "version": "0.5.0-alpha.1",
-        "sha256": "53d25b789050b3d764224bedb788e5c9f9b7502bb14b4de94bfa0336d307b3cc",
+        "sha256": "01b86be5784791e698860fe3a24682ade26b39c62ff5a3f3a53851a55f1c0c60",
         "bytes": 9856504,
         "buildType": "debug",
         "production": false,
@@ -73,17 +73,17 @@
       "screenshots": 9,
       "recordings": {
         "keyboard-tour.mp4": {
-          "sha256": "ceac197bf6f33e1e47b09e8990cbe0ad8a1560e68d297a98b387f9d529b4e941",
-          "bytes": 149064,
-          "durationSeconds": 10.880809,
+          "sha256": "def0c05a57d6b5a6b1beacd1bcd46e2594e89f209d94c38c0ab1e92b4ab91848",
+          "bytes": 127139,
+          "durationSeconds": 9.729004,
           "width": 720,
           "height": 1600,
           "codec": "h264"
         },
         "advisor-tour.mp4": {
-          "sha256": "0d321db385bc7b41f33fcbfd4193adf18b6c66209b2ab0e87b93642b3c2c65ce",
-          "bytes": 56223,
-          "durationSeconds": 3.049196,
+          "sha256": "daa72b448daf65e16027ed1f3fb76412535d20fa539ef58df08dd904ac720ddd",
+          "bytes": 92608,
+          "durationSeconds": 3.899879,
           "width": 720,
           "height": 1600,
           "codec": "h264"
