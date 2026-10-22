@@ -4,6 +4,7 @@ import { uuid } from '../security.mjs';
 import { emptyMemory, changeMemory, resolveCandidate, memoryDelta } from '../memory/domain.mjs';
 import { historyEvent } from '../memory/history.mjs';
 import { MemoryModel, historyRequest } from '../memory/model.mjs';
+import { QwenCounter } from '../memory/counter.mjs';
 
 const history = () => ({ id: uuid(), revision: 2, type: 'voice', asrText: '豆包', insertedText: '豆包', resultText: '豆豆', conversationRef: '' });
 const wordOp = h => ({ kind: 'hotword', action: 'upsert', id: 'new:word', value: { text: '豆豆', variants: ['豆包'] }, sourceId: h.id, sourceRevision: h.revision, category: 'correction', confidence: 0.99 });
@@ -55,14 +56,42 @@ test('every history fragment receives the same COMPLETE memory, with Unicode-saf
   await assert.rejects(historyRequest({ ...model, fits: async () => false }, { version: 9, memory }, input, 0), /完整记忆/);
 });
 
-test('provider counter sees the exact generation messages, schema and protocol fields; no character fallback', async () => {
+test('counter receives unchanged generation messages and schema; no character fallback', async () => {
   let counted;
-  const model = new MemoryModel({ textReady: true, modelKey: 'fixture', textModel: 'qwen-flash', tokenizerUrl: 'https://fixture.invalid/tokenizer', memoryOutputTokens: 8192, memoryMaxInputTokens: 10000, memoryContextTokens: 20000 }, async (_url, opts) => { counted = JSON.parse(opts.body); return new Response(JSON.stringify({ usage: { input_tokens: 3000 } })); });
+  const model = new MemoryModel({ textReady: true, modelKey: 'fixture', textModel: 'qwen3.8-flash', memoryOutputTokens: 8192, memoryMaxInputTokens: 10000, memoryContextTokens: 20000 }, { counter: { count: async req => { counted = structuredClone(req); return { tokens: 3000 }; } } });
   await model.init(); const request = model.request(emptyMemory(), 1, history());
-  assert.equal(await model.fits(request), true); assert.deepEqual(counted.input.messages, request.messages);
-  assert.ok(request.messages[0].content.includes('sourceRevision')); assert.deepEqual(counted.parameters.response_format, request.response_format);
-  model.fetcher = async () => new Response('{}');
+  assert.equal(await model.fits(request), true); assert.deepEqual(counted.messages, request.messages);
+  assert.ok(request.messages[0].content.includes('sourceRevision')); assert.deepEqual(counted.response_format, request.response_format);
+  request.messages[1].content += ' changed';
+  model.counter = { count: async () => ({}) };
   await assert.rejects(model.fits(request), /Token/);
-  model.fetcher = async () => { throw Error('offline'); };
-  await assert.rejects(model.fits(request), /精确容量/);
+  model.counter = { count: async () => { throw Error('counter unavailable'); } };
+  await assert.rejects(model.fits(request), /counter unavailable/);
+});
+
+test('pinned official tokenizer includes the chat template and protocol allowance', async t => {
+  const counter = new QwenCounter(); t.after(() => counter.close());
+  const request = { model: 'qwen3.8-flash', enable_thinking: false, response_format: { type: 'json_object' }, messages: [
+    { role: 'system', content: '只输出JSON。' }, { role: 'user', content: '豆豆 CPA 👩🏽\nบริษัท 稀有人名' },
+  ] };
+  const counted = await counter.count(request);
+  assert.equal(counted.revision, 'de4b8e4d43b917e7706784d8bb445c9af86a3540');
+  assert.ok(counted.contentTokens > 10); assert.equal(counted.protocolTokens, 256);
+  assert.equal(counted.tokens, counted.contentTokens + counted.protocolTokens);
+  await assert.rejects(counter.count({ ...request, model: 'unverified-model' }), /已验证/);
+  await assert.rejects(counter.count({ ...request, enable_thinking: true }), /已验证/);
+});
+
+test('generation cannot commit an over-budget or unverified provider token count', async () => {
+  let calls = 0;
+  const cfg = { textReady: true, textModel: 'qwen3.8-flash', textBase: 'https://fixture.invalid', memoryOutputTokens: 8192, memoryMaxInputTokens: 10000, memoryContextTokens: 20000 };
+  const model = new MemoryModel(cfg, { counter: { count: async () => ({ tokens: 500 }) }, fetcher: async () => {
+    calls++; return new Response(JSON.stringify({ usage: { prompt_tokens: 501 }, choices: [{ finish_reason: 'stop', message: { content: '{"baseVersion":0,"operations":[]}' } }] }));
+  } });
+  await model.init(); const request = model.request(emptyMemory(), 0, history());
+  await assert.rejects(model.generate(request), { code: 'TOKEN_COUNTER_MISMATCH' });
+  assert.equal(calls, 1);
+  model.cfg.memoryMaxInputTokens = 499;
+  await assert.rejects(model.generate(request), { code: 'MEMORY_CAPACITY' });
+  assert.equal(calls, 1);
 });

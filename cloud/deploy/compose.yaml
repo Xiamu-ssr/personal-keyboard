@@ -16,9 +16,9 @@ services:
     cpus: 1.0
     environment:
       UV_THREADPOOL_SIZE: "2"
-      NODE_OPTIONS: "--max-old-space-size=128 --v8-pool-size=2"
+      NODE_OPTIONS: "--max-old-space-size=384 --v8-pool-size=2"
     pids_limit: 128
-    mem_limit: 192m
+    mem_limit: 768m
     restart: unless-stopped
     logging:
       driver: json-file

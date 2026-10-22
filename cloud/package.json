@@ -11,6 +11,8 @@
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
+    "@huggingface/jinja": "0.5.10",
+    "@huggingface/tokenizers": "0.2.0",
     "pg": "8.16.3",
     "ws": "8.22.0"
   }

@@ -2,3 +2,5 @@
 android/gradlew.bat whitespace=cr-at-eol
 android/app/src/main/cpp/vendor/aosp-pinyin/** -whitespace
 android/app/src/main/assets/aosp-notice.txt -whitespace
+# Keep pinned tokenizer artifacts byte-identical to their official SHA-256 hashes.
+cloud/memory/tokenizer/** -text -whitespace linguist-vendored

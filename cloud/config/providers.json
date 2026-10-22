@@ -12,8 +12,10 @@
     }
   },
   "text": {
-    "default": "qwen-flash",
-    "vision": "qwen3-vl-flash",
+    "default": "qwen3.8-flash",
+    "vision": "qwen3.8-flash",
+    "maxInputTokens": 991808,
+    "contextTokens": 1000000,
     "transport": "openai-compatible",
     "endpointRef": "BAILIAN_TEXT_BASE_URL",
     "credentialRef": "BAILIAN_API_KEY"

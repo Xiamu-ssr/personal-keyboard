@@ -96,7 +96,7 @@ export class PersonalMemory {
       row = (await this.db.query("UPDATE memory_work SET lease_token=$1,lease_until=now()+interval '10 minutes',state='running',attempts=attempts+1 WHERE user_id=(SELECT w.user_id FROM memory_work w JOIN users u ON u.id=w.user_id WHERE u.status='active' AND w.retry_at<=now() AND (w.lease_until IS NULL OR w.lease_until<now()) AND EXISTS(SELECT 1 FROM memory_history h WHERE h.user_id=w.user_id AND h.state='queued') ORDER BY w.retry_at FOR UPDATE OF w SKIP LOCKED LIMIT 1) RETURNING user_id", [token])).rows[0];
       if (row) await this.process(row.user_id, token);
     } catch (error) {
-      if (row) await this.db.query("UPDATE memory_work SET lease_until=NULL,state=CASE WHEN $4 OR attempts>=3 THEN 'paused' ELSE 'waiting' END,error_code=$3,retry_at=CASE WHEN $4 OR attempts>=3 THEN 'infinity'::timestamptz ELSE now()+interval '5 minutes' END WHERE user_id=$1 AND lease_token=$2", [row.user_id, token, String(error.code || 'MEMORY_UNAVAILABLE').slice(0, 60), error.code === 'MEMORY_CAPACITY']).catch(() => {});
+      if (row) await this.db.query("UPDATE memory_work SET lease_until=NULL,state=CASE WHEN $4 OR attempts>=3 THEN 'paused' ELSE 'waiting' END,error_code=$3,retry_at=CASE WHEN $4 OR attempts>=3 THEN 'infinity'::timestamptz ELSE now()+interval '5 minutes' END WHERE user_id=$1 AND lease_token=$2", [row.user_id, token, String(error.code || 'MEMORY_UNAVAILABLE').slice(0, 60), ['MEMORY_CAPACITY', 'TOKEN_COUNTER_MISMATCH'].includes(error.code)]).catch(() => {});
     } finally { this.running = false; }
   }
   async process(user, token) {

@@ -146,7 +146,7 @@ test("compiled Spec uses YAML details and prompts without a Markdown document la
     assert.equal(compiled.prompts.find((c) => c.id === p.id).system, p.system);
     assert.equal(p.document, undefined);
   }
-  assert(compiled.meta.status.includes("模型与短信待配置"));
+  assert.equal(compiled.meta.status, source.meta.status);
   assert(!html.includes("data-doc="));
   assert(!html.includes("#doc/"));
   assert(!html.includes("data-prompt="));

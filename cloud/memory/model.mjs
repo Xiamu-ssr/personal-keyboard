@@ -1,10 +1,12 @@
 import fs from 'node:fs/promises';
 import { requireValue, ServiceError } from '../http/errors.mjs';
+import { digest } from '../security.mjs';
+import { memoryCounter } from './counter.mjs';
 
 export const memoryOutputContract = {
   baseVersion: '与输入一致的整数',
-  operations: [{ action: 'upsert 或 delete', kind: 'hotword / style / person / fact / relation', id: '已有 ID 或 new:临时名', personId: 'fact/relation 的所属人物 ID',
-    value: 'hotword={text,variants}; style={scene,rules,examples}; person={name,aliases}; fact={key,value,scope}; relation={targetId,type}',
+  operations: [{ action: 'upsert 或 delete', kind: 'hotword / style / person / fact / relation', id: '已有 UUID；新增必须匹配 ^new:[A-Za-z0-9_-]{1,64}$，例如 new:word1，不能含中文', personId: '仅 fact/relation 填所属人物 UUID 或本批 new:person1，其他类型不填',
+    value: 'hotword={text:结果稿里纠正后的标准词,variants:[填入稿里纠正前的错误写法]}; style={scene,rules,examples}; person={name,aliases}; fact={key,value,scope}; relation={targetId,type}',
     sourceId: '本批历史 ID', sourceRevision: '本批历史修订', category: 'correction 或 observation', confidence: '0至1', reason: '简短理由' }],
 };
 
@@ -20,9 +22,11 @@ async function boundedJson(response, limit = 32 * 1024 * 1024) {
   catch { throw new ServiceError('MEMORY_PROVIDER', '记忆服务响应无效，历史待办保留', 503); }
 }
 
-/** Count and generate from the SAME messages; schema is part of the system text. */
+/** The pinned official tokenizer counts the SAME prompt, including its schema. */
 export class MemoryModel {
-  constructor(cfg, fetcher = fetch) { this.cfg = cfg; this.fetcher = fetcher; }
+  constructor(cfg, { fetcher = fetch, counter = memoryCounter } = {}) {
+    Object.assign(this, { cfg, fetcher, counter }); this.counts = new WeakMap();
+  }
   async init() { this.prompt = await fs.readFile(new URL('../prompts/learn.md', import.meta.url), 'utf8'); }
   request(memory, baseVersion, history) {
     return { model: this.cfg.textModel,
@@ -34,15 +38,11 @@ export class MemoryModel {
   }
   async count(request) {
     requireValue(this.cfg.textReady, 'MODEL_NOT_READY', '记忆更新等待云端模型配置', 503);
-    let response;
-    try {
-      response = await this.fetcher(this.cfg.tokenizerUrl, { method: 'POST', signal: AbortSignal.timeout(25000),
-        headers: { Authorization: 'Bearer ' + this.cfg.modelKey, 'Content-Type': 'application/json', ...(this.cfg.workspace ? { 'X-DashScope-WorkSpace': this.cfg.workspace } : {}) },
-        body: JSON.stringify({ model: request.model, input: { messages: request.messages }, parameters: { enable_thinking: false, response_format: request.response_format } }),
-      });
-    } catch { throw new ServiceError('TOKEN_COUNTER_UNAVAILABLE', '无法完成精确容量检查，历史待办保留', 503); }
-    const data = await boundedJson(response), count = data.usage?.input_tokens;
-    requireValue(Number.isSafeInteger(count) && count > 0, 'TOKEN_COUNTER_UNAVAILABLE', '供应商未返回有效 Token 计数，历史待办保留', 503);
+    const signature = digest(JSON.stringify(request)), previous = this.counts.get(request);
+    if (previous?.signature === signature) return previous.tokens;
+    const counted = await this.counter.count(request), count = counted.tokens;
+    requireValue(Number.isSafeInteger(count) && count > 0, 'TOKEN_COUNTER_UNAVAILABLE', '分词器未返回有效 Token 计数，历史待办保留', 503);
+    this.counts.set(request, { signature, tokens: count });
     return count;
   }
   async fits(request) {
@@ -50,6 +50,9 @@ export class MemoryModel {
     return n <= this.cfg.memoryMaxInputTokens && n + request.max_tokens <= this.cfg.memoryContextTokens;
   }
   async generate(request) {
+    const budget = await this.count(request);
+    requireValue(budget <= this.cfg.memoryMaxInputTokens && budget + request.max_tokens <= this.cfg.memoryContextTokens,
+      'MEMORY_CAPACITY', '完整记忆超出上下文，历史待办保留', 409);
     let response;
     try {
       response = await this.fetcher(this.cfg.textBase.replace(/\/$/, '') + '/chat/completions', {
@@ -58,6 +61,8 @@ export class MemoryModel {
       });
     } catch { throw new ServiceError('MEMORY_PROVIDER', '记忆更新连接失败，历史待办保留', 503); }
     const data = await boundedJson(response, 300000);
+    requireValue(Number.isSafeInteger(data.usage?.prompt_tokens) && data.usage.prompt_tokens <= budget,
+      'TOKEN_COUNTER_MISMATCH', '供应商计数超过本地容量预算，更新已暂停，历史待办保留', 503);
     requireValue(data.choices?.[0]?.finish_reason === 'stop', 'MODEL_TRUNCATED', '记忆更新没有完整返回，历史待办保留', 503);
     try { return JSON.parse(data.choices[0].message.content); }
     catch { throw new ServiceError('MEMORY_FORMAT', '记忆更新格式无效，历史待办保留', 503); }
