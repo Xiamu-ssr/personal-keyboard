@@ -64,7 +64,7 @@ FlorisBoard 官方中文文档说明其音码算法不足，不推荐日常拼�
 
 ### 最终发送文本的边界
 
-[Android InputConnection](https://developer.android.com/reference/android/view/inputmethod/InputConnection#performEditorAction(int)) 的读取可能为空 / 截断，编辑动作返回值也不是聊天消息回执。因此不能声称跨 App 百分百抓到最终发送内容。我们的建议是保存一份最后有效改稿并保留证据状态，军师近期历史只选可确认的本人最终发言；原 ASR 仍是历史来源，不顶替已发送消息。对编辑的观察不等于为每次按键保存快照。
+[Android InputConnection](https://developer.android.com/reference/android/view/inputmethod/InputConnection#performEditorAction(int)) 的读取可能为空 / 截断，编辑动作返回值也不是聊天消息回执。因此不能声称跨 App 百分百抓到最终发送内容。本轮采用来源、实际填入基线和最后有效修改稿；以本人表达和纠词作为学习信号，不要求发送回执。近期表达优先本人修改稿，聊天事实依据有说话人归属的截图内容。对编辑的观察不等于为每次按键保存快照。
 
 ### OCR 与多模态
 
@@ -73,3 +73,7 @@ FlorisBoard 官方中文文档说明其音码算法不足，不推荐日常拼�
 [Qwen3-VL 官方项目](https://github.com/QwenLM/Qwen3-VL)提供图文理解、视觉定位与 OCR 等能力，适合直接处理聊天画面。**所以推荐军师一期直接多模态，避免维护额外的聊天 OCR 解析层**；这是工程判断，尚无本项目同样本准确率 / 成本对照，不宣称一定更准或更便宜。
 
 直接多模态会上传本次截图；本机历史和云端推理是不同数据用途。截图与文字均可能被误读，人物记忆必须能追溯来源，不能只信模型自报置信度。
+
+## 2026-10-22 · 本轮方案对齐
+
+竞品机制为研究事实，本产品不照搬所有选项：自动学习直接启用。已选择 Cloud 个人记忆主本、手机缓存；App 提交历史变化，Cloud 用受限结构化 LLM 任务核验落库，手机同步完整变更记录。这是本产品的架构选择，不是竞品内部实现。个人热词可接入离线候选，文风和人物用于语音整理与军师；接入效果尚待 APK 验证。

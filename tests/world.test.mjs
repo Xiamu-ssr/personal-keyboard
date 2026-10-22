@@ -17,18 +17,18 @@ test("both business views share entities, never duplicate processing steps as no
   assert.deepEqual(validateWorld(source), {
     domains: 5,
     businesses: 2,
-    nodes: 10,
+    nodes: 11,
     channels: 3,
     lanes: 6,
     prompts: 3,
   });
   assert.deepEqual(
     source.domains.find((d) => d.id === "app").nodes.map((n) => n.title),
-    ["历史", "热词", "文风", "人物"],
+    ["历史", "记忆缓存"],
   );
   assert.deepEqual(
     source.domains.find((d) => d.id === "cloud").nodes.map((n) => n.title),
-    ["代理", "账户与权益"],
+    ["代理", "账户与权益", "热词", "文风", "人物"],
   );
   for (const view of source.businesses) {
     assert.equal(view.groups, undefined);
