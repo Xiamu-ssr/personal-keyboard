@@ -650,10 +650,6 @@ p {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
 }
-.prompt-link {
-  color: #8064a4;
-  font-size: 13px;
-}
 #panel-shade {
   position: fixed;
   inset: 0;
@@ -741,10 +737,13 @@ p {
   gap: 8px;
 }
 .packet-fields { margin: 0; }
-.packet-fields > div { display: grid; grid-template-columns: 70px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
-.packet-fields dt { color: var(--muted); font-size: 12px; }
-.packet-fields dd { margin: 0; }
+.packet-fields > div { display: grid; grid-template-columns: minmax(70px, auto) minmax(0, 1fr); gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.packet-fields dt { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; max-width: 126px; }
+.packet-fields dd { margin: 0; overflow-wrap: anywhere; }
 .prompt-text { padding: 14px; border-radius: 12px; background: #eef2f8; }
+.record-example { padding: 14px; border-radius: 12px; background: #eef2f8; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.detail-section .record-example code { font-size: 13px; line-height: 1.65; padding: 0; background: none; }
+.model-reference { font-size: 13px; }
 .modal {
   width: min(1100px, calc(100% - 36px));
   max-height: calc(100dvh - 36px);

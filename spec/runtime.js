@@ -36,6 +36,8 @@
     `<section class="detail-section"><h3>${esc(name)}</h3>${body}</section>`;
   const list = (items) =>
     `<ul>${items.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`;
+  const fields = (items) =>
+    `<dl class="packet-fields">${Object.entries(items).map(([key, value]) => `<div><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join("")}</dl>`;
   const welcome = data.catalog.plans.find(
     (p) => p.id === data.catalog.activeWelcomePlan,
   );
@@ -379,6 +381,7 @@
     el("inspector-heading").innerHTML =
       `<h2>${esc(title)}</h2>${summary ? `<p>${esc(summary)}</p>` : ""}`;
     el("inspector-content").innerHTML = body;
+    el("inspector-content").scrollTop = 0;
     el("panel-shade").hidden = false;
     el("inspector").hidden = false;
     el("close-inspector").focus();
@@ -409,20 +412,17 @@
     openPanel(
       n.title,
       n.summary,
-      section("职责与数据", list(n.details)) +
+      (n.fields ? section("输入与约定", fields(n.fields)) : "") +
+        section("职责与数据", list(n.details)) +
+        (n.format
+          ? section("数据格式", fields(n.format.fields)) +
+            section("示例数据", `<pre class="record-example"><code>${esc(n.format.preview)}</code></pre>`)
+          : "") +
         (world?.status[id]
           ? section("本次示例", `<p>${esc(world.status[id])}</p>`)
           : "") +
-        (n.prompts?.length
-          ? section(
-              "代理持有的提示词",
-              n.prompts
-                .map(
-                  (p) =>
-                    `<button class="prompt-link" data-prompt="${p}">${esc(prompts.get(p).name)} ↗</button>`,
-                )
-                .join(" "),
-            )
+        (n.reference
+          ? `<p class="model-reference"><a href="${esc(n.reference.url)}" target="_blank" rel="noopener noreferrer">${esc(n.reference.title)}</a></p>`
           : ""),
       domains.get(n.domain).name + " / " + (n.eyebrow || "子节点"),
     );
@@ -436,36 +436,14 @@
     openPanel(
       p.title,
       p.body,
-      section(
-        "域之间的数据",
-        `<p>${esc(domains.get(p.from).name)} → ${esc(domains.get(p.to).name)}</p>`,
-      ) +
-        (p.fields
-          ? section(
-              "携带的数据",
-              `<dl class="packet-fields">${Object.entries(p.fields).map(([key, value]) => `<div><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join("")}</dl>`,
-            )
-          : "") +
+      (p.fields ? section("携带的数据", fields(p.fields)) : "") +
         (p.prompt
           ? section(
-              "随请求传递",
-              `<button class="prompt-link" data-prompt="${p.prompt}">${esc(prompts.get(p.prompt).name)} ↗</button>`,
+              "提示词正文",
+              `<p class="prompt-text">${esc(prompts.get(p.prompt).system)}</p>`,
             )
           : ""),
       "数据卡片 / #" + p.sequence,
-    );
-  }
-  function openPrompt(id) {
-    const p = prompts.get(id);
-    if (!p) return;
-    openPanel(
-      p.name,
-      `Cloud → ${p.mode === "multimodal" ? "多模态模型" : "文本模型"}`,
-      section("提示词正文", `<p class="prompt-text">${esc(p.system)}</p>`) +
-        section("输入", `<p>${esc(p.contract.input)}</p>`) +
-        section("输出", `<p>${esc(p.contract.output)}</p>`) +
-        section("约束", list(p.contract.rules)),
-      "Cloud / 提示词",
     );
   }
   function route() {
@@ -506,7 +484,6 @@
       closePanel();
     } else if (b.dataset.domain) openDomain(b.dataset.domain);
     else if (b.dataset.openNode) openNode(b.dataset.openNode);
-    else if (b.dataset.prompt) openPrompt(b.dataset.prompt);
     else if (b.dataset.packet) openPacket(b.dataset.packet);
     else if (b.dataset.history) {
       const c = data.world.channels.find((c) => c.id === b.dataset.history);

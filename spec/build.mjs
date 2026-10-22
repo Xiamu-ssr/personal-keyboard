@@ -7,6 +7,10 @@ import { validateWorld } from "./world.mjs";
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const spec = YAML.parse(await fs.readFile(path.join(dir, "spec.yaml"), "utf8"));
 const counts = validateWorld(spec);
+for (const domain of spec.domains)
+  for (const node of domain.nodes || [])
+    if (node.format)
+      node.format.preview = YAML.stringify(node.format.example, { lineWidth: 48 });
 const [template, css, script, world, panels, catalog] = await Promise.all([
   ...["template.html", "style.css", "runtime.js", "world.mjs", "panels.js"].map(
     (f) => fs.readFile(path.join(dir, f), "utf8"),

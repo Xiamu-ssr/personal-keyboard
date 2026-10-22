@@ -37,6 +37,18 @@ export function validateWorld(spec) {
     !spec.documents && !spec.sources,
     "Spec is a YAML graph, not a document registry",
   );
+  const learning = spec.memoryUpdate;
+  need(
+    learning?.memory === "full_snapshot" &&
+      learning.partition === "history_only" &&
+      learning.order === "per_user_serial" &&
+      learning.concurrency === "compare_base_version" &&
+      learning.result === "structured_operations" &&
+      learning.overflow === "pause_without_truncation" &&
+      learning.tokenCheck === "complete_serialized_request" &&
+      learning.growthCheck === "before_commit",
+    "Memory updates require a complete snapshot and history-only batching",
+  );
   const domains = new Map(),
     colors = new Set();
   for (const d of spec.domains) {
@@ -60,6 +72,18 @@ export function validateWorld(spec) {
       need(!n.ports, "Entity nodes do not have workflow ports");
       ids.add(n.id);
       need(!n.documents, "Entity details belong in YAML");
+      if (n.format)
+        need(
+          n.format.fields &&
+            Object.values(n.format.fields).every((v) => typeof v === "string") &&
+            n.format.example && typeof n.format.example === "object",
+          "Record formats require fields and a structured example",
+        );
+      if (n.reference)
+        need(
+          n.reference.title && /^https:\/\//.test(n.reference.url),
+          "Model references use HTTPS sources",
+        );
     }
   }
   const w = spec.world,
@@ -116,12 +140,6 @@ export function validateWorld(spec) {
         p.contract?.output,
       "Cloud owns prompt contracts",
     );
-  for (const n of nodes.values())
-    for (const id of n.prompts || [])
-      need(
-        n.domain === "cloud" && prompts.has(id),
-        "Prompt attached outside Cloud",
-      );
   for (const c of w.channels) {
     const pair = [c.a, c.b].sort().join(":");
     need(

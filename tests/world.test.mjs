@@ -69,6 +69,10 @@ test("malformed topology, supplier bypass, workflow ports and future data are re
     (s) => (s.documents = [{ id: "unstructured-notes" }]),
     (s) => (s.world.channels[0].stack[2] = 600),
     (s) => s.world.groups[1].nodes.pop(),
+    (s) => (s.memoryUpdate.memory = "retrieved_subset"),
+    (s) => (s.memoryUpdate.partition = "people_and_topics"),
+    (s) => (s.memoryUpdate.overflow = "truncate"),
+    (s) => (s.memoryUpdate.growthCheck = "none"),
   ]) {
     const s = structuredClone(source);
     mutate(s);
@@ -145,6 +149,9 @@ test("compiled Spec uses YAML details and prompts without a Markdown document la
   assert(compiled.meta.status.includes("尚未迁移"));
   assert(!html.includes("data-doc="));
   assert(!html.includes("#doc/"));
+  assert(!html.includes("data-prompt="));
+  assert(!html.includes("function openPrompt("));
+  assert(!html.includes("域之间的数据"));
   const markdownFiles = (await fs.readdir(new URL("../spec/", import.meta.url), { recursive: true }))
     .filter((name) => name.endsWith(".md"));
   assert.deepEqual(markdownFiles, []);
@@ -153,7 +160,7 @@ test("compiled Spec uses YAML details and prompts without a Markdown document la
   assert(!html.includes('id="library-dialog"'));
   assert(!/<script[^>]+src=/.test(html));
 });
-test("advisor payload uses Cloud memory and learning scopes updates to retrieved evidence", () => {
+test("advisor reads Cloud memory; learning sends full snapshots and only batches history", () => {
   const advisor = source.businesses.find((v) => v.id === "advisor");
   const upload = advisor.events.find((e) => e.channel === "app-cloud" && e.direction === "ab");
   assert.deepEqual(Object.keys(upload.fields), ["截图", "会话标识", "近期上下文", "意图"]);
@@ -164,8 +171,16 @@ test("advisor payload uses Cloud memory and learning scopes updates to retrieved
   assert.equal(learning.events[0].channel, "app-cloud");
   const learn = source.prompts.find((p) => p.id === "learn");
   assert.equal(learn.mode, "text");
-  assert(learn.system.includes("不得删除未提供的资料"));
-  assert(learn.system.includes("预期版本"));
+  assert(learn.system.includes("完整个人记忆快照"));
+  assert(learn.system.includes("baseVersion"));
+  assert.equal(source.memoryUpdate.memory, "full_snapshot");
+  assert.equal(source.memoryUpdate.partition, "history_only");
+  const inserted = source.businesses.find((v) => v.id === "voice")
+    .events.find((e) => e.id === "voice-11");
+  assert.equal(inserted.fields.结果稿, inserted.fields.实际填入稿);
+  const revised = source.businesses.find((v) => v.id === "voice")
+    .events.find((e) => e.id === "voice-12");
+  assert.notEqual(revised.fields.结果稿, inserted.fields.结果稿);
   const specText = JSON.stringify(source);
-  assert(!/近期表达|识别上下文|五小时任务/.test(specText));
+  assert(!/近期表达|识别上下文|五小时任务|相关人物索引|needsContext|最后有效改稿/.test(specText));
 });
