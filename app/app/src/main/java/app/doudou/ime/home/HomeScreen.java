@@ -18,24 +18,16 @@ public final class HomeScreen extends Screen {
 
   @Override
   protected void draw() {
-    LinearLayout hero = Ui.card(activity);
-    Ui.pad(activity, hero, 22, 24);
-    GradientDrawable color =
-        new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[] {Ui.HERO, Ui.PANEL});
-    color.setCornerRadius(Ui.dp(activity, 20));
-    hero.setBackground(color);
-    TextView title = Ui.text(activity, "说出来，\n还是你的语气。", 27, Ui.INK);
+    LinearLayout hero = Ui.col(activity);
+    Ui.pad(activity, hero, 4, 22);
+    TextView title = Ui.text(activity, "开口，\n就写好了。", 34, Ui.INK);
     title.setTypeface(null, Typeface.BOLD);
-    title.setLineSpacing(Ui.dp(activity, 5), 1);
+    title.setLineSpacing(Ui.dp(activity, 6), 1);
     hero.addView(title);
-    Ui.gap(activity, hero, 12);
-    hero.addView(Ui.text(activity, "日常打字、语音整理，和原地军师。", 13, Ui.SUB));
-    Ui.gap(activity, hero, 22);
-    hero.addView(
-        Ui.primary(
-            activity,
-            "试试豆豆",
-            () -> activity.startActivity(new Intent(activity, PracticeActivity.class))));
+    Ui.gap(activity, hero, 16);
+    hero.addView(Ui.text(activity, "长按空格说话，松手填入。", 16, Ui.SUB));
+    Ui.gap(activity, hero, 28);
+    hero.addView(Ui.primary(activity, "试试豆豆", () -> activity.startActivity(new Intent(activity, PracticeActivity.class))));
     add(hero);
     String selected =
         Settings.Secure.getString(
@@ -56,37 +48,11 @@ public final class HomeScreen extends Screen {
               else activity.startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS));
             }));
     add(setup);
-    add(Ui.eyebrow(activity, "属于你的表达"));
-    LinearLayout stats = Ui.row(activity);
-    stat(stats, "热词", app.store.list("word", 0).size(), "把专有词记准确", () -> nav.open("words", 0));
-    stat(stats, "文风", app.store.list("style", 0).size(), "把习惯留下来", () -> nav.open("style", 0));
-    add(stats);
-    LinearLayout people = Ui.card(activity);
-    people.addView(
-        Ui.cell(
-            activity,
-            "人物",
-            "人物与记忆",
-            app.store.list("person", 0).size() + " 位人物",
-            "",
-            () -> nav.open("people", 0)));
-    add(people);
-    caption("军师只在点按时读屏；回复填入输入框后，由你决定发送。");
-  }
-
-  private void stat(LinearLayout row, String label, int value, String hint, Runnable action) {
-    LinearLayout card = Ui.card(activity);
-    card.setBackground(Ui.pressable(activity, Ui.PANEL, 18));
-    card.setOnClickListener(v -> action.run());
-    card.addView(Ui.text(activity, label, 12, Ui.SUB));
-    Ui.gap(activity, card, 10);
-    TextView count = Ui.text(activity, "" + value, 30, Ui.INK);
-    count.setTypeface(null, Typeface.BOLD);
-    card.addView(count);
-    Ui.gap(activity, card, 8);
-    card.addView(Ui.text(activity, hint, 11, Ui.SUB));
-    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
-    if (row.getChildCount() == 0) lp.rightMargin = Ui.dp(activity, 10);
-    row.addView(card, lp);
+    LinearLayout quick = Ui.card(activity);
+    quick.addView(Ui.cell(activity, "历史", "我的历史", "文字与截图，留在手机", "", () -> nav.open("history", 0)));
+    quick.addView(Ui.divider(activity));
+    quick.addView(Ui.cell(activity, "词典", "我的表达习惯", "热词、文风，让豆豆更懂你", "", () -> nav.open("memory", 0)));
+    add(quick);
+    caption("点军师，看看怎么回。选好后填入，发送由你决定。");
   }
 }

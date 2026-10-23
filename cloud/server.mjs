@@ -67,7 +67,7 @@ export async function createCloudServer({
         await db.query("SELECT 1");
         return json(res, {
           status: "ok",
-          version: "0.6.0-alpha.1",
+          version: "0.7.0-alpha.1",
           readiness: {
             account: true,
             asr: cfg.asrReady,

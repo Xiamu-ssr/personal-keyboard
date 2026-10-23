@@ -55,8 +55,8 @@ public abstract class PanelController extends ContextWrapper {
     host.settings(page);
   }
 
-  protected void message(String title, String detail, Runnable retry) {
-    host.message(title, detail, retry);
+  protected void message(String title, String detail, String actionLabel, Runnable action) {
+    host.message(title, detail, actionLabel, action);
   }
 
   protected void panelHeading(String title, Runnable back) {

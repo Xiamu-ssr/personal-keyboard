@@ -29,13 +29,13 @@ public final class PeopleScreen extends Screen {
 
   private void list() {
     List<MemoryStore.Item> all = app.store.list("person", 0);
-    if (!all.isEmpty()) {
+    if (all.size() > 1) {
       LinearLayout card = Ui.card(activity);
       card.addView(
           new RelationshipGraph(activity, all, id -> nav.open("person", id)),
           new LinearLayout.LayoutParams(-1, Ui.dp(activity, 220)));
       add(card);
-    } else Ui.empty(activity, body, "把重要的人，记在这里", "事实、事件和偏好各自有来源；同名不自动合并。");
+    } else if (all.isEmpty()) Ui.empty(activity, body, "记住重要的人", "添加称呼和关系，军师就更懂该怎么回。");
     add(Ui.primary(activity, "＋ 添加人物", () -> editor.edit(null, "person", 0)));
     if (!all.isEmpty()) {
       LinearLayout list = Ui.card(activity);
@@ -54,7 +54,7 @@ public final class PeopleScreen extends Screen {
       }
       add(list);
     }
-    caption("人物使用独立身份记录；新发现和资料冲突先核对。");
+    if (!all.isEmpty()) caption("新发现的资料先由你核对，随时可以修改。");
   }
 
   private void detail() {

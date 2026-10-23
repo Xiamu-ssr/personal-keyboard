@@ -145,8 +145,14 @@ public class NativeFlowTest {
   }
 
   private void click(String text) {
-    assertTrue(text, await(text).performAction(AccessibilityNodeInfo.ACTION_CLICK));
-    SystemClock.sleep(110);
+    long until=SystemClock.uptimeMillis()+2000;
+    while(SystemClock.uptimeMillis()<until) {
+      AccessibilityNodeInfo target=await(text);
+      if(target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {SystemClock.sleep(110);return;}
+      // InputConnection restarts can replace the action row between lookup and dispatch.
+      SystemClock.sleep(80);
+    }
+    fail("Control did not accept click: "+text);
   }
 
   private String value() {
@@ -207,65 +213,15 @@ public class NativeFlowTest {
   }
 
   @Test
-  public void advisorCapturesOwnScreenAndPreservesDraft() {
-    // Instrumentation restarts the process. Rebind only an already authorized service.
-    String services =
-        android.provider.Settings.Secure.getString(
-            activity.getContentResolver(), "enabled_accessibility_services");
-    String own = "app.doudou.ime/app.doudou.ime.capture.CaptureService";
-    assertTrue(
-        "Screenshot permission must already be enabled",
-        services != null
-            && (services.contains(own)
-                || services.contains("app.doudou.ime/.capture.CaptureService")));
-    if (CaptureService.current == null) {
-      ui.adoptShellPermissionIdentity(android.Manifest.permission.WRITE_SECURE_SETTINGS);
-      try {
-        List<String> keep = new ArrayList<>(Arrays.asList(services.split(":")));
-        keep.remove(own);
-        android.provider.Settings.Secure.putString(
-            activity.getContentResolver(),
-            "enabled_accessibility_services",
-            String.join(":", keep));
-        // Let AccessibilityManager observe removal before re-enabling the same service.
-        SystemClock.sleep(700);
-        android.provider.Settings.Secure.putString(
-            activity.getContentResolver(), "enabled_accessibility_services", services);
-      } finally {
-        ui.dropShellPermissionIdentity();
-      }
-      long until = SystemClock.uptimeMillis() + 8000;
-      while (CaptureService.current == null && SystemClock.uptimeMillis() < until)
-        SystemClock.sleep(80);
-    }
-    assertNotNull("Already authorized screenshot service did not bind", CaptureService.current);
+  public void advisorChecksAccountBeforeCapturingAndPreservesDraft() {
     instrumentation.runOnMainSync(() -> editor.setText("本机验收草稿"));
     instrumentation.waitForIdleSync();
-    try {
-      ui.waitForIdle(160, 3000);
-    } catch (java.util.concurrent.TimeoutException e) {
-      throw new AssertionError("Practice editor did not settle after updating its draft", e);
-    }
-    int normal = keyboardHeight();
     click("军师");
-    await("正在截取当前屏幕…");
-    int shrunk = keyboardHeight();
-    long resizedBy = SystemClock.uptimeMillis() + 2500;
-    while (shrunk >= normal - 300 && SystemClock.uptimeMillis() < resizedBy) {
-      SystemClock.sleep(20);
-      shrunk = keyboardHeight();
-    }
-    System.out.println("IME height px normal=" + normal + " shrunk=" + shrunk);
-    assertTrue("Capture must expose more of the host", shrunk < normal - 300);
-    await("选择聊天对象");
-    screenshot("advisor");
-    app.doudou.ime.app.KeyboardApp app = (app.doudou.ime.app.KeyboardApp) activity.getApplication();
-    java.util.List<app.doudou.ime.history.HistoryStore.Entry> entries = app.histories.list(10);
-    assertTrue(
-        entries.stream().anyMatch(e -> e.type.equals("advisor") && e.screenshots.length() > 0));
+    await("登录后使用军师");
+    await("去登录");
+    assertNull(node("重试"));
     assertEquals("本机验收草稿", value());
-    click("返回");
-    await("工具");
+    click("返回"); await("工具");
     assertEquals("本机验收草稿", value());
   }
 
@@ -298,12 +254,8 @@ public class NativeFlowTest {
       await(title);
     screenshot("tools");
     click("语音输入");
-    await("开始说话");
-    screenshot("voice");
-    click("开始说话");
-    // The isolated emulator is not signed in; no supplier call may be made.
-    await("请先到设置登录豆豆账户");
-    await("开始说话");
+    await("登录后使用语音");
+    await("去登录");
     click("返回");
     await("工具");
     assertEquals("", value());

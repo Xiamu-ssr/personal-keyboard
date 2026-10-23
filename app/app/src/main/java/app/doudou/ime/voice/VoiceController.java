@@ -1,6 +1,5 @@
 package app.doudou.ime.voice;
 
-import android.graphics.Typeface;
 import android.view.*;
 import android.widget.*;
 import app.doudou.ime.design.Ui;
@@ -8,13 +7,15 @@ import app.doudou.ime.input.EditorHost;
 import app.doudou.ime.input.PanelController;
 import app.doudou.ime.model.TextModelClient;
 
-/** Owns recording, transcription and optional text cleanup; never sends a chat message. */
+/** Speak, release, insert. Composing previews can be cancelled without changing the prior draft. */
 public final class VoiceController extends PanelController {
   private final VoiceInput voice;
   private final TextModelClient model;
-  private TextView status, voiceText, insertAction;
+  private TextView status, voiceText, keep;
   private VoiceButton microphone;
-  private boolean recording, working;
+  private boolean recording, working, holding, stopping;
+  private float downX, downY;
+  private VoiceGesture.Target target = VoiceGesture.Target.FINISH;
   private String transcript = "", rawTranscript = "", historyId = "";
 
   public VoiceController(EditorHost host) {
@@ -23,277 +24,148 @@ public final class VoiceController extends PanelController {
     model = new TextModelClient(this);
   }
 
+  public boolean holding() { return holding; }
+
   public void cancel() {
-    voice.cancel();
-    model.cancel();
-    recording = false;
-    working = false;
-    transcript = "";
-    rawTranscript = "";
-    historyId = "";
+    holding = recording = working = stopping = false;
+    voice.cancel(); model.cancel(); host.restoreVoice();
+    transcript = rawTranscript = historyId = "";
     if (microphone != null) microphone.setState(VoiceButton.State.IDLE);
   }
 
-  public void show() {
-    if (privateMode()) {
-      message("隐私输入", "此输入框不启用语音、读屏、历史与学习。", null);
-      return;
+  public void show() { begin(false, 0, 0); }
+  public void hold(float x, float y) { begin(true, x, y); }
+
+  private void begin(boolean held, float x, float y) {
+    if (privateMode()) { message("隐私输入", "此输入框不启用语音。", "", null); return; }
+    if (!app.cloud.loggedIn()) { message("登录后使用语音", "普通打字不需要登录。", "去登录", () -> settings("account")); return; }
+    if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+      message("允许麦克风", "开启后，就能长按空格说话。", "允许麦克风", () -> settings("permissions")); return;
     }
-    host.cancelAdvisor();
-    commitComposing();
-    voice.cancel();
-    model.cancel();
-    recording = false;
-    working = false;
-    snapshot();
-    reset("voice", 284);
-    root.setBackgroundColor(Ui.KEYBOARD);
+    host.cancelAdvisor(); cancel(); commitComposing(); snapshot();
+    holding = held; downX = x; downY = y; target = VoiceGesture.Target.FINISH;
+    render(); startVoice();
+  }
+
+  public boolean touch(MotionEvent e) {
+    if (!holding) return false;
+    if (e.getActionMasked() == MotionEvent.ACTION_CANCEL || e.getPointerCount() > 1) {
+      leave(); return true;
+    }
+    VoiceGesture.Target next = VoiceGesture.target(e.getRawX() - downX, e.getRawY() - downY, Ui.dp(this, 64));
+    if (next != target) {
+      target = next;
+      root.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+      showHint();
+    }
+    if (e.getActionMasked() == MotionEvent.ACTION_UP) {
+      holding = false;
+      if (target == VoiceGesture.Target.CANCEL) leave();
+      else if (target == VoiceGesture.Target.LOCK) { target = VoiceGesture.Target.FINISH; showHint(); }
+      else finishRecording();
+    }
+    return true;
+  }
+
+  private void render() {
+    reset("voice", 284); root.setBackgroundColor(Ui.KEYBOARD);
     LinearLayout bar = Ui.row(this);
-    bar.addView(
-        Ui.icon(this, "返回", this::leave),
-        new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
-    TextView brand = Ui.text(this, "豆豆", 18, Ui.INK);
-    brand.setTypeface(null, Typeface.BOLD);
-    bar.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
-    TextView keyboard = Ui.button(this, "键盘", this::leave);
-    keyboard.setMinHeight(Ui.dp(this, 34));
-    LinearLayout.LayoutParams keyLp =
-        new LinearLayout.LayoutParams(Ui.dp(this, 68), Ui.dp(this, 34));
-    keyLp.rightMargin = Ui.dp(this, 12);
-    bar.addView(keyboard, keyLp);
-    root.addView(bar, new LinearLayout.LayoutParams(-1, Ui.dp(this, 44)));
-
-    LinearLayout center = Ui.col(this);
-    center.setGravity(Gravity.CENTER);
-    Ui.pad(this, center, 22, 0);
-    root.addView(center, new LinearLayout.LayoutParams(-1, 0, 1));
-    voiceText = Ui.text(this, transcript, 17, Ui.INK);
+    bar.addView(Ui.icon(this, "返回", this::leave), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+    TextView title = Ui.text(this, "说话就好", 17, Ui.INK);
+    bar.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+    bar.addView(Ui.button(this, "取消", this::leave), new LinearLayout.LayoutParams(Ui.dp(this, 68), Ui.dp(this, 48)));
+    root.addView(bar);
+    ScrollView scroll = new ScrollView(this);
+    scroll.setFillViewport(true);
+    voiceText = Ui.text(this, "", 19, Ui.INK);
     voiceText.setGravity(Gravity.CENTER);
-    voiceText.setMaxLines(2);
-    voiceText.setMovementMethod(android.text.method.ScrollingMovementMethod.getInstance());
-    voiceText.setLineSpacing(Ui.dp(this, 3), 1);
-    voiceText.setContentDescription("修正语音文字");
-    voiceText.setOnClickListener(v -> editTranscript());
-    center.addView(voiceText, new LinearLayout.LayoutParams(-1, Ui.dp(this, 48)));
-    status = Ui.text(this, transcript.isEmpty() ? "点击说话" : "点文字可修正", 14, Ui.SUB);
-    status.setGravity(Gravity.CENTER);
-    status.setMaxLines(2);
-    status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-    center.addView(status, new LinearLayout.LayoutParams(-1, Ui.dp(this, 38)));
-    microphone =
-        new VoiceButton(
-            this,
-            () -> {
-              if (recording) {
-                recording = false;
-                working = true;
-                microphone.setState(VoiceButton.State.TRANSCRIBING);
-                insertAction.setEnabled(false);
-                status.setText("正在识别…");
-                voice.stop();
-              } else startVoice();
-            });
-    center.addView(microphone, new LinearLayout.LayoutParams(Ui.dp(this, 156), Ui.dp(this, 58)));
-    Ui.gap(this, center, 8);
-    LinearLayout foot = Ui.row(this);
-    Ui.pad(this, foot, 16, 4);
-    foot.addView(
-        round("整理", this::polishVoice),
-        new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-    foot.addView(new Space(this), new LinearLayout.LayoutParams(0, 1, 1));
-    insertAction = Ui.button(this, transcript.isEmpty() ? "换行" : "填入", this::insertTranscript);
-    insertAction.setTextSize(18);
-    insertAction.setBackground(Ui.pressable(this, Ui.SELECTED, 26));
-    foot.addView(insertAction, new LinearLayout.LayoutParams(Ui.dp(this, 132), Ui.dp(this, 48)));
-    foot.addView(new Space(this), new LinearLayout.LayoutParams(0, 1, 1));
-    foot.addView(
-        round(
-            "退格",
-            () -> {
-              if (recording || working) return;
-              voice.cancel();
-              model.cancel();
-              microphone.setState(VoiceButton.State.IDLE);
-              if (transcript.isEmpty()) host.delete();
-              else {
-                transcript =
-                    transcript.substring(0, transcript.offsetByCodePoints(transcript.length(), -1));
-                renderTranscript();
-              }
-            }),
-        new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-    root.addView(foot, new LinearLayout.LayoutParams(-1, Ui.dp(this, 60)));
+    voiceText.setLineSpacing(Ui.dp(this, 4), 1);
+    Ui.pad(this, voiceText, 24, 8);
+    voiceText.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+    scroll.addView(voiceText);
+    root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+    status = Ui.text(this, "", 13, Ui.SUB);
+    status.setGravity(Gravity.CENTER); Ui.pad(this, status, 12, 6);
+    status.setMinHeight(Ui.dp(this, 36));
+    root.addView(status);
+    LinearLayout actions = Ui.row(this); actions.setGravity(Gravity.CENTER);
+    microphone = new VoiceButton(this, () -> { if (recording || working) finishRecording(); else begin(false, 0, 0); });
+    actions.addView(microphone, new LinearLayout.LayoutParams(Ui.dp(this, 156), Ui.dp(this, 56)));
+    root.addView(actions, new LinearLayout.LayoutParams(-1, Ui.dp(this, 64)));
+    keep = Ui.button(this, "填入已有文字", this::insertTranscript);
+    keep.setVisibility(View.GONE);
+    root.addView(keep, new LinearLayout.LayoutParams(-1, Ui.dp(this, 44)));
+    showHint();
   }
 
-  private View round(String name, Runnable action) {
-    View v = Ui.icon(this, name, action);
-    v.setBackground(Ui.pressable(this, Ui.SPECIAL_KEY, 28));
-    return v;
+  private void showHint() {
+    if (status == null) return;
+    status.setTextColor(target == VoiceGesture.Target.CANCEL ? Ui.RED : Ui.SUB);
+    status.setText(!holding ? "说完点停止，文字会自动填入" : target == VoiceGesture.Target.CANCEL ? "松手取消" : target == VoiceGesture.Target.LOCK ? "松手锁定，继续说话" : "松手填入 · 上滑锁定 · 左滑取消");
   }
 
-  private void leave() {
-    voice.cancel();
-    model.cancel();
-    recording = false;
-    working = false;
-    microphone.setState(VoiceButton.State.IDLE);
-    typing();
-  }
+  private void leave() { cancel(); typing(); }
 
-  private void editTranscript() {
-    if (transcript.isEmpty() || recording || working) return;
-    voice.cancel();
-    model.cancel();
-    recording = false;
-    microphone.setState(VoiceButton.State.IDLE);
-    editLocal(
-        "修正语音文字",
-        transcript,
-        edited -> {
-          transcript = edited;
-          show();
-        });
-  }
-
-  private void renderTranscript() {
-    voiceText.setText(transcript);
-    insertAction.setText(transcript.isEmpty() ? "换行" : "填入");
-    voiceText.post(() -> {
-      android.text.Layout layout = voiceText.getLayout();
-      if (layout != null) voiceText.scrollTo(0, Math.max(0, layout.getHeight() - voiceText.getHeight()));
-    });
+  private void finishRecording() {
+    if (stopping) return;
+    holding = false; stopping = true; recording = false; working = true;
+    microphone.setState(VoiceButton.State.TRANSCRIBING);
+    status.setTextColor(Ui.SUB); status.setText("正在完成识别…"); voice.stop();
   }
 
   private void insertTranscript() {
-    if (recording || working) return;
-    if (transcript.trim().isEmpty()) {
-      host.insert("\n");
-      return;
-    }
-    voice.cancel();
-    model.cancel();
-    if (protectedInsert(transcript.trim())) {
+    if (recording || working || transcript.trim().isEmpty()) return;
+    String value = transcript.trim();
+    voice.cancel(); model.cancel();
+    if (host.finishVoice(value)) {
       if (app.prefs().getBoolean("history", true)) {
         if (historyId.isEmpty()) historyId = app.histories.create("voice", rawTranscript);
-        app.histories.inserted(historyId, transcript.trim(), host.conversationRef());
-        host.trackHistory(historyId);
+        app.histories.inserted(historyId, value, host.conversationRef()); host.trackHistory(historyId);
       }
-      historyId = "";
-      rawTranscript = "";
-      transcript = "";
+      holding = false; transcript = rawTranscript = historyId = "";
       typing();
     }
   }
 
   private void startVoice() {
-    if (working || recording) return;
-    model.cancel();
-    working = true;
-    insertAction.setEnabled(false);
+    working = true; stopping = false;
     microphone.setState(VoiceButton.State.CONNECTING);
     final long gen = host.generation();
-    final String prefix = transcript.isEmpty() ? "" : transcript + " ";
-    final String rawPrefix = rawTranscript.isEmpty() ? "" : rawTranscript + " ";
-    voice.start(
-        new VoiceInput.Listener() {
-          boolean active() {
-            return gen == host.generation() && host.mode().equals("voice");
-          }
-
-          public void text(String value, boolean fin) {
-            if (!active()) return;
-            transcript = prefix + value;
-            renderTranscript();
-            if (fin) {
-              rawTranscript = rawPrefix + value;
-              if (app.prefs().getBoolean("history", true)) {
-                if (historyId.isEmpty()) historyId = app.histories.create("voice", rawTranscript);
-                else app.histories.transcript(historyId, rawTranscript);
-              }
-              recording = false;
-              working = false;
-              insertAction.setEnabled(true);
-              microphone.setState(VoiceButton.State.IDLE);
-              status.setText("说完了 · 可修正、整理或填入");
-              if (app.prefs().getBoolean("personalRewrite", false)) polishVoice();
-            }
-          }
-
-          public void level(float rmsDb) {
-            if (active()) microphone.level(rmsDb);
-          }
-
-          public void ready() {
-            if (!active()) return;
-            working = false;
-            recording = true;
-            microphone.setState(VoiceButton.State.LISTENING);
-          }
-
-          public void processing() {
-            if (active()) {
-              recording = false;
-              working = true;
-              microphone.setState(VoiceButton.State.TRANSCRIBING);
-              insertAction.setEnabled(false);
-            }
-          }
-
-          public void status(String value) {
-            if (active()) status.setText(value);
-          }
-
-          public void error(String value) {
-            if (!active()) return;
-            recording = false;
-            working = false;
-            insertAction.setEnabled(true);
-            microphone.setState(VoiceButton.State.IDLE);
-            status.setText(value);
-          }
-        },
-        host.conversationRef());
+    voice.start(new VoiceInput.Listener() {
+      boolean active() { return gen == host.generation() && host.mode().equals("voice"); }
+      public void text(String value, boolean fin) {
+        if (!active()) return;
+        transcript = value; voiceText.setText(value); host.previewVoice(value);
+        if (fin) {
+          holding = recording = working = false; rawTranscript = value;
+          if (!value.trim().isEmpty() && app.prefs().getBoolean("history", true)) historyId = app.histories.create("voice", value);
+          if (value.trim().isEmpty()) { host.restoreVoice(); microphone.setState(VoiceButton.State.IDLE); status.setText("没听清，再说一次"); return; }
+          if (app.prefs().getBoolean("personalRewrite", false)) polishVoice(); else insertTranscript();
+        }
+      }
+      public void level(float rmsDb) { if (active()) microphone.level(rmsDb); }
+      public void ready() { if (active() && !stopping) { working = false; recording = true; microphone.setState(VoiceButton.State.LISTENING); showHint(); } }
+      public void processing() { if (active()) { recording = false; working = true; microphone.setState(VoiceButton.State.TRANSCRIBING); status.setText("正在完成识别…"); } }
+      public void status(String value) { /* Status belongs to the interaction, not transport implementation. */ }
+      public void error(String value) {
+        if (!active()) return;
+        holding = recording = working = stopping = false; host.restoreVoice();
+        microphone.setState(VoiceButton.State.IDLE);
+        status.setTextColor(Ui.RED); status.setText(value);
+        keep.setVisibility(transcript.trim().isEmpty() ? View.GONE : View.VISIBLE);
+      }
+    }, host.conversationRef());
   }
 
   private void polishVoice() {
-    if (recording || working) return;
-    voice.cancel();
-    recording = false;
-    microphone.setState(VoiceButton.State.IDLE);
-    String original = transcript.trim();
-    if (original.isEmpty()) {
-      status.setText("先说一段话，再按个人文风整理");
-      return;
-    }
-    if (!model.configured()) {
-      status.setText("请先登录豆豆账户；原始转写可直接填入");
-      return;
-    }
-    final long gen = host.generation();
-    working = true;
-    insertAction.setEnabled(false);
-    microphone.setState(VoiceButton.State.REWRITING);
-    status.setText("按热词和文风整理中…");
-    model.polish(
-        original,
-        voice.sourceJob(),
-        host.conversationRef(),
-        (text, error) -> {
-          if (gen != host.generation() || !host.mode().equals("voice")) return;
-          working = false;
-          insertAction.setEnabled(true);
-          microphone.setState(VoiceButton.State.IDLE);
-          if (error != null) {
-            status.setText(error);
-            return;
-          }
-          if (!transcript.trim().equals(original)) {
-            status.setText("保留你修改的文字，可重新整理");
-            return;
-          }
-          transcript = text;
-          renderTranscript();
-          status.setText("整理完成 · 确认意思后填入");
-        });
+    final long gen = host.generation(); final String original = transcript;
+    working = true; microphone.setState(VoiceButton.State.REWRITING); status.setText("按你的口吻整理…");
+    model.polish(original, voice.sourceJob(), host.conversationRef(), (text, error) -> {
+      if (gen != host.generation() || !host.mode().equals("voice")) return;
+      working = false;
+      transcript = error == null ? text : original;
+      if (error != null) Ui.toast(this, "整理未完成，已保留原文");
+      insertTranscript();
+    });
   }
 }

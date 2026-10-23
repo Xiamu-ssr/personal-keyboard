@@ -39,6 +39,15 @@ public final class KeyboardService extends InputMethodService
   private int initialStart, initialEnd;
   private EditText localEditor;
   private Runnable finishLocal;
+  private final app.doudou.ime.input.DictationEditor dictation = new app.doudou.ime.input.DictationEditor();
+
+  private final class InputSurface extends LinearLayout {
+    InputSurface() { super(KeyboardService.this); setOrientation(VERTICAL); }
+    @Override public boolean dispatchTouchEvent(MotionEvent event) {
+      if (voice != null && voice.holding()) return voice.touch(event);
+      return super.dispatchTouchEvent(event);
+    }
+  }
 
   @Override
   public void onCreate() {
@@ -51,12 +60,22 @@ public final class KeyboardService extends InputMethodService
 
   @Override
   public View onCreateInputView() {
-    root = Ui.col(this);
+    Window window = getWindow().getWindow();
+    window.setDecorFitsSystemWindows(false);
+    window.setNavigationBarColor(Ui.KEYBOARD);
+    window.setNavigationBarContrastEnforced(false);
+    WindowInsetsController bars = window.getInsetsController();
+    if (bars != null) bars.setSystemBarsAppearance(
+        0, WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+    root = new InputSurface();
     root.setBackgroundColor(Ui.PANEL);
     root.setPadding(Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4));
     root.setOnApplyWindowInsetsListener(
         (view, insets) -> {
-          int bottom = insets.getInsets(WindowInsets.Type.navigationBars()).bottom;
+          // Android 15 and some OEM IMEs report their switcher as a caption bar.
+          // It belongs to the system. Reserve it once; never draw controls underneath it.
+          int bottom = insets.getInsets(
+              WindowInsets.Type.navigationBars() | WindowInsets.Type.captionBar()).bottom;
           if (bottom != bottomInset) {
             bottomInset = bottom;
             sizeInputView();
@@ -66,6 +85,11 @@ public final class KeyboardService extends InputMethodService
     typing();
     root.requestApplyInsets();
     return root;
+  }
+
+  @Override
+  public boolean onEvaluateFullscreenMode() {
+    return false;
   }
 
   @Override
@@ -246,6 +270,10 @@ public final class KeyboardService extends InputMethodService
 
               public void voice() {
                 if (localEditor == null) showVoice();
+              }
+
+              public void holdVoice(float x, float y) {
+                if (localEditor == null) voice.hold(x, y);
               }
 
               public void advisor() {
@@ -555,14 +583,14 @@ public final class KeyboardService extends InputMethodService
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
   }
 
-  public void message(String title, String detail, Runnable retry) {
+  public void message(String title, String detail, String actionLabel, Runnable action) {
     reset("error", 284);
     panelHeading(title, this::typing);
     TextView t = Ui.text(this, detail, 15, Ui.SUB);
     Ui.pad(this, t, 16, 16);
     root.addView(t, new LinearLayout.LayoutParams(-1, 0, 1));
-    if (retry != null) root.addView(Ui.button(this, "重试", retry));
-    root.addView(Ui.button(this, "打开设置", () -> settings("settings")));
+    if (action != null) root.addView(Ui.primary(this, actionLabel, action));
+    root.addView(Ui.button(this, "返回键盘", this::typing));
   }
 
   private void panelHeading(String title, Runnable back) {
@@ -612,7 +640,7 @@ public final class KeyboardService extends InputMethodService
             || s[0] != initialStart
             || s[1] != initialEnd;
     if (changed) {
-      message("你已修改输入框", "为保护新草稿，没有自动填入。可以复制这条建议后自行粘贴。", null);
+      message("你已修改输入框", "为保护新草稿，没有自动填入。可以复制这条建议后自行粘贴。", "", null);
       root.addView(
           Ui.button(
               this,
@@ -641,7 +669,7 @@ public final class KeyboardService extends InputMethodService
   }
 
   private void observeHistory() {
-    if (app == null || privateMode() || localEditor != null || trackedHistory.isEmpty()) return;
+    if (app == null || privateMode() || localEditor != null || trackedHistory.isEmpty() || dictation.active()) return;
     String value = historyEdits.observedText(full(), generation);
     if (value != null) app.histories.observed(trackedHistory, value);
   }
@@ -709,6 +737,23 @@ public final class KeyboardService extends InputMethodService
   private void showVoice() {
     voice.show();
   }
+
+  public boolean previewVoice(String text) {
+    if (!dictation.active()) {
+      String current = full(); int[] selected = selection();
+      if (current == null || selected == null || initialDraft == null || !initialDraft.equals(current)
+          || selected[0] != initialStart || selected[1] != initialEnd) return false;
+      if (!dictation.begin(input(), current, selected[0], selected[1])) return false;
+    }
+    return dictation.update(text);
+  }
+
+  public boolean finishVoice(String text) {
+    dictation.restore();
+    return protectedInsert(text);
+  }
+
+  public void restoreVoice() { dictation.restore(); }
 
   private void startAdvisor(boolean supplement) {
     advisorController.start(supplement);

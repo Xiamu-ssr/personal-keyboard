@@ -10,6 +10,7 @@ import android.view.*;
 import android.view.inputmethod.*;
 import android.widget.*;
 import app.doudou.ime.BuildConfig;
+import app.doudou.ime.account.AccountSummary;
 import app.doudou.ime.app.*;
 import app.doudou.ime.capture.CaptureService;
 import app.doudou.ime.design.Ui;
@@ -25,148 +26,100 @@ public final class SettingsScreen extends Screen {
     super(a, app, nav);
   }
 
+  private String page = "settings";
+
+  public void page(String value) { page = value; }
+
   @Override
   protected void draw() {
-    LinearLayout permissions = section("系统权限", "键盘、麦克风与主动截屏分别管理。");
-    action(
-        permissions,
-        "键盘：" + (enabled() ? "已启用" : "未启用"),
-        () -> activity.startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)));
-    action(
-        permissions,
-        "麦克风："
-            + (activity.checkSelfPermission(Manifest.permission.RECORD_AUDIO)
-                    == PackageManager.PERMISSION_GRANTED
-                ? "已允许"
-                : "未允许"),
-        () -> activity.requestPermissions(new String[] {Manifest.permission.RECORD_AUDIO}, 20));
-    action(
-        permissions,
-        "主动截屏：" + (CaptureService.current != null ? "已开启" : "未开启"),
-        () ->
-            new AlertDialog.Builder(activity)
-                .setTitle("只在点军师时读屏")
-                .setMessage("点击军师时截取当前屏幕；截图用于本次图文推理并保存在手机。")
-                .setPositiveButton(
-                    "去系统设置",
-                    (d, w) ->
-                        activity.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)))
-                .setNegativeButton("取消", null)
-                .show());
-    add(permissions);
-    LinearLayout input = section("输入与语音", "");
-    toggle(input, "按键轻振", "haptic", true);
-    toggle(input, "学习本地候选排序", "learning", true);
-    toggle(input, "保存主动使用历史", "history", true);
-    toggle(input, "ASR 基础规整", "asrPolish", true);
-    toggle(input, "按我的口吻整理", "personalRewrite", false);
-    captionIn(input, "语音实时识别会携带少量热词与近期文字；个人整理开启后，再用文字模型按文风处理。");
-    add(input);
-    LinearLayout account =
-        section("豆豆账户", app.cloud.loggedIn() ? app.cloud.handle() : "登录后使用语音和军师；普通输入离线可用。");
-    action(account, app.cloud.loggedIn() ? "账户、权益与云同步" : "登录豆豆账户", () -> nav.open("account", 0));
-    add(account);
-    LinearLayout intelligence = section("个人记忆", "热词、文风和人物由云端管理，手机同步缓存。历史与截图保存在本机。");
-    action(
-        intelligence,
-        "同步个人记忆",
-        () -> {
-          Ui.toast(activity, "正在同步个人记忆");
-          app.worker.execute(
-              () -> {
-                String result;
-                try {
-                  result = new LearningBatch(app).run();
-                } catch (Exception e) {
-                  result = e.getMessage() == null ? "整理失败，新增历史保留" : e.getMessage();
-                }
-                final String message = result;
-                activity.runOnUiThread(() -> Ui.toast(activity, message));
-              });
-        });
-    captionIn(intelligence, "新增历史自动合批提交；明确纠词可撤销，文风和人物更新先核对。");
-    add(intelligence);
-    LinearLayout privacy = section("数据与备份", "备份含人物、词库和本机历史，请保存到你信任的位置；不包含登录凭据和同步密钥。");
-    action(
-        privacy,
-        "历史保留：" + app.prefs().getInt("retentionDays", 30) + " 天",
-        () ->
-            new AlertDialog.Builder(activity)
-                .setTitle("历史保留天数")
-                .setItems(
-                    new String[] {"7 天", "30 天", "90 天", "不自动清理"},
-                    (d, w) -> {
-                      app.prefs()
-                          .edit()
-                          .putInt("retentionDays", new int[] {7, 30, 90, 0}[w])
-                          .apply();
-                      app.histories.prune(new int[] {7, 30, 90, 0}[w]);
-                      nav.refresh();
-                    })
-                .show());
-    action(
-        privacy,
-        "导出本地资料",
-        () ->
-            activity.startActivityForResult(
-                new Intent(Intent.ACTION_CREATE_DOCUMENT)
-                    .setType("application/json")
-                    .putExtra(Intent.EXTRA_TITLE, "豆豆输入法-备份.json")
-                    .addCategory(Intent.CATEGORY_OPENABLE),
-                EXPORT));
-    action(
-        privacy,
-        "从备份恢复历史",
-        () ->
-            activity.startActivityForResult(
-                new Intent(Intent.ACTION_OPEN_DOCUMENT)
-                    .setType("application/json")
-                    .addCategory(Intent.CATEGORY_OPENABLE),
-                IMPORT));
-    action(
-        privacy,
-        "清除本机历史和候选学习",
-        () ->
-            new AlertDialog.Builder(activity)
-                .setTitle("清除本机历史和截图？")
-                .setMessage("本机历史、截图和候选排序学习将删除；已确认的个人记忆可在记忆页管理。建议先导出备份。")
-                .setPositiveButton(
-                    "清除",
-                    (d, w) -> {
-                      app.histories.clear();
-                      app.store.clearLocalLearning();
-                      app.clearDecoderLearning();
-                      nav.refresh();
-                      Ui.toast(activity, "已清除本地资料");
-                    })
-                .setNegativeButton("取消", null)
-                .show());
-    add(privacy);
-    caption("个人记忆随账户同步，完整历史和截图的云备份在账户页开启。");
-    LinearLayout about =
-        section(
-            "豆豆输入法 " + BuildConfig.VERSION_NAME,
-            "拼音：AOSP PinyinIME（Apache 2.0）\n"
-                + "个人词拼音：TinyPinyin（Apache 2.0）\n"
-                + "语音：Qwen Message，经豆豆 Cloud 代理。");
-    action(
-        about,
-        "开源许可",
-        () -> {
-          try (InputStream in = activity.getAssets().open("aosp-notice.txt")) {
-            ByteArrayOutputStream b = new ByteArrayOutputStream();
-            byte[] bytes = new byte[2048];
-            int n;
-            while ((n = in.read(bytes)) != -1) b.write(bytes, 0, n);
-            new AlertDialog.Builder(activity)
-                .setTitle("第三方许可")
-                .setMessage(b.toString("UTF-8"))
-                .setPositiveButton("关闭", null)
-                .show();
-          } catch (Exception e) {
-            Ui.toast(activity, "许可文件暂不可读");
-          }
-        });
+    if (page.equals("input-settings")) { input(); return; }
+    if (page.equals("data-settings")) { data(); return; }
+    if (page.equals("permissions")) { permissions(); return; }
+    if (page.equals("about")) { about(); return; }
+    add(AccountSummary.create(activity, app, () -> nav.open("account", 0)));
+    LinearLayout options = Ui.card(activity);
+    options.addView(Ui.cell(activity, "语音", "语音与键盘", "", "", () -> nav.open("input-settings", 0)));
+    options.addView(Ui.divider(activity));
+    options.addView(Ui.cell(activity, "隐私", "数据与隐私", "", "", () -> nav.open("data-settings", 0)));
+    options.addView(Ui.divider(activity));
+    options.addView(Ui.cell(activity, "设置", "系统权限", "", "", () -> nav.open("permissions", 0)));
+    add(options);
+    LinearLayout support = Ui.card(activity);
+    support.addView(Ui.cell(activity, "闪光", "关于豆豆", "", BuildConfig.VERSION_NAME.split("-", 2)[0], () -> nav.open("about", 0)));
+    add(support);
+  }
+
+  private void input() {
+    LinearLayout voice = section("说话的方式", "长按空格说话，松手填入；上滑锁定，左滑取消。");
+    toggle(voice, "按我的口吻整理", "personalRewrite", false);
+    captionIn(voice, "识别后再按你的文风整理，原意保持不变。");
+    add(voice);
+    LinearLayout keys = section("键盘", "");
+    toggle(keys, "按键轻振", "haptic", true);
+    toggle(keys, "记住常用候选", "learning", true);
+    add(keys);
+  }
+
+  private void permissions() {
+    LinearLayout c = section("按需开启", "语音需要麦克风；军师需要主动截屏。");
+    c.addView(Ui.cell(activity, "工具", "豆豆键盘", "", enabled() ? "已启用" : "去开启", () -> activity.startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))));
+    c.addView(Ui.divider(activity));
+    c.addView(Ui.cell(activity, "语音", "麦克风", "", activity.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED ? "已允许" : "去允许", () -> activity.requestPermissions(new String[] {Manifest.permission.RECORD_AUDIO}, 20)));
+    c.addView(Ui.divider(activity));
+    c.addView(Ui.cell(activity, "军师", "主动截屏", "只在你点军师时截图", CaptureService.current != null ? "已开启" : "去开启", () -> new AlertDialog.Builder(activity)
+      .setTitle("允许军师看当前屏幕")
+      .setMessage("只在你点军师时截图，上传用于生成回复。开启历史后保存在手机，可随时删除。")
+      .setPositiveButton("去开启", (d, w) -> activity.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)))
+      .setNegativeButton("取消", null).show()));
+    add(c);
+  }
+
+  private void data() {
+    LinearLayout history = section("本机历史", "文字和军师截图保存在手机。");
+    toggle(history, "保留使用历史", "history", true);
+    int days = app.prefs().getInt("retentionDays", 30);
+    action(history, "自动清理 · " + (days == 0 ? "不自动清理" : days + " 天"), () -> new AlertDialog.Builder(activity)
+      .setTitle("历史保留时长").setItems(new String[] {"7 天", "30 天", "90 天", "不自动清理"}, (d, w) -> {
+        int value = new int[] {7, 30, 90, 0}[w];
+        app.prefs().edit().putInt("retentionDays", value).apply();
+        app.histories.prune(value); nav.refresh();
+      }).show());
+    action(history, "查看历史", () -> nav.open("history", 0));
+    add(history);
+    LinearLayout memory = section("个人记忆", "热词、文风和人物随账户同步，手机保留一份缓存。");
+    action(memory, "立即同步", () -> {
+      Ui.toast(activity, "正在同步");
+      app.worker.execute(() -> {
+        String result;
+        try { result = new LearningBatch(app).run(); }
+        catch (Exception e) { result = "暂时无法同步，稍后会自动重试"; }
+        final String message = result;
+        activity.runOnUiThread(() -> Ui.toast(activity, message));
+      });
+    });
+    add(memory);
+    LinearLayout backup = section("备份与恢复", "备份包含本机历史和截图，请妥善保存。");
+    action(backup, "导出本地资料", () -> activity.startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/json").putExtra(Intent.EXTRA_TITLE, "豆豆输入法-备份.json").addCategory(Intent.CATEGORY_OPENABLE), EXPORT));
+    action(backup, "从备份恢复", () -> activity.startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("application/json").addCategory(Intent.CATEGORY_OPENABLE), IMPORT));
+    add(backup);
+    TextView clear = Ui.button(activity, "清除本机历史", () -> new AlertDialog.Builder(activity)
+      .setTitle("清除本机历史和截图？")
+      .setMessage("本机历史、截图和候选排序学习将删除；云端个人记忆保留。建议先导出备份。")
+      .setPositiveButton("清除", (d, w) -> { app.histories.clear(); app.store.clearLocalLearning(); app.clearDecoderLearning(); nav.refresh(); Ui.toast(activity, "已清除本机历史"); })
+      .setNegativeButton("取消", null).show());
+    clear.setTextColor(Ui.RED); add(clear);
+  }
+
+  private void about() {
+    LinearLayout about = section("豆豆输入法", BuildConfig.VERSION_NAME);
+    action(about, "版本与下载", () -> activity.startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/Xiamu-ssr/personal-keyboard/releases"))));
+    action(about, "开源许可", () -> {
+      try (InputStream in = activity.getAssets().open("aosp-notice.txt")) {
+        ByteArrayOutputStream b = new ByteArrayOutputStream(); byte[] bytes = new byte[2048]; int n;
+        while ((n = in.read(bytes)) != -1) b.write(bytes, 0, n);
+        new AlertDialog.Builder(activity).setTitle("第三方许可").setMessage(b.toString("UTF-8")).setPositiveButton("关闭", null).show();
+      } catch (Exception e) { Ui.toast(activity, "许可文件暂不可读"); }
+    });
     add(about);
   }
 

@@ -14,12 +14,21 @@ import org.json.*;
 /** Invited accounts, recovery and entitlements. No supplier or SMS configuration in the App. */
 public final class AccountScreen extends Screen {
   private String mode = "login", handle = "", status = "", pendingRecovery = "";
-  private boolean busy;
+  private boolean busy, security;
+  private final java.util.Map<String, String> form = new java.util.HashMap<>();
+  public void leave() { form.clear(); }
 
   public AccountScreen(Activity a, KeyboardApp app, Navigator nav) { super(a, app, nav); }
 
   private EditText field(LinearLayout parent, String hint, boolean secret) {
     EditText edit = Ui.edit(activity, hint, "");
+    final String fieldKey = mode + ":" + hint;
+    edit.setText(form.getOrDefault(fieldKey, ""));
+    edit.addTextChangedListener(new android.text.TextWatcher() {
+      public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+      public void onTextChanged(CharSequence s, int start, int before, int count) { form.put(fieldKey, s.toString()); }
+      public void afterTextChanged(android.text.Editable s) {}
+    });
     edit.setSingleLine(true);
     edit.setEnabled(!busy);
     edit.setInputType(InputType.TYPE_CLASS_TEXT | (secret ? InputType.TYPE_TEXT_VARIATION_PASSWORD : InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD));
@@ -66,7 +75,7 @@ public final class AccountScreen extends Screen {
         if (next.equals(mode)) continue;
         TextView item = Ui.button(activity, next.equals("login") ? "已有账号" : next.equals("register") ? "受邀注册" : "忘记密码", () -> {
           if (busy) return;
-          handle = name.getText().toString().trim(); mode = next; status = ""; nav.refresh();
+          handle = name.getText().toString().trim(); form.clear(); mode = next; status = ""; nav.refresh();
         });
         item.setEnabled(!busy);
         choices.addView(item, new LinearLayout.LayoutParams(0, -2, 1));
@@ -77,35 +86,10 @@ public final class AccountScreen extends Screen {
       return;
     }
     JSONObject account = app.cloud.cachedAccount(), ent = account.optJSONObject("entitlements");
-    LinearLayout identity = section(app.cloud.handle(), "豆豆账户");
-    action(
-        identity,
-        busy ? "正在刷新…" : "刷新账户用量",
-        () ->
-            work(
-                () -> {
-                  app.cloud.account();
-                  return "用量已更新";
-                }));
-    add(identity);
-    LinearLayout allowance = section("可用权益", "成功后扣量，失败和原任务重试不重复扣。");
-    if (ent != null) {
-      JSONObject asr = ent.optJSONObject("asr"), advisor = ent.optJSONObject("advisor");
-      metric(allowance, "转写字符", asr == null ? 0 : asr.optLong("available"));
-      metric(allowance, "军师次数", advisor == null ? 0 : advisor.optLong("available"));
-    } else captionIn(allowance, "刷新后查看用量");
-    add(allowance);
-    LinearLayout memory = section("个人记忆", "热词、文风和人物随账户同步，普通输入使用本机缓存。");
-    action(
-        memory,
-        "立即同步",
-        () ->
-            work(
-                () -> {
-                  app.personalization.sync();
-                  return "个人记忆已同步";
-                }));
-    add(memory);
+    add(AccountSummary.create(activity, app, null));
+    TextView refresh = Ui.button(activity, busy ? "正在刷新…" : "刷新用量", () -> work(() -> { app.cloud.account(); return "用量已更新"; }));
+    refresh.setEnabled(!busy);
+    add(refresh);
     LinearLayout sync =
         section(
             "历史云备份",
@@ -139,18 +123,12 @@ public final class AccountScreen extends Screen {
                   }));
       captionIn(sync, "换机恢复需要验证账号密码。云端可通过账号恢复密钥，此方案不宣称端到端加密。");
     }
-    add(sync);
-    LinearLayout management = section("账户管理", "退出不会清除本机资料。");
-    action(
-        management,
-        "退出登录",
-        () ->
-            work(
-                () -> {
-                  app.cloud.logout();
-                  app.personalization.activate();
-                  return "已退出";
-                }));
+    if (ent != null && ent.optBoolean("cloudSync")) add(sync);
+    LinearLayout securityEntry = Ui.card(activity);
+    securityEntry.addView(Ui.cell(activity, "隐私", "账户安全", "密码、恢复码与注销", security ? "收起" : "", () -> { security = !security; nav.refresh(); }));
+    add(securityEntry);
+    if (security) {
+    LinearLayout management = section("账户安全", "");
     action(management, "验证账号", () -> passwordPrompt("验证账号", password -> {
       app.cloud.reauthenticate(password);
       return "验证完成，可继续云备份或换机恢复";
@@ -172,6 +150,11 @@ public final class AccountScreen extends Screen {
         return "账户已注销";
       })).show());
     add(management);
+    }
+    TextView logout = Ui.button(activity, "退出登录", () -> new AlertDialog.Builder(activity)
+      .setTitle("退出当前账户？").setMessage("本机历史保留，重新登录后可继续使用语音和军师。")
+      .setNegativeButton("取消", null).setPositiveButton("退出", (d, w) -> work(() -> { app.cloud.logout(); app.personalization.activate(); security = false; return "已退出"; })).show());
+    add(logout);
     if (!status.isEmpty()) caption(status);
   }
 
@@ -244,16 +227,17 @@ public final class AccountScreen extends Screen {
     nav.refresh();
     app.network.execute(
         () -> {
-          String result;
+          String result; boolean succeeded;
           try {
-            result = task.run();
+            result = task.run(); succeeded = true;
           } catch (Exception e) {
-            result = e.getMessage() == null ? "连接失败，请稍后重试" : e.getMessage();
+            succeeded = false; result = e.getMessage() == null ? "连接失败，请稍后重试" : e.getMessage();
           }
-          final String value = result;
+          final String value = result; final boolean success = succeeded;
           activity.runOnUiThread(
               () -> {
                 busy = false;
+                if (success) form.clear();
                 status = value;
                 nav.refresh();
                 showRecovery();

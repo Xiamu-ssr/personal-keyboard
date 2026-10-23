@@ -31,6 +31,8 @@ public final class KeyboardView extends LinearLayout {
 
     void voice();
 
+    void holdVoice(float x, float y);
+
     void advisor();
 
     void hide();
@@ -92,7 +94,7 @@ public final class KeyboardView extends LinearLayout {
     bar.addView(expand, new LayoutParams(Ui.dp(c, 36), -1));
     addView(bar, new LayoutParams(-1, Ui.dp(c, 44)));
     if (symbols) {
-      for (String chars : new String[] {"1234567890", "@#¥%&*+-=", "，。？！：；（）"}) {
+      for (String chars : new String[] {"1234567890", "@#¥%&*+-=_", ".,/?!:;()'"}) {
         LinearLayout row = row();
         for (char ch : chars.toCharArray()) key(row, "" + ch, 1, () -> a.letter(ch), false);
       }
@@ -118,11 +120,12 @@ public final class KeyboardView extends LinearLayout {
         if (n == 2) icon(row, "退格", 1.35f, a::delete, false);
       }
       LinearLayout row = row();
-      key(row, "123", 1.55f, a::symbols, true);
-      key(row, english ? "," : "，", .8f, () -> a.letter(english ? ',' : '，'), false);
-      key(row, "空格", 3.6f, a::space, false);
+      key(row, "123", 1.3f, a::symbols, true);
+      key(row, english ? "," : "，", .7f, () -> a.letter(english ? ',' : '，'), false);
+      key(row, "空格", 3.2f, a::space, false);
+      key(row, english ? "." : "。", .7f, () -> a.letter(english ? '.' : '。'), false);
       key(row, english ? "EN" : "中", .85f, a::language, true);
-      icon(row, "换行", 1.7f, a::enter, true);
+      icon(row, "换行", 1.6f, a::enter, true);
     }
   }
 
@@ -157,17 +160,48 @@ public final class KeyboardView extends LinearLayout {
           click.run();
         });
     row.addView(key, geometry(weight));
+    if (label.equals("，") || label.equals(",")) {
+      key.setTooltipText("长按选择标点");
+      key.setOnLongClickListener(v -> {
+        PopupMenu punctuation = new PopupMenu(c, v);
+        for (String mark : new String[] {"。", "？", "！", "、", ".", "/", "_", "：", "；", "…"})
+          punctuation.getMenu().add(mark).setOnMenuItemClickListener(item -> { actions.letter(mark.charAt(0)); return true; });
+        punctuation.show();
+        return true;
+      });
+    }
     if (label.equals("空格")) {
-      final float[] down = {0};
+      key.setTooltipText("长按说话 · 上滑锁定 · 左滑取消");
+      final float[] down = {0, 0};
+      final boolean[] moved = {false};
+      Runnable hold = () -> {
+        actions.haptic(key);
+        actions.holdVoice(down[0], down[1]);
+      };
       key.setOnTouchListener(
           (v, e) -> {
-            if (e.getAction() == MotionEvent.ACTION_DOWN) down[0] = e.getX();
-            if (e.getAction() == MotionEvent.ACTION_UP
-                && Math.abs(e.getX() - down[0]) > Ui.dp(c, 28)) {
-              actions.cursor(e.getX() > down[0] ? 1 : -1);
-              return true;
+            switch (e.getActionMasked()) {
+              case MotionEvent.ACTION_DOWN:
+                down[0] = e.getRawX(); down[1] = e.getRawY(); moved[0] = false;
+                v.setPressed(true);
+                repeats.postDelayed(hold, 280);
+                break;
+              case MotionEvent.ACTION_MOVE:
+                if (Math.abs(e.getRawX() - down[0]) > Ui.dp(c, 20)) {
+                  moved[0] = true;
+                  repeats.removeCallbacks(hold);
+                }
+                break;
+              case MotionEvent.ACTION_UP:
+                repeats.removeCallbacks(hold); v.setPressed(false);
+                if (moved[0]) actions.cursor(e.getRawX() > down[0] ? 1 : -1);
+                else v.performClick();
+                break;
+              case MotionEvent.ACTION_CANCEL:
+                repeats.removeCallbacks(hold); v.setPressed(false);
+                break;
             }
-            return false;
+            return true;
           });
     }
   }

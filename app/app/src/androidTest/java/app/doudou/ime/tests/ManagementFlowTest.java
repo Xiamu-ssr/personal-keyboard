@@ -149,7 +149,7 @@ public final class ManagementFlowTest {
       click("林间");
       await("周末约球");
       shot("person");
-      click("设置");
+      click("我的");
       await("系统权限");
       shot("settings");
       click("输入");

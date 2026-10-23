@@ -8,6 +8,7 @@ import android.os.*;
 import app.doudou.ime.BuildConfig;
 import app.doudou.ime.app.KeyboardApp;
 import java.util.UUID;
+import java.util.ArrayDeque;
 import okhttp3.*;
 import okio.ByteString;
 import org.json.*;
@@ -38,6 +39,10 @@ public final class VoiceInput {
   private volatile WebSocket socket;
   private volatile Listener listener;
   private volatile String jobId = "";
+  private final Object audioLock = new Object();
+  private final ArrayDeque<byte[]> prebuffer = new ArrayDeque<>();
+  private int bufferedBytes;
+  private boolean transportReady, audioDone, finishSent;
 
   public VoiceInput(Context c) {
     context = c;
@@ -61,6 +66,9 @@ public final class VoiceInput {
     jobId = "";
     finished = false;
     stopRequested = false;
+    synchronized (audioLock) {
+      prebuffer.clear(); bufferedBytes = 0; transportReady = audioDone = finishSent = false;
+    }
     if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO)
         != PackageManager.PERMISSION_GRANTED) {
       next.error("请先到豆豆设置允许麦克风");
@@ -73,10 +81,13 @@ public final class VoiceInput {
     }
     final String account = app.cloud.userId();
     next.status("正在连接豆豆语音…");
+    capture(token);
+    main.postDelayed(() -> { if (token == epoch && !finished && !transportReady) fail(token, "连接较慢，请稍后重试"); }, 8000);
     app.network.execute(
         () -> {
           try {
             String access = app.cloud.accessToken(account);
+            if (token != epoch || finished) return;
             JSONObject config =
                 new JSONObject()
                     .put("type", "configure")
@@ -109,7 +120,12 @@ public final class VoiceInput {
                           String type = m.optString("type");
                           if (type.equals("accepted")) jobId = m.getString("jobId");
                           if (type.equals("ready")) {
-                            capture(ws, token);
+                            synchronized (audioLock) {
+                              socket = ws; transportReady = true;
+                              while (!prebuffer.isEmpty()) ws.send(ByteString.of(prebuffer.removeFirst()));
+                              bufferedBytes = 0;
+                              finishWhenReady();
+                            }
                           }
                           if (type.equals("partial")) {
                             String text = m.optString("text");
@@ -157,13 +173,8 @@ public final class VoiceInput {
   }
 
   @SuppressWarnings("MissingPermission")
-  private void capture(WebSocket ws, int token) {
+  private void capture(int token) {
     if (token != epoch) return;
-    if (stopRequested) {
-      ws.send("{\"type\":\"cancel\"}");
-      fail(token, "已停止，本次未开始录音");
-      return;
-    }
     recording = true;
     new Thread(
             () -> {
@@ -182,13 +193,13 @@ public final class VoiceInput {
                         Math.max(min, 6400));
                 if (audio.getState() != AudioRecord.STATE_INITIALIZED)
                   throw new IllegalStateException();
-                if (token != epoch) return;
+                if (token != epoch || finished || stopRequested) return;
                 recorder = audio;
                 audio.startRecording();
                 post(token, () -> { listener.ready(); listener.status("正在听，说完点停止"); });
                 byte[] buffer = new byte[3200];
                 long started = System.currentTimeMillis();
-                while (recording
+                while (recording && !stopRequested
                     && token == epoch
                     && System.currentTimeMillis() - started < 90000) {
                   int n = audio.read(buffer, 0, buffer.length);
@@ -196,8 +207,15 @@ public final class VoiceInput {
                     if (!recording) break;
                     throw new IllegalStateException();
                   }
-                  if (ws.queueSize() > 128000) throw new java.io.IOException("网络较慢，请缩短语音");
-                  if (!ws.send(ByteString.of(buffer, 0, n))) throw new java.io.IOException("连接中断");
+                  synchronized (audioLock) {
+                    if (token != epoch || finished) break;
+                    if (transportReady && socket != null) {
+                      if (socket.queueSize() > 128000 || !socket.send(ByteString.of(buffer, 0, n))) throw new java.io.IOException("网络较慢，请重试");
+                    } else {
+                      if (bufferedBytes + n > 128000) throw new java.io.IOException("网络较慢，请重试");
+                      prebuffer.add(java.util.Arrays.copyOf(buffer, n)); bufferedBytes += n;
+                    }
+                  }
                   double sum = 0;
                   for (int i = 0; i + 1 < n; i += 2) {
                     short sample = (short) ((buffer[i] & 255) | (buffer[i + 1] << 8));
@@ -214,15 +232,17 @@ public final class VoiceInput {
                         listener.status("正在完成识别…");
                         listener.processing();
                       });
-                  ws.send("{\"type\":\"finish\"}");
+                  synchronized (audioLock) { audioDone = true; finishWhenReady(); }
                 }
               } catch (Exception e) {
                 if (token == epoch && !finished) {
-                  ws.send("{\"type\":\"cancel\"}");
                   fail(token, e.getMessage() == null ? "录音失败，请检查麦克风" : e.getMessage());
                 }
               } finally {
-                if (token == epoch) recording = false;
+                if (token == epoch) {
+                  recording = false;
+                  synchronized (audioLock) { audioDone = true; finishWhenReady(); }
+                }
                 if (audio != null) {
                   try {
                     audio.stop();
@@ -237,10 +257,17 @@ public final class VoiceInput {
         .start();
   }
 
+  private void finishWhenReady() {
+    if (transportReady && audioDone && !finishSent && !finished && socket != null) {
+      finishSent = true; socket.send("{\"type\":\"finish\"}");
+    }
+  }
+
   private void fail(int token, String value) {
     if (token != epoch) return;
     finished = true;
     releaseRecorder();
+    synchronized (audioLock) { prebuffer.clear(); bufferedBytes = 0; }
     WebSocket current = socket;
     if (current != null) { current.send("{\"type\":\"cancel\"}"); current.close(1000, "Stopped"); }
     post(token, () -> listener.error(value));
@@ -267,7 +294,7 @@ public final class VoiceInput {
     finished = true;
     releaseRecorder();
     WebSocket ws = socket;
-    socket = null;
+    synchronized (audioLock) { socket = null; prebuffer.clear(); bufferedBytes = 0; transportReady = false; }
     if (ws != null) {
       ws.send("{\"type\":\"cancel\"}");
       ws.close(1000, "Cancelled");

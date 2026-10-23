@@ -10,6 +10,7 @@ import app.doudou.ime.input.EditorHost;
 import app.doudou.ime.input.PanelController;
 import app.doudou.ime.memory.MemoryStore;
 import app.doudou.ime.model.TextModelClient;
+import app.doudou.ime.voice.VoiceButton;
 import java.util.*;
 import org.json.*;
 
@@ -36,11 +37,15 @@ public final class AdvisorController extends PanelController {
 
   public void start(boolean supplement) {
     if (privateMode()) {
-      message("隐私输入", "此输入框不启用军师读屏。", null);
+      message("隐私输入", "此输入框不启用军师读屏。", "", null);
+      return;
+    }
+    if (!model.configured()) {
+      message("登录后使用军师", "普通打字不需要登录。", "去登录", () -> settings("account"));
       return;
     }
     if (CaptureService.current == null) {
-      message("允许主动截屏", "点军师时截取当前屏幕，用于生成回复。", () -> settings("settings"));
+      message("允许主动截屏", "点军师时截取当前屏幕，用于生成回复。", "允许截屏", () -> settings("permissions"));
       return;
     }
     if (supplement && advisor.pages() >= AdvisorSession.MAX_PAGES) {
@@ -132,7 +137,7 @@ public final class AdvisorController extends PanelController {
                               && generation == host.generation()) {
                             advisor.historyId = history;
                             advisor.image(image);
-                            panel();
+                            generate("");
                           }
                         });
                   } catch (Exception ex) {
@@ -160,99 +165,97 @@ public final class AdvisorController extends PanelController {
 
   private void panel() {
     if (!advisor.valid(advisor.token(), host.generation())) return;
-    reset("advisor", 284);
-    panelHeading(
-        advisor.personName.isEmpty() ? "军师" : advisor.personName,
-        () -> {
-          cancel();
-          typing();
-        });
+    reset("advisor", 320);
+    root.setBackgroundColor(Ui.KEYBOARD);
+    LinearLayout heading = Ui.row(this);
+    heading.addView(Ui.icon(this, "返回", () -> { cancel(); typing(); }), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+    TextView title = Ui.text(this, advisor.personName.isEmpty() ? "怎么回" : "回复" + advisor.personName, 17, Ui.INK);
+    title.setSingleLine(true);
+    title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+    heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+    View options = Ui.icon(this, "更多", () -> {});
+    options.setOnClickListener(v -> options(v));
+    heading.addView(options, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+    root.addView(heading);
+    boolean waiting = advisor.stage == AdvisorSession.Stage.GENERATING;
+    options.setEnabled(!waiting);
+    if (waiting) {
+      LinearLayout progress = Ui.col(this);
+      progress.setGravity(Gravity.CENTER);
+      VoiceButton animation = new VoiceButton(this, () -> {});
+      progress.addView(animation, new LinearLayout.LayoutParams(Ui.dp(this, 88), Ui.dp(this, 48)));
+      animation.setState(VoiceButton.State.REWRITING);
+      Ui.gap(this, progress, 18);
+      TextView text = Ui.text(this, "看懂聊天，想想怎么回…", 16, Ui.INK);
+      text.setGravity(Gravity.CENTER);
+      Ui.pad(this, text, 20, 0);
+      text.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+      progress.addView(text);
+      root.addView(progress, new LinearLayout.LayoutParams(-1, 0, 1));
+      return;
+    }
+    if (advisor.stage == AdvisorSession.Stage.ERROR) {
+      LinearLayout error = Ui.col(this);
+      Ui.pad(this, error, 20, 10);
+      TextView detail = Ui.text(this, advisor.error, 15, Ui.SUB);
+      detail.setLineSpacing(Ui.dp(this, 4), 1);
+      error.addView(detail);
+      Ui.gap(this, error, 16);
+      error.addView(Ui.primary(this, "重试", () -> { if (advisor.pages() > 0) generate(""); else start(false); }));
+      if (!replies.replies().isEmpty()) {
+        Ui.gap(this, error, 8);
+        error.addView(Ui.button(this, "保留上一组", () -> { advisor.stage = AdvisorSession.Stage.RESULTS; panel(); }));
+      }
+      root.addView(error, new LinearLayout.LayoutParams(-1, 0, 1));
+      return;
+    }
     ScrollView scroll = new ScrollView(this);
+    scroll.setFillViewport(false);
     LinearLayout content = Ui.col(this);
-    Ui.pad(this, content, 12, 3);
+    Ui.pad(this, content, 12, 0);
     scroll.addView(content);
     root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-    if (advisor.stage == AdvisorSession.Stage.ERROR) {
-      content.addView(Ui.text(this, advisor.error, 14, Ui.RED));
+    for (int i = 0; i < replies.replies().size(); i++) {
+      final String reply = replies.replies().get(i);
+      LinearLayout card = Ui.row(this);
+      card.setMinimumHeight(Ui.dp(this, 66));
+      card.setBackground(Ui.pressable(this, Ui.SURFACE, 12));
+      Ui.pad(this, card, 12, 10);
+      TextView style = Ui.text(this, replies.style().isEmpty() ? styles[i] : replies.style(), 12, Ui.SUB);
+      card.addView(style, new LinearLayout.LayoutParams(Ui.dp(this, 36), -2));
+      TextView text = Ui.text(this, reply, 16, Ui.INK);
+      text.setLineSpacing(Ui.dp(this, 2), 1);
+      card.addView(text, new LinearLayout.LayoutParams(0, -2, 1));
+      card.setOnClickListener(v -> applyReply(reply));
+      card.setOnLongClickListener(v -> { editLocal("修改这条回复", reply, this::applyReply); return true; });
+      card.setContentDescription(styles[i] + "回复");
+      card.setFocusable(true);
+      content.addView(card);
       Ui.gap(this, content, 6);
-    }
-    if (replies.replies().isEmpty() || advisor.stage == AdvisorSession.Stage.GENERATING) {
-      LinearLayout choices = Ui.row(this);
-      choices.addView(
-          Ui.button(
-              this,
-              advisor.personName.isEmpty() ? "选择聊天对象" : advisor.personName,
-              this::choosePerson),
-          new LinearLayout.LayoutParams(0, Ui.dp(this, 40), 1));
-      choices.addView(
-          Ui.button(this, "已截 " + advisor.pages() + " 屏", () -> start(true)),
-          new LinearLayout.LayoutParams(Ui.dp(this, 100), Ui.dp(this, 40)));
-      content.addView(choices);
-      content.addView(
-          Ui.button(
-              this,
-              intent.isEmpty() ? "我想表达…" : intent,
-              () ->
-                  editLocal(
-                      "我想表达",
-                      intent,
-                      value -> {
-                        intent = value;
-                        panel();
-                      })));
-      Ui.gap(this, content, 6);
-      if (advisor.stage == AdvisorSession.Stage.GENERATING)
-        content.addView(Ui.text(this, "正在看图组织回复…", 14, Ui.SUB));
-      else
-        content.addView(
-            Ui.primary(
-                this,
-                model.configured() ? "生成三条回复" : "登录豆豆账户",
-                () -> {
-                  if (model.configured()) generate("");
-                  else settings("account");
-                }));
-    } else {
-      for (int i = 0; i < replies.replies().size(); i++) {
-        final int index = i;
-        LinearLayout card = Ui.row(this);
-        card.setBackground(Ui.bg(this, Ui.SURFACE, 14));
-        Ui.pad(this, card, 12, 4);
-        TextView text = Ui.text(this, replies.replies().get(i), 15, Ui.INK);
-        text.setMaxLines(2);
-        text.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        text.setContentDescription(styles[i] + "回复");
-        text.setOnClickListener(v -> applyReply(replies.replies().get(index)));
-        card.addView(text, new LinearLayout.LayoutParams(0, Ui.dp(this, 54), 1));
-        card.addView(
-            Ui.button(
-                this,
-                "更多",
-                () -> generate(replies.style().isEmpty() ? styles[index] : replies.style())),
-            new LinearLayout.LayoutParams(Ui.dp(this, 54), Ui.dp(this, 44)));
-        content.addView(card);
-        Ui.gap(this, content, 5);
-      }
     }
     LinearLayout footer = Ui.row(this);
-    footer.addView(
-        Ui.button(this, "重新截图", () -> start(false)),
-        new LinearLayout.LayoutParams(0, Ui.dp(this, 40), 1));
-    if (replies.canBack())
-      footer.addView(
-          Ui.button(
-              this,
-              "上一组",
-              () -> {
-                replies.back();
-                advisor.stage = AdvisorSession.Stage.RESULTS;
-                panel();
-              }),
-          new LinearLayout.LayoutParams(0, Ui.dp(this, 40), 1));
-    footer.addView(
-        Ui.button(this, "补充一屏", () -> start(true)),
-        new LinearLayout.LayoutParams(0, Ui.dp(this, 40), 1));
+    Ui.pad(this, footer, 12, 0);
+    TextView hint = Ui.text(this, "点回复填入 · 长按修改", 12, Ui.SUB);
+    footer.addView(hint, new LinearLayout.LayoutParams(0, -2, 1));
+    TextView more = Ui.button(this, "换一组 · 1次", () -> generate(""));
+    more.setTextSize(14);
+    more.setPadding(Ui.dp(this, 8), 0, Ui.dp(this, 8), 0);
+    more.setBackground(Ui.pressable(this, android.graphics.Color.TRANSPARENT, 12));
+    footer.addView(more, new LinearLayout.LayoutParams(Ui.dp(this, 128), Ui.dp(this, 48)));
     root.addView(footer);
+  }
+
+  private void options(View anchor) {
+    PopupMenu menu = new PopupMenu(this, anchor);
+    menu.getMenu().add("聊天对象").setOnMenuItemClickListener(i -> { choosePerson(); return true; });
+    menu.getMenu().add("我想表达…").setOnMenuItemClickListener(i -> {
+      editLocal("我想表达", intent, value -> { intent = value; advisor.stage = AdvisorSession.Stage.READY; generate(""); }); return true;
+    });
+    if (advisor.pages() < AdvisorSession.MAX_PAGES)
+      menu.getMenu().add("补充一屏").setOnMenuItemClickListener(i -> { start(true); return true; });
+    menu.getMenu().add("重新截图").setOnMenuItemClickListener(i -> { start(false); return true; });
+    if (replies.canBack()) menu.getMenu().add("上一组").setOnMenuItemClickListener(i -> { replies.back(); advisor.stage = AdvisorSession.Stage.RESULTS; panel(); return true; });
+    menu.show();
   }
 
   private void choosePerson() {
@@ -270,7 +273,7 @@ public final class AdvisorController extends PanelController {
             () -> {
               advisor.identify("", "");
               replies.clear();
-              panel();
+              generate("");
             }));
     for (MemoryStore.Item person : app.store.list("person", 0))
       people.addView(
@@ -283,7 +286,7 @@ public final class AdvisorController extends PanelController {
               () -> {
                 advisor.identify(person.globalId, person.title);
                 replies.clear();
-                panel();
+                generate("");
               }));
     people.addView(Ui.button(this, "管理人物", () -> settings("people")));
   }
@@ -315,7 +318,7 @@ public final class AdvisorController extends PanelController {
               texts.add(values.getJSONObject(i).getString("text"));
             if (!advisor.historyId.isEmpty())
               app.histories.interpreted(advisor.historyId, messages);
-            replies.accept(texts, style, !style.isEmpty(), messages.toString());
+            replies.accept(texts, style, !replies.replies().isEmpty(), messages.toString());
             advisor.stage = AdvisorSession.Stage.RESULTS;
             panel();
           } catch (Exception ex) {

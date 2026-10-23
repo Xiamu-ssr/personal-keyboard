@@ -1,8 +1,8 @@
 {
   "package": "app.doudou.ime",
-  "version": "0.6.0-alpha.1",
-  "sha256": "2ed3f191118d35e8b1131fa031dabf062b25eebca1d597a023b73bb4072ccd13",
-  "bytes": 9815248,
+  "version": "0.7.0-alpha.1",
+  "sha256": "53390f08cca5698ebff17e15e98d91c571fd137073fb24bd35f2cd2334a97a29",
+  "bytes": 9897452,
   "buildType": "debug",
   "production": false,
   "modelsBundled": false

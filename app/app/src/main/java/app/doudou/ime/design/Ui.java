@@ -65,6 +65,8 @@ public final class Ui {
 
   public static TextView button(Context c, String s, Runnable click) {
     TextView t = text(c, s, 15, INK);
+    t.setSingleLine(true);
+    t.setEllipsize(android.text.TextUtils.TruncateAt.END);
     t.setGravity(Gravity.CENTER);
     pad(c, t, 14, 8);
     t.setMinHeight(dp(c, 44));
@@ -330,6 +332,9 @@ public final class Ui {
       } else if (name.equals("返回")) {
         c.drawLine(16, 4, 8, 12, p);
         c.drawLine(8, 12, 16, 20, p);
+      } else if (name.equals("更多")) {
+        p.setStyle(Paint.Style.FILL);
+        for (int x = 5; x <= 19; x += 7) c.drawCircle(x, 12, 1.5f, p);
       } else if (name.equals("关闭")) {
         c.drawLine(6, 6, 18, 18, p);
         c.drawLine(18, 6, 6, 18, p);

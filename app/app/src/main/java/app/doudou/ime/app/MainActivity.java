@@ -61,8 +61,9 @@ public final class MainActivity extends Activity implements Navigator {
 
   @Override
   public void open(String next, long id) {
-    if (next.equals("words") || next.equals("style")) {
-      memory.restore(next.equals("words") ? "word" : "style");
+    if (page.equals("account") && !next.equals("account")) account.leave();
+    if (next.equals("words") || next.equals("style") || next.equals("history")) {
+      memory.restore(next.equals("words") ? "word" : next.equals("history") ? "history" : "style");
       page = "memory";
     } else page = next;
     person = id;
@@ -85,14 +86,25 @@ public final class MainActivity extends Activity implements Navigator {
     notice.addView(row);
   }
 
+  private boolean settingsDetail() {
+    return java.util.Arrays.asList("input-settings", "data-settings", "permissions", "about").contains(page);
+  }
+
+  @Override public void onBackPressed() {
+    if (page.equals("person")) open("people", 0);
+    else if (settingsDetail() || page.equals("account")) open("settings", 0);
+    else if (!page.equals("home")) open("home", 0);
+    else super.onBackPressed();
+  }
+
   private void render() {
     LinearLayout root = Ui.col(this);
     root.setBackgroundColor(Ui.BG);
     LinearLayout heading = Ui.row(this);
     Ui.pad(this, heading, 20, 10);
-    if (page.equals("person") || page.equals("account"))
+    if (page.equals("person") || page.equals("account") || settingsDetail())
       heading.addView(
-          Ui.icon(this, "返回", () -> open(page.equals("account") ? "settings" : "people", 0)),
+          Ui.icon(this, "返回", () -> open(page.equals("person") ? "people" : "settings", 0)),
           new LinearLayout.LayoutParams(Ui.dp(this, 36), Ui.dp(this, 48)));
     String title =
         page.equals("home")
@@ -101,7 +113,9 @@ public final class MainActivity extends Activity implements Navigator {
                 ? "我的记忆"
                 : page.equals("people")
                     ? "人物关系"
-                    : page.equals("person") ? "人物资料" : page.equals("account") ? "账户与权益" : "设置";
+                    : page.equals("person") ? "人物资料" : page.equals("account") ? "账户与权益"
+            : page.equals("input-settings") ? "语音与键盘" : page.equals("data-settings") ? "数据与隐私"
+            : page.equals("permissions") ? "系统权限" : page.equals("about") ? "关于豆豆" : "我的";
     TextView label = Ui.text(this, title, 28, Ui.INK);
     label.setTypeface(null, android.graphics.Typeface.BOLD);
     heading.addView(label, new LinearLayout.LayoutParams(0, Ui.dp(this, 54), 1));
@@ -110,6 +124,8 @@ public final class MainActivity extends Activity implements Navigator {
       TextView mark = Ui.text(this, BuildConfig.VERSION_NAME.split("-", 2)[0], 11, Ui.ACCENT);
       Ui.pad(this, mark, 10, 6);
       mark.setBackground(Ui.bg(this, Ui.SELECTED, 20));
+      mark.setOnClickListener(v -> open("about", 0));
+      mark.setContentDescription("关于豆豆与版本更新");
       heading.addView(mark);
     }
     root.addView(heading);
@@ -126,7 +142,7 @@ public final class MainActivity extends Activity implements Navigator {
       people.person(person);
       people.render(body);
     } else if (page.equals("account")) account.render(body);
-    else settings.render(body);
+    else { settings.page(page); settings.render(body); }
     notice = Ui.col(this);
     Ui.pad(this, notice, 20, 0);
     root.addView(notice);
@@ -134,7 +150,7 @@ public final class MainActivity extends Activity implements Navigator {
     LinearLayout nav = Ui.row(this);
     nav.setBackgroundColor(Ui.PANEL);
     Ui.pad(this, nav, 12, 8);
-    String[] labels = {"输入", "记忆", "人物", "设置"},
+    String[] labels = {"输入", "记忆", "人物", "我的"},
         icons = {"首页", "词典", "人物", "设置"},
         routes = {"home", "memory", "people", "settings"};
     for (int i = 0; i < labels.length; i++) {
@@ -142,7 +158,7 @@ public final class MainActivity extends Activity implements Navigator {
       boolean selected =
           page.equals(route)
               || (page.equals("person") && route.equals("people"))
-              || (page.equals("account") && route.equals("settings"));
+              || ((page.equals("account") || settingsDetail()) && route.equals("settings"));
       nav.addView(
           Ui.nav(this, labels[i], icons[i], selected, () -> open(route, 0)),
           new LinearLayout.LayoutParams(0, Ui.dp(this, 58), 1));

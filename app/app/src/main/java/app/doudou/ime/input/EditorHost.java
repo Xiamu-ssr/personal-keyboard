@@ -33,6 +33,12 @@ public interface EditorHost {
 
   boolean protectedInsert(String text);
 
+  boolean previewVoice(String text);
+
+  boolean finishVoice(String text);
+
+  void restoreVoice();
+
   void editLocal(String title, String value, Consumer<String> done);
 
   void settings(String page);
@@ -41,7 +47,7 @@ public interface EditorHost {
 
   String conversationRef();
 
-  void message(String title, String detail, Runnable retry);
+  void message(String title, String detail, String actionLabel, Runnable action);
 
   void openVoice();
 

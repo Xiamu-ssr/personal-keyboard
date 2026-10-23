@@ -1,21 +1,21 @@
 {
-  "version": "0.6.0-alpha.1",
-  "sourceApkSha256": "2ed3f191118d35e8b1131fa031dabf062b25eebca1d597a023b73bb4072ccd13",
-  "source": "Actual Android 15 APK recordings of local practice; waits and launcher segments removed. No provider replies are simulated.",
-  "cloudModelsConfigured": false,
+  "version": "0.7.0-alpha.1",
+  "sourceApkSha256": "53390f08cca5698ebff17e15e98d91c571fd137073fb24bd35f2cd2334a97a29",
+  "source": "Actual Android 15 APK recording of owned practice. Launcher segments removed; no generated or substituted UI frames. Advisor calls the production Cloud and Aliyun. The voice clip demonstrates hold, slide, lock and cancellation, not speech-recognition accuracy.",
+  "cloudModelsConfigured": true,
   "files": {
     "keyboard-tour.mp4": {
-      "sha256": "7e583f1701af6e19286a7cc2c14ab3fd169786233e85bcbdfb4f82b0d3aa0032",
-      "bytes": 296969,
-      "durationSeconds": 13.225939,
+      "sha256": "df2cc5bb52fa4d8cc1dbb9c4857f72c09645a143cddfd9ec4bbd851e93551816",
+      "bytes": 84000,
+      "durationSeconds": 6.393304,
       "width": 720,
       "height": 1600,
       "codec": "h264"
     },
     "advisor-tour.mp4": {
-      "sha256": "74edbc471fbc09743792de2cf98a8f116f8498eb62d61bafd91ea5b6d1687090",
-      "bytes": 142820,
-      "durationSeconds": 6.024478,
+      "sha256": "0104fb5719ff458a16ff4bfa6cb345ab8b49afc035e6a8f40632a082ba8eb6a5",
+      "bytes": 156247,
+      "durationSeconds": 13.456809,
       "width": 720,
       "height": 1600,
       "codec": "h264"

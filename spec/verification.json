@@ -1,12 +1,12 @@
 {
-  "reviewedAt": "2026-10-23T12:31:05.460957+00:00",
-  "version": "0.6.0-alpha.1",
-  "status": "Invited preview; account and live supplier backend available; public commercial release and payments are not enabled",
+  "reviewedAt": "2026-10-23T15:23:28.448978+00:00",
+  "version": "0.7.0-alpha.1",
+  "status": "Invited product preview; physical visual checks and live advisor verified; human continuous dictation remains unverified",
   "checks": [
     {
       "name": "JVM and JNI state",
       "status": "passed",
-      "tests": 25,
+      "tests": 27,
       "failures": 0
     },
     {
@@ -14,9 +14,9 @@
       "status": "passed",
       "artifact": {
         "package": "app.doudou.ime",
-        "version": "0.6.0-alpha.1",
-        "sha256": "2ed3f191118d35e8b1131fa031dabf062b25eebca1d597a023b73bb4072ccd13",
-        "bytes": 9815248,
+        "version": "0.7.0-alpha.1",
+        "sha256": "53390f08cca5698ebff17e15e98d91c571fd137073fb24bd35f2cd2334a97a29",
+        "bytes": 9897452,
         "buildType": "debug",
         "production": false,
         "modelsBundled": false
@@ -25,37 +25,51 @@
       "sameSignerAsPrevious": true
     },
     {
-      "name": "Android 15 API 35 instrumentation",
+      "name": "Android 15 native controls and data",
       "status": "passed",
-      "uniqueTests": 17,
-      "failures": 0,
-      "rerunAfterEmulatorSetup": 2,
-      "realDevice": false,
-      "realAccountBackend": true,
-      "realModelAudioInEmulator": false,
-      "normalPublicIpTlsVerified": true
+      "uniqueTests": 21,
+      "failuresAfterRetest": 0,
+      "staleAccessibilityNodeRetested": 1,
+      "ownedPracticeOnly": true,
+      "threeButtonNavigation": "passed"
     },
     {
-      "name": "Cloud identity and domain graph",
+      "name": "Live advisor and recording gestures",
       "status": "passed",
-      "nodeTests": 19,
-      "postgresqlIntegrationTests": 2,
-      "fixtureModelsInDatabaseTests": true,
+      "realModelAdvisor": true,
+      "sameSessionPreviousGroupRestored": true,
+      "selectedReplyInsertedWithoutSending": true,
+      "slideCancelRestoresDraft": true,
+      "slideUpLocks": true,
+      "doesNotClaimHumanAudioAccuracy": true,
+      "fontScale130Percent": "passed with scrolling"
+    },
+    {
+      "name": "Physical OPPO",
+      "status": "passed-for-inspected-surfaces",
+      "sameApkAsDownload": true,
+      "preservedAppData": true,
+      "keyboardNavigationOverlapFixed": true,
+      "originalDisplayAndNavigationPreserved": true,
+      "noPrivateChatInspected": true,
+      "doesNotClaimEveryHostAppVerified": true
+    },
+    {
+      "name": "ASR fixture boundaries",
+      "status": "partial",
+      "productionCloudFullAudioTranscription": true,
+      "ordinaryProfanityPreservedInOwnedFixture": true,
+      "nativeEditorPreviewCancelAndExternalEditProtection": true,
+      "virtualMicrophoneCompleteSentence": "not-verified: SDK input was unstable and crashed; no incomplete recording published",
+      "humanContinuousDictation": "not-yet-verified"
+    },
+    {
+      "name": "Cloud and Spec Node checks",
+      "status": "passed",
+      "passed": 19,
+      "postgresqlIntegrationSkipped": 2,
       "graphs": 3,
-      "domains": 5,
       "maxDirectedLinesPerPair": 2
-    },
-    {
-      "name": "Owned local resource cleanup",
-      "status": "passed",
-      "emulatorStopped": true,
-      "emulatorPortsCleared": [
-        5554,
-        5555
-      ],
-      "adbStopped": true,
-      "disposableDatabaseRemoved": true,
-      "realPhoneTouched": false
     },
     {
       "name": "Light Cloud deployment",
@@ -66,46 +80,58 @@
       ],
       "tls": true,
       "supplierCredentialsConfigured": true,
-      "accountLoginConfigured": true,
-      "purchasesEnabled": false,
-      "liveTokenizerVerified": true,
-      "databaseVolumesPreserved": true
+      "databaseVolumesPreserved": true,
+      "purchasesEnabled": false
     },
     {
-      "name": "Native media",
+      "name": "Independent product review",
+      "status": "passed-for-reviewed-material",
+      "reviewer": "\u6bd2\u820c\u4f46\u5ba2\u89c2\u7684\u9ad8\u5ba1\u7f8e\u5185\u6d4b\u5458",
+      "fixed": "navigation overlap, reply reading, one-tap advisor, space gestures, account form retention, explicit prerequisite actions, previous groups and direct punctuation",
+      "remainingMustFixFindings": 0,
+      "finalPhoneKeyboardProof": true,
+      "fontScale130PercentProof": true,
+      "humanContinuousDictation": "not-yet-verified"
+    },
+    {
+      "name": "Native public media",
       "status": "passed",
       "screenshots": 9,
       "recordings": {
         "keyboard-tour.mp4": {
-          "sha256": "7e583f1701af6e19286a7cc2c14ab3fd169786233e85bcbdfb4f82b0d3aa0032",
-          "bytes": 296969,
-          "durationSeconds": 13.225939,
+          "sha256": "df2cc5bb52fa4d8cc1dbb9c4857f72c09645a143cddfd9ec4bbd851e93551816",
+          "bytes": 84000,
+          "durationSeconds": 6.393304,
           "width": 720,
           "height": 1600,
           "codec": "h264"
         },
         "advisor-tour.mp4": {
-          "sha256": "74edbc471fbc09743792de2cf98a8f116f8498eb62d61bafd91ea5b6d1687090",
-          "bytes": 142820,
-          "durationSeconds": 6.024478,
+          "sha256": "0104fb5719ff458a16ff4bfa6cb345ab8b49afc035e6a8f40632a082ba8eb6a5",
+          "bytes": 156247,
+          "durationSeconds": 13.456809,
           "width": 720,
           "height": 1600,
           "codec": "h264"
         }
       },
+      "sourceApkSha256": "53390f08cca5698ebff17e15e98d91c571fd137073fb24bd35f2cd2334a97a29",
+      "syntheticPracticeOnly": true,
       "containsPrivateChats": false,
       "publicAndroidHost": false
     },
     {
-      "name": "Supplier acceptance",
+      "name": "Local cleanup",
       "status": "passed",
-      "verifiedAt": "2026-10-22",
-      "models": [
-        "qwen-audio-3.1-asr-flash-message",
-        "qwen3.8-flash"
+      "emulatorStopped": true,
+      "emulatorPortsCleared": [
+        5554,
+        5555,
+        8554
       ],
-      "ownedPracticeMaterial": true,
-      "doesNotClaimRealUserAccuracy": true
+      "qaAccountDeleted": true,
+      "qaDeviceCredentialsCleared": true,
+      "phoneAdbRetained": true
     },
     {
       "name": "Public commercial distribution and merchant payments",

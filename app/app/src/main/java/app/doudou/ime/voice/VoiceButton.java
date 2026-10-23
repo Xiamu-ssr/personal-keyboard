@@ -72,6 +72,11 @@ public final class VoiceButton extends View {
     super.onDetachedFromWindow();
   }
 
+  @Override protected void onAttachedToWindow() {
+    super.onAttachedToWindow();
+    setState(state);
+  }
+
   @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);

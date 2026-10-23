@@ -83,18 +83,18 @@ public final class ToolsPanel extends PanelController {
 
   private void clipboard() {
     if (privateMode()) {
-      message("隐私输入", "隐私模式不读取剪贴板。", null);
+      message("隐私输入", "隐私模式不读取剪贴板。", "", null);
       return;
     }
     ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
     ClipData clip = clipboard.getPrimaryClip();
     if (clip == null || clip.getItemCount() == 0) {
-      message("剪贴板是空的", "不会保存剪贴板历史。", null);
+      message("剪贴板是空的", "不会保存剪贴板历史。", "", null);
       return;
     }
     CharSequence raw = clip.getItemAt(0).getText();
     if (raw == null || raw.length() > 10000) {
-      message("无法粘贴", "支持一万字以内的纯文字。", null);
+      message("无法粘贴", "支持一万字以内的纯文字。", "", null);
       return;
     }
     String value = raw.toString();
