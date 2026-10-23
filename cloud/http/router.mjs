@@ -14,7 +14,9 @@ export async function jsonBody(req, maximum = 100000) {
     chunks.push(b);
   }
   try {
-    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    requireValue(body && typeof body === 'object' && !Array.isArray(body), 'INVALID_JSON', '请发送 JSON 对象');
+    return body;
   } catch {
     throw new ServiceError("INVALID_JSON", "请求内容格式错误");
   }

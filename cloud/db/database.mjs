@@ -36,6 +36,11 @@ export class Database {
       await c.query(
         await fs.readFile(new URL("./schema.sql", import.meta.url), "utf8"),
       );
+      const identity = (await c.query("SELECT 1 FROM schema_migrations WHERE version=3")).rowCount;
+      if (!identity) {
+        await c.query(await fs.readFile(new URL('./identity-migration.sql', import.meta.url), 'utf8'));
+        await c.query('INSERT INTO schema_migrations(version) VALUES(3)');
+      }
       for (const p of plans.plans)
         await c.query(
           "INSERT INTO plans(id,version,status,definition,published_at) VALUES($1,$2,$3,$4,CASE WHEN $3='published' THEN now() ELSE NULL END) ON CONFLICT(id) DO NOTHING",
@@ -61,7 +66,7 @@ export class Database {
       "UPDATE jobs SET input_cipher=NULL,result_cipher=NULL WHERE expires_at<now() AND (input_cipher IS NOT NULL OR result_cipher IS NOT NULL)",
     );
     await this.query(
-      "DELETE FROM challenges WHERE created_at<now()-interval '2 days'",
+      "DELETE FROM auth_attempts WHERE created_at<now()-interval '2 days'",
     );
     await this.query(
       "DELETE FROM sessions WHERE expires_at<now()-interval '30 days'",

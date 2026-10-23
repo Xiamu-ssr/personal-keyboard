@@ -27,11 +27,6 @@ export async function configuration(env = process.env) {
     asrModel: providers.asr.routes[providers.asr.default].model,
     textModel: env.TEXT_MODEL || providers.text.default,
     visionModel: env.VISION_MODEL || providers.text.vision,
-    smsKeyId: env.SMS_ACCESS_KEY_ID || "",
-    smsKeySecret: env.SMS_ACCESS_KEY_SECRET || "",
-    smsToken: env.SMS_SECURITY_TOKEN || "",
-    smsSignature: env.SMS_SIGNATURE || "",
-    smsTemplate: env.SMS_TEMPLATE_CODE || "",
     storageRoot: path.resolve(env.STORAGE_ROOT || ".runtime/cloud-sync"),
     jobTtlHours: 24,
     accessMs: 15 * 60_000,
@@ -40,6 +35,7 @@ export async function configuration(env = process.env) {
     maxAsrCharacters: 2000,
     maxJobs: 3,
     workerConcurrency: 2,
+    maxTextQueue: 16,
     memoryMaxInputTokens: Number(env.MEMORY_MAX_INPUT_TOKENS || providers.text.maxInputTokens),
     memoryContextTokens: Number(env.MEMORY_CONTEXT_TOKENS || providers.text.contextTokens),
     memoryOutputTokens: Number(env.MEMORY_OUTPUT_TOKENS || 8192),
@@ -68,12 +64,6 @@ export async function configuration(env = process.env) {
     "CONFIGURATION",
     "Public endpoint must use HTTPS",
     503,
-  );
-  cfg.smsReady = !!(
-    cfg.smsKeyId &&
-    cfg.smsKeySecret &&
-    cfg.smsSignature &&
-    cfg.smsTemplate
   );
   cfg.asrReady = !!(cfg.modelKey && cfg.workspace);
   cfg.textReady = !!(cfg.modelKey && cfg.textBase && cfg.textModel);

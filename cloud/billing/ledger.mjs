@@ -142,6 +142,14 @@ export class Ledger {
         "已有任务进行中，请稍后重试",
         429,
       );
+      if (['rewrite', 'advisor'].includes(kind)) {
+        // Global capacity must be reserved atomically across different accounts.
+        // In-flight advisor pictures remain in RAM, so registration count cannot
+        // be allowed to turn into an unbounded image queue.
+        await c.query('SELECT pg_advisory_xact_lock(42390026)');
+        const pending = Number((await c.query("SELECT count(*) n FROM jobs WHERE kind IN('rewrite','advisor') AND status IN('queued','running')")).rows[0].n);
+        requireValue(pending < this.cfg.maxTextQueue, 'SERVICE_BUSY', '当前任务较多，请稍后重试，本次未扣量', 429);
+      }
       if (kind === "rewrite") {
         requireValue(
           isUuid(sourceJob),

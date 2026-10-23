@@ -11,8 +11,10 @@ import app.doudou.ime.design.Ui;
 public final class VoiceButton extends View {
   public enum State {
     IDLE,
+    CONNECTING,
     LISTENING,
-    PROCESSING
+    TRANSCRIBING,
+    REWRITING
   }
 
   private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -33,9 +35,9 @@ public final class VoiceButton extends View {
     state = next;
     stopProgress();
     java.util.Arrays.fill(levels, 0);
-    setContentDescription(next == State.IDLE ? "开始说话" : next == State.LISTENING ? "停止录音" : "正在识别");
-    setEnabled(next != State.PROCESSING);
-    if (next == State.PROCESSING && isAttachedToWindow() && ValueAnimator.areAnimatorsEnabled()) {
+    setContentDescription(next == State.IDLE ? "开始说话" : next == State.LISTENING ? "停止录音" : next == State.CONNECTING ? "正在连接语音" : next == State.REWRITING ? "正在按文风整理" : "正在完成识别");
+    setEnabled(next == State.IDLE || next == State.LISTENING);
+    if (next != State.IDLE && next != State.LISTENING && isAttachedToWindow() && ValueAnimator.areAnimatorsEnabled()) {
       progress = ValueAnimator.ofFloat(0, 360);
       progress.setDuration(900);
       progress.setRepeatCount(ValueAnimator.INFINITE);
@@ -80,7 +82,13 @@ public final class VoiceButton extends View {
     paint.setColor(Ui.BG);
     paint.setStrokeCap(Paint.Cap.ROUND);
     paint.setStrokeWidth(2.4f);
-    if (state == State.PROCESSING) {
+    if (state == State.REWRITING) {
+      paint.setStyle(Paint.Style.FILL);
+      for (int i = 0; i < 3; i++) {
+        float bounce = ValueAnimator.areAnimatorsEnabled() ? (float) Math.sin(Math.toRadians(phase - i * 65)) * 3 : 0;
+        canvas.drawCircle((i - 1) * 13, bounce, 3.5f, paint);
+      }
+    } else if (state == State.CONNECTING || state == State.TRANSCRIBING) {
       paint.setStyle(Paint.Style.STROKE);
       canvas.drawArc(-12, -12, 12, 12, phase - 90, 255, false, paint);
     } else if (state == State.LISTENING) {

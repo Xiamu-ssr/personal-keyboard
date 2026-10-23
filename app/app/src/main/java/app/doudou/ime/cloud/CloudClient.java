@@ -43,10 +43,10 @@ public final class CloudClient {
         : session.optJSONObject("user").optString("id");
   }
 
-  public String phoneHint() {
+  public String handle() {
     return session.optJSONObject("user") == null
         ? ""
-        : session.optJSONObject("user").optString("phoneHint");
+        : session.optJSONObject("user").optString("handle");
   }
 
   public static final class CloudError extends IOException {
@@ -97,14 +97,38 @@ public final class CloudClient {
     }
   }
 
-  public synchronized void login(String challenge, String code) throws Exception {
-    JSONObject next =
-        publicRequest(
-            "/v1/auth/verify", new JSONObject().put("challengeId", challenge).put("code", code));
+  private void acceptSession(JSONObject next) throws Exception {
+    // The recovery code is displayed once and never persisted with login tokens.
+    JSONObject stored = new JSONObject(next.toString());
+    stored.remove("recoveryCode");
     if (!userId().equals(next.getJSONObject("user").getString("id")))
       prefs.edit().remove("syncEnabled").remove("account").apply();
-    vault.set("session", next.toString());
-    session = next;
+    vault.set("session", stored.toString());
+    session = stored;
+  }
+
+  public synchronized void login(String handle, String password) throws Exception {
+    acceptSession(publicRequest("/v1/auth/login", new JSONObject().put("handle", handle).put("password", password)));
+  }
+
+  public synchronized String register(String handle, String password, String invitation) throws Exception {
+    JSONObject next = publicRequest("/v1/auth/register", new JSONObject().put("handle", handle).put("password", password).put("invitation", invitation));
+    acceptSession(next);
+    return next.getString("recoveryCode");
+  }
+
+  public synchronized String recover(String handle, String password, String code) throws Exception {
+    JSONObject next = publicRequest("/v1/auth/recover", new JSONObject().put("handle", handle).put("password", password).put("recoveryCode", code));
+    acceptSession(next);
+    return next.getString("recoveryCode");
+  }
+
+  public synchronized void changePassword(String current, String password) throws Exception {
+    acceptSession(request(userId(), "/v1/auth/password", "POST", new JSONObject().put("currentPassword", current).put("password", password)));
+  }
+
+  public void reauthenticate(String password) throws Exception {
+    request(userId(), "/v1/auth/reauth", "POST", new JSONObject().put("password", password));
   }
 
   public synchronized String accessToken(String account) throws Exception {

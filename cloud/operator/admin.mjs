@@ -131,7 +131,7 @@ export class Admin {
       users: count,
       jobs: result.rows,
       readiness: {
-        sms: this.cfg.smsReady,
+        account: true,
         asr: this.cfg.asrReady,
         text: this.cfg.textReady,
         vision: this.cfg.visionReady,
@@ -145,14 +145,14 @@ export class Admin {
   async users() {
     return (
       await this.db.query(
-        `SELECT u.id,u.phone_hint,u.status,u.created_at,COALESCE(sum(g.asr_limit-g.asr_used) FILTER(WHERE NOT g.revoked AND (g.expires_at IS NULL OR g.expires_at>now())),0)::bigint asr_remaining,COALESCE(sum(g.advisor_limit-g.advisor_used) FILTER(WHERE NOT g.revoked AND (g.expires_at IS NULL OR g.expires_at>now())),0)::integer advisor_remaining FROM users u LEFT JOIN grants g ON g.user_id=u.id GROUP BY u.id ORDER BY u.created_at DESC LIMIT 200`,
+        `SELECT u.id,u.handle,u.status,u.created_at,COALESCE(sum(g.asr_limit-g.asr_used) FILTER(WHERE NOT g.revoked AND (g.expires_at IS NULL OR g.expires_at>now())),0)::bigint asr_remaining,COALESCE(sum(g.advisor_limit-g.advisor_used) FILTER(WHERE NOT g.revoked AND (g.expires_at IS NULL OR g.expires_at>now())),0)::integer advisor_remaining FROM users u LEFT JOIN grants g ON g.user_id=u.id GROUP BY u.id ORDER BY u.created_at DESC LIMIT 200`,
       )
     ).rows;
   }
   async jobs() {
     return (
       await this.db.query(
-        "SELECT j.id,u.phone_hint,j.kind,j.status,j.consumed_asr,j.consumed_advisor,j.error_code,j.provider_model,j.provider_usage,j.created_at FROM jobs j JOIN users u ON u.id=j.user_id ORDER BY j.created_at DESC LIMIT 150",
+        "SELECT j.id,u.handle,j.kind,j.status,j.consumed_asr,j.consumed_advisor,j.error_code,j.provider_model,j.provider_usage,j.created_at FROM jobs j JOIN users u ON u.id=j.user_id ORDER BY j.created_at DESC LIMIT 150",
       )
     ).rows;
   }

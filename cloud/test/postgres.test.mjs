@@ -15,7 +15,7 @@ test(
   async () => {
     const env = JSON.parse(
       await fs.readFile(
-        new URL("../../.runtime/v05/test-env.json", import.meta.url),
+        process.env.KEYBOARD_TEST_ENV || new URL("../../.runtime/v06/test-env.json", import.meta.url),
         "utf8",
       ),
     );
@@ -26,7 +26,6 @@ test(
       STORAGE_ROOT: root,
     });
     Object.assign(cfg, {
-      smsReady: true,
       textReady: true,
       visionReady: true,
       asrReady: true,
@@ -44,12 +43,6 @@ test(
         return { baseVersion: request.version, operations: h.resultText === '豆豆' && h.insertedText === '豆包' ? [{ kind: 'hotword', action: 'upsert', id: 'new:word', value: { text: '豆豆', variants: ['豆包'] }, sourceId: h.id, sourceRevision: h.revision, category: 'correction', confidence: 1 }] : [] };
       },
     };
-    const sent = [],
-      sms = {
-        async send(phone, code) {
-          sent.push({ phone, code });
-        },
-      };
     const models = {
       prompts: new Map([["advisor", { revision: "fixture" }]]),
       async init() {},
@@ -106,7 +99,6 @@ test(
     );
     const app = await createCloudServer({
       cfg,
-      sms,
       models,
       memoryModel,
       asrSocket: () =>
@@ -117,7 +109,7 @@ test(
     const base = "http://127.0.0.1:" + app.server.address().port;
     try {
       await app.db.query(
-        "TRUNCATE users,plans,challenges,sessions,jobs,job_allocations,grants,audits,admin_sessions,admin_attempts,sync_keys,sync_manifests,orders,payment_nonces CASCADE",
+        "TRUNCATE users,plans,invitations,auth_attempts,sessions,jobs,job_allocations,grants,audits,admin_sessions,admin_attempts,sync_keys,sync_manifests,orders,payment_nonces CASCADE",
       );
       await app.db.migrate(cfg.plans);
       const request = async (route, body, token, method) => {
@@ -131,48 +123,57 @@ test(
         });
         return { status: r.status, value: await r.json() };
       };
-      const challenge = (
-        await request("/v1/auth/challenges", { phone: "13800001234" })
-      ).value;
-      assert.equal(sent.length, 1);
-      assert.equal(
-        (
-          await request("/v1/auth/verify", {
-            challengeId: challenge.challengeId,
-            code: "000000",
-          })
-        ).status,
-        401,
-      );
-      assert.equal(
-        (
-          await app.db.query("SELECT attempts FROM challenges WHERE id=$1", [
-            challenge.challengeId,
-          ])
-        ).rows[0].attempts,
-        1,
-      );
-      let auth = (
-        await request("/v1/auth/verify", {
-          challengeId: challenge.challengeId,
-          code: sent[0].code,
-        })
-      ).value;
-      assert(auth.accessToken);
-      assert.equal(
-        (
-          await request("/v1/auth/verify", {
-            challengeId: challenge.challengeId,
-            code: sent[0].code,
-          })
-        ).status,
-        401,
-      );
+      const handle = 'fixture-user', password = 'fixture-password-2026';
+      const invite = (await app.invitations.create('fixture-admin', { count: 3 })).invitations;
+      const attempts = await Promise.all(['fixture-user', 'fixture-racer'].map(handle => request('/v1/auth/register', { handle, password, invitation: invite[0].code })));
+      assert.equal(attempts.filter(r => r.status === 201).length, 1, 'one invitation can create only one account');
+      const winner = attempts.find(r => r.status === 201);
+      const activeHandle = winner.value.user.handle;
+      let auth = winner.value;
+      assert(auth.accessToken && auth.recoveryCode);
+      assert.equal((await app.invitations.list()).some(i => 'code' in i || 'code_hash' in i), false);
+      assert.equal((await request('/v1/auth/login', { handle: activeHandle, password: 'wrong-password' })).status, 401);
+      assert.equal((await request('/v1/auth/login', { handle: 'missing-user', password: 'wrong-password' })).status, 401);
+      await app.invitations.revoke('fixture-admin', invite[1].id);
+      assert.equal((await request('/v1/auth/register', { handle: 'revoked-user', password, invitation: invite[1].code })).status, 403);
+      await app.db.query("UPDATE invitations SET expires_at=now()-interval '1 second' WHERE id=$1", [invite[2].id]);
+      assert.equal((await request('/v1/auth/register', { handle: 'expired-user', password, invitation: invite[2].code })).status, 403);
+      const originalRecovery = auth.recoveryCode;
+      const recovered = await request('/v1/auth/recover', { handle: activeHandle, password, recoveryCode: originalRecovery });
+      assert.equal(recovered.status, 200);
+      assert.notEqual(recovered.value.recoveryCode, originalRecovery);
+      assert.equal((await request('/v1/account', null, auth.accessToken)).status, 401);
+      assert.equal((await request('/v1/auth/recover', { handle: activeHandle, password, recoveryCode: originalRecovery })).status, 401);
+      auth = recovered.value;
+      const oldToken = auth.accessToken;
+      const changed = await request('/v1/auth/password', { currentPassword: password, password: password + '-new' }, oldToken);
+      assert.equal(changed.status, 200);
+      assert.equal((await request('/v1/account', null, oldToken)).status, 401);
+      assert.equal((await request('/v1/auth/login', { handle: activeHandle, password })).status, 401);
+      auth = changed.value;
+      assert.equal((await request('/v1/auth/recovery-code', { password: 'wrong-password' }, auth.accessToken)).status, 403);
+      const rotatedCode = (await request('/v1/auth/recovery-code', { password: password + '-new' }, auth.accessToken)).value.recoveryCode;
+      assert(rotatedCode && rotatedCode !== recovered.value.recoveryCode);
+      await app.db.query("UPDATE sessions SET verified_at=now()-interval '1 day' WHERE user_id=$1", [auth.user.id]);
+      assert.equal((await request('/v1/account/delete', { confirm: true }, auth.accessToken)).status, 401);
+      assert.equal((await request('/v1/auth/reauth', { password: password + '-new' }, auth.accessToken)).status, 200);
       const uid = auth.user.id,
         token = auth.accessToken,
         initial = (await request("/v1/account", null, token)).value;
       assert.equal(initial.entitlements.asr.available, 10000);
       assert.equal(initial.entitlements.advisor.available, 20);
+      app.jobs.stopped = true;
+      cfg.maxTextQueue = 1;
+      try {
+        const queuedId = uuid(), queued = await app.ledger.reserve(uid, queuedId, 'advisor', { intent: 'capacity' });
+        await assert.rejects(app.ledger.reserve(uid, uuid(), 'advisor', { intent: 'capacity' }), error => error.code === 'SERVICE_BUSY');
+        assert.equal((await app.ledger.reserve(uid, queuedId, 'advisor', { intent: 'capacity' })).created, false, 'capacity must not break idempotent retries');
+        await app.ledger.finish(queued.job.id, 'cancelled', null);
+        assert.equal((await app.ledger.balance(uid)).advisor.available, 20);
+      } finally {
+        app.jobs.stopped = false;
+        cfg.maxTextQueue = 16;
+      }
       const id = uuid(),
         input = { context: "", polish: true };
       const reservations = await Promise.all(
@@ -309,20 +310,9 @@ test(
         (await request("/v1/account", null, rotation.accessToken)).status,
         401,
       );
-      // A second independently verified device gets the same once-only welcome grant.
-      await app.db.query(
-        "UPDATE challenges SET created_at=now()-interval '2 minutes' WHERE phone_hash=(SELECT phone_hash FROM users WHERE id=$1)",
-        [uid],
-      );
-      const ch2 = (
-        await request("/v1/auth/challenges", { phone: "13800001234" })
-      ).value;
-      auth = (
-        await request("/v1/auth/verify", {
-          challengeId: ch2.challengeId,
-          code: sent.at(-1).code,
-        })
-      ).value;
+      // A second login gets the same account and no new welcome grant.
+      auth = (await request('/v1/auth/login', { handle: activeHandle, password: password + '-new' })).value;
+      assert.equal(auth.user.id, uid);
       assert.equal(
         (
           await app.db.query(
@@ -408,6 +398,13 @@ test(
             !r.input_cipher && !String(r.result_cipher).includes("fixture"),
         ),
       );
+      const invitationResponse = await fetch(base + '/admin/api/invitations', { method: 'POST', headers: { 'Content-Type': 'application/json', cookie: adminCookie, 'X-CSRF-Token': csrf }, body: JSON.stringify({ count: 1, days: 1, label: 'integration test' }) });
+      assert.equal(invitationResponse.status, 201);
+      const privateCode = (await invitationResponse.json()).invitations[0].code;
+      const audit = JSON.stringify((await app.db.query('SELECT detail FROM audits')).rows);
+      assert(!audit.includes(privateCode) && !audit.includes(password) && !audit.includes(rotatedCode));
+      for (let n = 0; n < 10; n++) assert.equal((await request('/v1/auth/login', { handle: 'locked-user', password })).status, 401);
+      assert.equal((await request('/v1/auth/login', { handle: 'locked-user', password })).status, 429);
       const late = await app.ledger.reserve(uid, uuid(), 'advisor', { intent: 'late' });
       assert.equal((await request('/v1/account/delete', { confirm: true }, auth.accessToken)).status, 200);
       for (const table of ['personal_memory', 'memory_history', 'memory_receipts', 'memory_work']) assert.equal((await app.db.query('SELECT count(*) n FROM ' + table + ' WHERE user_id=$1', [uid])).rows[0].n, '0');

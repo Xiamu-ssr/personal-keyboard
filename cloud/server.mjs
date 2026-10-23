@@ -7,7 +7,7 @@ import { configuration } from "./config.mjs";
 import { Database } from "./db/database.mjs";
 import { Ledger, isUuid } from "./billing/ledger.mjs";
 import { Accounts } from "./identity/accounts.mjs";
-import { AliyunSms } from "./identity/sms.mjs";
+import { Invitations } from "./identity/invitations.mjs";
 import { TextModels } from "./models/text.mjs";
 import { connectAsr } from "./models/asr.mjs";
 import { Jobs } from "./jobs/service.mjs";
@@ -30,7 +30,6 @@ import {
 export async function createCloudServer({
   cfg,
   db = new Database(cfg.databaseUrl),
-  sms = new AliyunSms(cfg),
   models = new TextModels(cfg),
   asrSocket,
   memoryModel = new MemoryModel(cfg),
@@ -39,7 +38,8 @@ export async function createCloudServer({
   await models.init();
   await memoryModel.init();
   const ledger = new Ledger(db, cfg),
-    accounts = new Accounts(db, ledger, cfg, sms),
+    accounts = new Accounts(db, ledger, cfg),
+    invitations = new Invitations(db),
     memory = new PersonalMemory(db, memoryModel, cfg),
     jobs = new Jobs(db, ledger, models, cfg, memory),
     sync = new SyncService(db, ledger, cfg),
@@ -67,9 +67,9 @@ export async function createCloudServer({
         await db.query("SELECT 1");
         return json(res, {
           status: "ok",
-          version: "0.5.0-alpha.1",
+          version: "0.6.0-alpha.1",
           readiness: {
-            sms: cfg.smsReady,
+            account: true,
             asr: cfg.asrReady,
             text: cfg.textReady,
             vision: cfg.visionReady,
@@ -87,15 +87,9 @@ export async function createCloudServer({
           metering: cfg.plans.metering,
           purchaseEnabled: false,
         });
-      if (method === "POST" && route === "/v1/auth/challenges")
-        return json(
-          res,
-          await accounts.challenge((await jsonBody(req)).phone, ip(req)),
-          201,
-        );
-      if (method === "POST" && route === "/v1/auth/verify") {
-        const b = await jsonBody(req);
-        return json(res, await accounts.verify(b.challengeId, b.code));
+      if (method === "POST" && ["/v1/auth/register", "/v1/auth/login", "/v1/auth/recover"].includes(route)) {
+        const action = route.split('/').at(-1);
+        return json(res, await accounts[action](await jsonBody(req, 4096), ip(req)), action === 'register' ? 201 : 200);
       }
       if (method === "POST" && route === "/v1/auth/refresh")
         return json(
@@ -166,6 +160,12 @@ export async function createCloudServer({
           return json(res, await admin.overview());
         if (method === "GET" && route === "/admin/api/users")
           return json(res, await admin.users());
+        if (method === 'GET' && route === '/admin/api/invitations')
+          return json(res, await invitations.list());
+        if (method === 'POST' && route === '/admin/api/invitations')
+          return json(res, await invitations.create(actor, await jsonBody(req, 4096)), 201);
+        if (method === 'POST' && route === '/admin/api/invitations/revoke')
+          return json(res, await invitations.revoke(actor, (await jsonBody(req, 4096)).id));
         if (method === "GET" && route === "/admin/api/jobs")
           return json(res, await admin.jobs());
         if (method === "GET" && route === "/admin/api/plans")
@@ -205,17 +205,23 @@ export async function createCloudServer({
         const user = await accounts.authenticate(bearer(req));
         if (method === "GET" && route === "/v1/account")
           return json(res, {
-            user: { id: user.id, phoneHint: user.phone_hint },
+            user: { id: user.id, handle: user.handle },
             entitlements: ledger.publicBalance(await ledger.balance(user.id)),
             services: {
               asr: cfg.asrReady,
               text: cfg.textReady,
               vision: cfg.visionReady,
-              sms: cfg.smsReady,
+              account: true,
             },
           });
         if (method === "POST" && route === "/v1/auth/logout")
           return json(res, await accounts.logout(user));
+        if (method === 'POST' && route === '/v1/auth/reauth')
+          return json(res, await accounts.reauthenticate(user, (await jsonBody(req, 4096)).password, ip(req)));
+        if (method === 'POST' && route === '/v1/auth/password')
+          return json(res, await accounts.changePassword(user, await jsonBody(req, 4096), ip(req)));
+        if (method === 'POST' && route === '/v1/auth/recovery-code')
+          return json(res, await accounts.rotateRecovery(user, (await jsonBody(req, 4096)).password, ip(req)));
         if (method === "POST" && route === "/v1/account/delete") {
           const b = await jsonBody(req);
           requireValue(
@@ -226,7 +232,7 @@ export async function createCloudServer({
           requireValue(
             Date.now() - new Date(user.verified_at) < 600000,
             "REAUTH_REQUIRED",
-            "注销前请重新验证手机号",
+            "注销前请重新验证账号密码",
             401,
           );
           const result = await accounts.delete(user, c => memory.remove(user, c));
@@ -312,11 +318,13 @@ export async function createCloudServer({
       const token = bearer(req),
         user = await accounts.authenticate(token);
       user.accessToken = token;
+      requireValue(sockets.clients.size < 8, 'ASR_BUSY', '当前语音会话较多，请稍后再试', 429);
       sockets.handleUpgrade(req, socket, head, (ws) =>
         connectAsr(ws, user, { cfg, ledger, accounts, memory, makeSocket: asrSocket }),
       );
-    })().catch(() => {
-      socket.end("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+    })().catch((error) => {
+      const status = error.status === 429 ? '429 Too Many Requests' : '401 Unauthorized';
+      socket.end(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`);
     });
   });
   const queue = setInterval(() => { jobs.pump(); void memory.pump(); }, 1000),
@@ -331,6 +339,7 @@ export async function createCloudServer({
     db,
     ledger,
     accounts,
+    invitations,
     jobs,
     sync,
     memory,

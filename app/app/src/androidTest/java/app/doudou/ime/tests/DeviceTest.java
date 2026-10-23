@@ -199,4 +199,42 @@ public class DeviceTest {
     JSONObject health = new app.doudou.ime.cloud.CloudClient(c).publicRequest("/healthz", null);
     assertEquals("ok", health.getString("status"));
   }
+
+  @Test
+  public void invitedAccountUsesRealCloudAndDoesNotStoreRecoveryCode() throws Exception {
+    java.io.File input = new java.io.File(c.getCacheDir(), "device-account-test.json");
+    Assume.assumeTrue("Explicit disposable test invitation required", input.isFile());
+    assertTrue(android.os.Build.HARDWARE.equals("ranchu") || android.os.Build.HARDWARE.equals("goldfish"));
+    JSONObject data;
+    try (java.io.FileInputStream stream = new java.io.FileInputStream(input)) {
+      byte[] bytes = new byte[(int) input.length()];
+      assertEquals(bytes.length, stream.read(bytes));
+      data = new JSONObject(new String(bytes, java.nio.charset.StandardCharsets.UTF_8));
+    }
+    input.delete();
+    app.doudou.ime.cloud.CloudClient client = new app.doudou.ime.cloud.CloudClient(c);
+    assertFalse("Never replace a real user's session", client.loggedIn());
+    String name = data.getString("handle"), password = data.getString("password");
+    try {
+      String recovery = client.register(name, password, data.getString("invitation"));
+      String id = client.userId();
+      assertTrue(recovery.startsWith("DDR-"));
+      assertFalse(client.secrets().get("session").contains(recovery));
+      assertEquals(10000, client.account().getJSONObject("entitlements").getJSONObject("asr").getLong("available"));
+      client.logout();
+      client.login(name, password);
+      assertEquals(id, client.userId());
+      assertEquals(20, client.account().getJSONObject("entitlements").getJSONObject("advisor").getInt("available"));
+      client.changePassword(password, password + "-changed");
+      client.logout();
+      String rotated = client.recover(name, password, recovery);
+      assertNotEquals(recovery, rotated);
+      assertEquals(id, client.userId());
+      assertFalse(client.secrets().get("session").contains(rotated));
+      client.reauthenticate(password);
+    } finally {
+      if (client.loggedIn()) client.request(client.userId(), "/v1/account/delete", "POST", new JSONObject().put("confirm", true));
+      client.clearSession();
+    }
+  }
 }

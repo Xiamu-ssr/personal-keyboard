@@ -48,6 +48,7 @@ function table(head, rows) {
     : '<div class="empty">暂无记录</div>';
 }
 function edit(title, content, save) {
+  $("save").textContent = '保存';
   $("editor-title").textContent = title;
   $("editor-fields").innerHTML = content;
   $("editor").showModal();
@@ -102,7 +103,7 @@ async function load() {
             ([k, v]) =>
               '<div class="card"><h3>' +
               {
-                sms: "短信登录",
+                account: "账号登录",
                 asr: "实时语音",
                 text: "文字模型",
                 vision: "图文模型",
@@ -127,9 +128,9 @@ async function load() {
       c.innerHTML =
         "<h1>用户与权益</h1>" +
         table(
-          ["手机号", "转写剩余", "军师剩余", "状态", "注册", "操作"],
+          ["账号", "转写剩余", "军师剩余", "状态", "注册", "操作"],
           data.map((u) => [
-            esc(u.phone_hint),
+            esc(u.handle),
             esc(u.asr_remaining),
             esc(u.advisor_remaining),
             esc(u.status),
@@ -146,13 +147,37 @@ async function load() {
           ]),
         );
     }
+    if (view === 'invitations') {
+      c.innerHTML = '<div class="toolbar"><h1>邀请试用</h1><button id="new-invitation">生成邀请码</button></div>' +
+        '<p>每码限一个新账号，赠送权益按注册时的欢迎套餐发放。完整邀请码只显示一次。</p>' +
+        table(['备注', '状态', '创建', '到期', '操作'], data.map(i => [
+          esc(i.label || '—'), i.used_at ? '已使用' : i.revoked ? '已撤销' : new Date(i.expires_at) <= new Date() ? '已过期' : '待使用',
+          date(i.created_at), date(i.expires_at), !i.used_at && !i.revoked ? '<button data-revoke="' + esc(i.id) + '">撤销</button>' : '—'
+        ]));
+      $('new-invitation').onclick = () => {
+        edit('生成邀请码', '<label>数量<input id="invite-count" type="number" min="1" max="20" value="1"></label><label>有效天数<input id="invite-days" type="number" min="1" max="90" value="30"></label><label>备注<input id="invite-label" maxlength="80" placeholder="例如第一批试用"></label>', async () => {
+          const result = await api('invitations', { count: Number($('invite-count').value), days: Number($('invite-days').value), label: $('invite-label').value });
+          // Show after this editor closes; codes never enter storage or audit logs.
+          setTimeout(() => {
+            edit('请保存邀请码', '<p>关闭后无法再次查看，可在列表中撤销。每行一个。</p><textarea id="invitation-codes" readonly aria-label="一次性邀请码"></textarea><button id="copy-invitations" type="button">复制</button>', async () => {});
+            $('invitation-codes').value = result.invitations.map(i => i.code).join('\n');
+            $('copy-invitations').onclick = async () => {
+              try { await navigator.clipboard.writeText($('invitation-codes').value); $('copy-invitations').textContent = '已复制'; }
+              catch { $('invitation-codes').select(); }
+            };
+            $('save').textContent = '已保存';
+          }, 0);
+        });
+        $('save').textContent = '生成';
+      };
+    }
     if (view === "jobs")
       c.innerHTML =
         "<h1>任务记录</h1>" +
         table(
           ["用户", "类型", "状态", "字符 / 次数", "模型", "错误码", "时间"],
           data.map((j) => [
-            esc(j.phone_hint),
+            esc(j.handle),
             esc(j.kind),
             esc(j.status),
             esc(j.consumed_asr + " / " + j.consumed_advisor),
@@ -270,6 +295,10 @@ $("content").onclick = async (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   try {
+    if (b.dataset.revoke) {
+      await api('invitations/revoke', { id: b.dataset.revoke });
+      await load();
+    }
     if (b.dataset.grant)
       edit(
         "调整权益",

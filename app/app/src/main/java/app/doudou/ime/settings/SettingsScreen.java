@@ -63,8 +63,8 @@ public final class SettingsScreen extends Screen {
     captionIn(input, "语音实时识别会携带少量热词与近期文字；个人整理开启后，再用文字模型按文风处理。");
     add(input);
     LinearLayout account =
-        section("豆豆账户", app.cloud.loggedIn() ? app.cloud.phoneHint() : "登录后使用语音和军师；普通输入离线可用。");
-    action(account, app.cloud.loggedIn() ? "账户、权益与云同步" : "手机号登录", () -> nav.open("account", 0));
+        section("豆豆账户", app.cloud.loggedIn() ? app.cloud.handle() : "登录后使用语音和军师；普通输入离线可用。");
+    action(account, app.cloud.loggedIn() ? "账户、权益与云同步" : "登录豆豆账户", () -> nav.open("account", 0));
     add(account);
     LinearLayout intelligence = section("个人记忆", "热词、文风和人物由云端管理，手机同步缓存。历史与截图保存在本机。");
     action(

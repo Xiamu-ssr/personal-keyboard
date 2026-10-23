@@ -23,7 +23,7 @@ export class SyncService {
     requireValue(
       Date.now() - new Date(user.verified_at).getTime() < 600000,
       "REAUTH_REQUIRED",
-      "换机恢复前请重新验证手机号",
+      "换机恢复前请重新验证账号密码",
       401,
     );
     return this.db.transaction(async (c) => {

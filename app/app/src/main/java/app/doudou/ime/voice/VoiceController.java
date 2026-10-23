@@ -14,7 +14,7 @@ public final class VoiceController extends PanelController {
   private final TextModelClient model;
   private TextView status, voiceText, insertAction;
   private VoiceButton microphone;
-  private boolean recording;
+  private boolean recording, working;
   private String transcript = "", rawTranscript = "", historyId = "";
 
   public VoiceController(EditorHost host) {
@@ -27,6 +27,7 @@ public final class VoiceController extends PanelController {
     voice.cancel();
     model.cancel();
     recording = false;
+    working = false;
     transcript = "";
     rawTranscript = "";
     historyId = "";
@@ -43,6 +44,7 @@ public final class VoiceController extends PanelController {
     voice.cancel();
     model.cancel();
     recording = false;
+    working = false;
     snapshot();
     reset("voice", 284);
     root.setBackgroundColor(Ui.KEYBOARD);
@@ -68,7 +70,7 @@ public final class VoiceController extends PanelController {
     voiceText = Ui.text(this, transcript, 17, Ui.INK);
     voiceText.setGravity(Gravity.CENTER);
     voiceText.setMaxLines(2);
-    voiceText.setEllipsize(android.text.TextUtils.TruncateAt.END);
+    voiceText.setMovementMethod(android.text.method.ScrollingMovementMethod.getInstance());
     voiceText.setLineSpacing(Ui.dp(this, 3), 1);
     voiceText.setContentDescription("修正语音文字");
     voiceText.setOnClickListener(v -> editTranscript());
@@ -76,6 +78,7 @@ public final class VoiceController extends PanelController {
     status = Ui.text(this, transcript.isEmpty() ? "点击说话" : "点文字可修正", 14, Ui.SUB);
     status.setGravity(Gravity.CENTER);
     status.setMaxLines(2);
+    status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
     center.addView(status, new LinearLayout.LayoutParams(-1, Ui.dp(this, 38)));
     microphone =
         new VoiceButton(
@@ -83,7 +86,9 @@ public final class VoiceController extends PanelController {
             () -> {
               if (recording) {
                 recording = false;
-                microphone.setState(VoiceButton.State.PROCESSING);
+                working = true;
+                microphone.setState(VoiceButton.State.TRANSCRIBING);
+                insertAction.setEnabled(false);
                 status.setText("正在识别…");
                 voice.stop();
               } else startVoice();
@@ -105,7 +110,7 @@ public final class VoiceController extends PanelController {
         round(
             "退格",
             () -> {
-              if (recording) return;
+              if (recording || working) return;
               voice.cancel();
               model.cancel();
               microphone.setState(VoiceButton.State.IDLE);
@@ -130,12 +135,13 @@ public final class VoiceController extends PanelController {
     voice.cancel();
     model.cancel();
     recording = false;
+    working = false;
     microphone.setState(VoiceButton.State.IDLE);
     typing();
   }
 
   private void editTranscript() {
-    if (transcript.isEmpty()) return;
+    if (transcript.isEmpty() || recording || working) return;
     voice.cancel();
     model.cancel();
     recording = false;
@@ -152,10 +158,14 @@ public final class VoiceController extends PanelController {
   private void renderTranscript() {
     voiceText.setText(transcript);
     insertAction.setText(transcript.isEmpty() ? "换行" : "填入");
+    voiceText.post(() -> {
+      android.text.Layout layout = voiceText.getLayout();
+      if (layout != null) voiceText.scrollTo(0, Math.max(0, layout.getHeight() - voiceText.getHeight()));
+    });
   }
 
   private void insertTranscript() {
-    if (recording) return;
+    if (recording || working) return;
     if (transcript.trim().isEmpty()) {
       host.insert("\n");
       return;
@@ -176,9 +186,11 @@ public final class VoiceController extends PanelController {
   }
 
   private void startVoice() {
+    if (working || recording) return;
     model.cancel();
-    recording = true;
-    microphone.setState(VoiceButton.State.LISTENING);
+    working = true;
+    insertAction.setEnabled(false);
+    microphone.setState(VoiceButton.State.CONNECTING);
     final long gen = host.generation();
     final String prefix = transcript.isEmpty() ? "" : transcript + " ";
     final String rawPrefix = rawTranscript.isEmpty() ? "" : rawTranscript + " ";
@@ -199,6 +211,8 @@ public final class VoiceController extends PanelController {
                 else app.histories.transcript(historyId, rawTranscript);
               }
               recording = false;
+              working = false;
+              insertAction.setEnabled(true);
               microphone.setState(VoiceButton.State.IDLE);
               status.setText("说完了 · 可修正、整理或填入");
               if (app.prefs().getBoolean("personalRewrite", false)) polishVoice();
@@ -209,10 +223,19 @@ public final class VoiceController extends PanelController {
             if (active()) microphone.level(rmsDb);
           }
 
+          public void ready() {
+            if (!active()) return;
+            working = false;
+            recording = true;
+            microphone.setState(VoiceButton.State.LISTENING);
+          }
+
           public void processing() {
             if (active()) {
               recording = false;
-              microphone.setState(VoiceButton.State.PROCESSING);
+              working = true;
+              microphone.setState(VoiceButton.State.TRANSCRIBING);
+              insertAction.setEnabled(false);
             }
           }
 
@@ -223,6 +246,8 @@ public final class VoiceController extends PanelController {
           public void error(String value) {
             if (!active()) return;
             recording = false;
+            working = false;
+            insertAction.setEnabled(true);
             microphone.setState(VoiceButton.State.IDLE);
             status.setText(value);
           }
@@ -231,6 +256,7 @@ public final class VoiceController extends PanelController {
   }
 
   private void polishVoice() {
+    if (recording || working) return;
     voice.cancel();
     recording = false;
     microphone.setState(VoiceButton.State.IDLE);
@@ -244,7 +270,9 @@ public final class VoiceController extends PanelController {
       return;
     }
     final long gen = host.generation();
-    microphone.setState(VoiceButton.State.PROCESSING);
+    working = true;
+    insertAction.setEnabled(false);
+    microphone.setState(VoiceButton.State.REWRITING);
     status.setText("按热词和文风整理中…");
     model.polish(
         original,
@@ -252,6 +280,8 @@ public final class VoiceController extends PanelController {
         host.conversationRef(),
         (text, error) -> {
           if (gen != host.generation() || !host.mode().equals("voice")) return;
+          working = false;
+          insertAction.setEnabled(true);
           microphone.setState(VoiceButton.State.IDLE);
           if (error != null) {
             status.setText(error);

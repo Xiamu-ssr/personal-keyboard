@@ -1,11 +1,14 @@
-version: 3
-status: implemented-provider-configuration-pending
+version: 4
+status: implemented-invited-preview
 base: https://106.14.88.147/keyboard-api
 identity:
-  domestic: phone-sms-code
+  domestic: invitation-account-password
   international: deferred
   accountId: stable-product-user-id
   sessions: short-access-token-and-rotating-hashed-refresh
+  password: async-scrypt-N32768-r8-p3-unique-salt-max-two-inflight
+  recovery: 256-bit-once-shown-hmac-stored-rotated-after-use
+  invitations: 256-bit-once-shown-sha256-stored-single-use-expiring
 entitlements:
   catalog: ../config/plans.json
   welcome: once-per-account
@@ -14,12 +17,16 @@ entitlements:
 routes:
   - {method: GET, path: /healthz, auth: public}
   - {method: GET, path: /v1/catalog, auth: public}
-  - {method: POST, path: /v1/auth/challenges, auth: phone-ip-and-global-rate-limit}
-  - {method: POST, path: /v1/auth/verify, auth: single-use-code}
+  - {method: POST, path: /v1/auth/register, auth: single-use-invitation-account-ip-and-global-limits}
+  - {method: POST, path: /v1/auth/login, auth: account-password-and-rate-limits}
+  - {method: POST, path: /v1/auth/recover, auth: single-use-recovery-code-revokes-all-sessions}
+  - {method: POST, path: /v1/auth/reauth, auth: product-user-password}
+  - {method: POST, path: /v1/auth/password, auth: product-user-current-password-revokes-other-sessions}
+  - {method: POST, path: /v1/auth/recovery-code, auth: product-user-password}
   - {method: POST, path: /v1/auth/refresh, auth: rotating-refresh-token}
   - {method: POST, path: /v1/auth/logout, auth: product-user}
   - {method: GET, path: /v1/account, auth: product-user}
-  - {method: POST, path: /v1/account/delete, auth: recently-sms-verified-user-and-explicit-confirmation}
+  - {method: POST, path: /v1/account/delete, auth: recently-password-verified-user-and-explicit-confirmation}
   - {method: WS, path: /v1/asr, auth: authorization-bearer-header}
   - {method: POST, path: /v1/jobs, kinds: [rewrite, advisor], auth: product-user}
   - {method: GET, path: /v1/jobs/{id}, auth: owning-user}
@@ -27,7 +34,7 @@ routes:
   - {method: GET, path: /v1/memory, auth: product-user, query: after-version, response: full-reset-or-complete-record-deltas-and-tombstones}
   - {method: POST, path: /v1/memory, auth: product-user, request: requestId-baseVersion-operations-or-candidate-confirmation}
   - {method: POST, path: /v1/memory/history, auth: product-user, request: historyId-revision-and-text-only-increments, response: durable-accepted-revisions}
-  - {method: POST, path: /v1/sync/key, auth: paid-sync-and-recent-sms-verification}
+  - {method: POST, path: /v1/sync/key, auth: paid-sync-and-recent-password-verification}
   - {method: GET, path: /v1/sync, auth: paid-sync-owning-user}
   - {method: PUT, path: /v1/sync, auth: paid-sync-and-manifest-baseRevision}
   - {method: DELETE, path: /v1/sync, auth: owning-user}
@@ -35,6 +42,9 @@ routes:
   - {method: GET, path: /admin/, auth: independent-admin-login}
   - {method: GET, path: /admin/api/overview, auth: admin-session}
   - {method: GET, path: /admin/api/users, auth: admin-session}
+  - {method: GET, path: /admin/api/invitations, auth: admin-session-metadata-only}
+  - {method: POST, path: /admin/api/invitations, auth: admin-session-csrf-one-time-code-display}
+  - {method: POST, path: /admin/api/invitations/revoke, auth: admin-session-csrf}
   - {method: POST, path: /admin/api/grants, auth: admin-session-csrf-and-audit-reason}
   - {method: GET, path: /admin/api/plans, auth: admin-session}
   - {method: POST, path: /admin/api/plans, auth: admin-session-csrf-draft-only}

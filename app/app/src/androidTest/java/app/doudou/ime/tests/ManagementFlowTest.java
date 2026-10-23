@@ -162,13 +162,7 @@ public final class ManagementFlowTest {
   }
 
   @Test
-  public void accountIsOptionalAndShowsUnconfiguredSmsHonestly() throws Exception {
-    org.junit.Assume.assumeFalse(
-        new app.doudou.ime.cloud.CloudClient(
-                InstrumentationRegistry.getInstrumentation().getTargetContext())
-            .publicRequest("/healthz", null)
-            .getJSONObject("readiness")
-            .getBoolean("sms"));
+  public void accountIsOptionalAndInvitationRegistrationNeedsNoSms() throws Exception {
     android.app.Instrumentation ins = InstrumentationRegistry.getInstrumentation();
     ui = ins.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
     android.accessibilityservice.AccessibilityServiceInfo info = ui.getServiceInfo();
@@ -182,11 +176,15 @@ public final class ManagementFlowTest {
                     .putExtra("page", "account")
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     try {
-      await("手机号");
-      set("手机号", "13800001234");
-      click("获取验证码");
-      await("短信登录尚待企业资质、签名和模板配置；本地输入仍可使用");
-      set("13800001234", "");
+      await("欢迎回来");
+      click("受邀注册");
+      await("创建豆豆账户");
+      await("邀请码");
+      click("忘记密码");
+      await("找回账户");
+      await("恢复码");
+      click("已有账号");
+      await("欢迎回来");
       shot("account");
       click("返回");
       await("系统权限");

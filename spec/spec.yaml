@@ -2,9 +2,9 @@ schemaVersion: 6
 meta:
   title: 豆豆输入法
   subtitle: 域与实体固定，数据在其间流动
-  version: 0.5.0-alpha.1
-  reviewedAt: 2026-10-22
-  status: App / Cloud 0.5 · 模型已接入 · 短信待资质
+  version: 0.6.0-alpha.1
+  reviewedAt: 2026-10-23
+  status: App / Cloud 0.6 · 邀请注册 · 实时语音
 domains:
   - id: phone
     name: 用户手机
@@ -89,6 +89,10 @@ domains:
       - 账户 / 权益 / 用量
       - 热词 / 场景文风 / 人物资料
       - 临时任务材料 / 版本游标 / 付费历史备份
+    fields:
+      部署: Cloud 与 PostgreSQL 为独立容器，数据库卷与备份卷独立持久化。
+      存储: 账户、权益和用量为关系表；个人记忆以加密 JSON 存 PostgreSQL。
+      容量: 语音最多 8 路；改写和军师并发 2、任务总量 16；记忆更新串行。
     code:
       - cloud/models/
       - cloud/jobs/
@@ -114,6 +118,7 @@ domains:
         title: 账户与权益
         summary: 登录 · 额度 · 结算
         details:
+          - 邀请码注册，账号密码登录；恢复码用于重设密码，换机登录不重领。
           - 新账户一次性赠送 10,000 转写字符与 20 次军师。
           - 只结算成功结果；原任务重试不重复扣量，“更多”算新生成。
           - 个人记忆同步为基础能力；完整历史与截图备份按付费权益开放。

@@ -26,6 +26,8 @@ public final class VoiceInput {
     void level(float rmsDb);
 
     void processing();
+
+    void ready();
   }
 
   private final Context context;
@@ -107,7 +109,6 @@ public final class VoiceInput {
                           String type = m.optString("type");
                           if (type.equals("accepted")) jobId = m.getString("jobId");
                           if (type.equals("ready")) {
-                            post(token, () -> listener.status("正在听，说完点停止"));
                             capture(ws, token);
                           }
                           if (type.equals("partial")) {
@@ -126,6 +127,7 @@ public final class VoiceInput {
                               String text = result.getString("text");
                               jobId = m.getString("id");
                               post(token, () -> listener.text(text, true));
+                              ws.close(1000, "Completed");
                             } else {
                               JSONObject e = m.optJSONObject("error");
                               fail(token, e == null ? "任务已结束，请重试" : e.optString("message"));
@@ -183,6 +185,7 @@ public final class VoiceInput {
                 if (token != epoch) return;
                 recorder = audio;
                 audio.startRecording();
+                post(token, () -> { listener.ready(); listener.status("正在听，说完点停止"); });
                 byte[] buffer = new byte[3200];
                 long started = System.currentTimeMillis();
                 while (recording
@@ -238,6 +241,8 @@ public final class VoiceInput {
     if (token != epoch) return;
     finished = true;
     releaseRecorder();
+    WebSocket current = socket;
+    if (current != null) { current.send("{\"type\":\"cancel\"}"); current.close(1000, "Stopped"); }
     post(token, () -> listener.error(value));
   }
 
