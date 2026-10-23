@@ -1,21 +1,21 @@
 {
-  "version": "0.7.0-alpha.1",
-  "sourceApkSha256": "53390f08cca5698ebff17e15e98d91c571fd137073fb24bd35f2cd2334a97a29",
-  "source": "Actual Android 15 APK recording of owned practice. Launcher segments removed; no generated or substituted UI frames. Advisor calls the production Cloud and Aliyun. The voice clip demonstrates hold, slide, lock and cancellation, not speech-recognition accuracy.",
+  "version": "0.7.1-alpha.1",
+  "sourceApkSha256": "d686dc4d4a447a02a8ff451631da7d0160470dd13d0e4b0d5d68722d9d38e802",
+  "source": "Actual Android 15 final APK recording of owned practice. Launcher/bootstrap segments removed; original frame order and speed, no generated or substituted UI. Advisor uses the production Cloud and Aliyun. The silent voice clip demonstrates hold, cancel, hands-free and keyboard recovery, not speech-recognition accuracy.",
   "cloudModelsConfigured": true,
   "files": {
     "keyboard-tour.mp4": {
-      "sha256": "df2cc5bb52fa4d8cc1dbb9c4857f72c09645a143cddfd9ec4bbd851e93551816",
-      "bytes": 84000,
-      "durationSeconds": 6.393304,
+      "sha256": "3e4bba3c7d42887ed75306f74a6b807ffe0b23d51198687aafd4b7dfa44d172e",
+      "bytes": 181566,
+      "durationSeconds": 7.35859,
       "width": 720,
       "height": 1600,
       "codec": "h264"
     },
     "advisor-tour.mp4": {
-      "sha256": "0104fb5719ff458a16ff4bfa6cb345ab8b49afc035e6a8f40632a082ba8eb6a5",
-      "bytes": 156247,
-      "durationSeconds": 13.456809,
+      "sha256": "9c9952601c8ae9a134ec701aca0052b24d4c6985374843df0cc5db848241c862",
+      "bytes": 196420,
+      "durationSeconds": 12.761493,
       "width": 720,
       "height": 1600,
       "codec": "h264"

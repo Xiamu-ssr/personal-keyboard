@@ -132,6 +132,19 @@ public class CoreTest {
   }
 
   @Test
+  public void undoAvailabilityCanBeCheckedWithoutConsumingTheInsertion() {
+    EditTracker t = new EditTracker();
+    t.begin("前文", 2, 2, "回复", 3);
+    assertTrue(t.canUndo("前文回复", 3));
+    assertTrue(t.canUndo("前文回复", 3));
+    assertFalse(t.canUndo("前文回复！", 3));
+    assertFalse(t.canUndo("前文回复", 4));
+    assertFalse(t.canUndo(null, 3));
+    assertEquals("前文", t.undo("前文回复", 3));
+    assertFalse(t.canUndo("前文回复", 3));
+  }
+
+  @Test
   public void clearOnSendIsUnknown() {
     EditTracker t = new EditTracker();
     t.begin("", 0, 0, "今天见", 1);

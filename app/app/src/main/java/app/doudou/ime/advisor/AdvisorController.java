@@ -246,15 +246,15 @@ public final class AdvisorController extends PanelController {
   }
 
   private void options(View anchor) {
-    PopupMenu menu = new PopupMenu(this, anchor);
-    menu.getMenu().add("聊天对象").setOnMenuItemClickListener(i -> { choosePerson(); return true; });
+    PopupMenu menu = Ui.menu(this, anchor);
+    menu.getMenu().add("聊天对象").setOnMenuItemClickListener(i -> { anchor.post(this::choosePerson); return true; });
     menu.getMenu().add("我想表达…").setOnMenuItemClickListener(i -> {
-      editLocal("我想表达", intent, value -> { intent = value; advisor.stage = AdvisorSession.Stage.READY; generate(""); }); return true;
+      anchor.post(() -> editLocal("我想表达", intent, value -> { intent = value; advisor.stage = AdvisorSession.Stage.READY; generate(""); })); return true;
     });
     if (advisor.pages() < AdvisorSession.MAX_PAGES)
-      menu.getMenu().add("补充一屏").setOnMenuItemClickListener(i -> { start(true); return true; });
-    menu.getMenu().add("重新截图").setOnMenuItemClickListener(i -> { start(false); return true; });
-    if (replies.canBack()) menu.getMenu().add("上一组").setOnMenuItemClickListener(i -> { replies.back(); advisor.stage = AdvisorSession.Stage.RESULTS; panel(); return true; });
+      menu.getMenu().add("补充一屏").setOnMenuItemClickListener(i -> { anchor.post(() -> start(true)); return true; });
+    menu.getMenu().add("重新截图").setOnMenuItemClickListener(i -> { anchor.post(() -> start(false)); return true; });
+    if (replies.canBack()) menu.getMenu().add("上一组").setOnMenuItemClickListener(i -> { anchor.post(() -> { replies.back(); advisor.stage = AdvisorSession.Stage.RESULTS; panel(); }); return true; });
     menu.show();
   }
 

@@ -81,10 +81,10 @@ public class NativeFlowTest {
             }
           });
       instrumentation.waitForIdleSync();
-      if (node("工具") != null) break;
+      if (node("更多") != null) break;
       SystemClock.sleep(100);
     } while (SystemClock.uptimeMillis() < keyboardDeadline);
-    await("工具");
+    await("更多");
     try {
       ui.waitForIdle(200, 3000);
     } catch (java.util.concurrent.TimeoutException e) {
@@ -148,7 +148,24 @@ public class NativeFlowTest {
     long until=SystemClock.uptimeMillis()+2000;
     while(SystemClock.uptimeMillis()<until) {
       AccessibilityNodeInfo target=await(text);
-      if(target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {SystemClock.sleep(110);return;}
+      AccessibilityNodeInfo action=target;
+      for (int depth=0; action!=null && !action.isClickable() && depth<3; depth++) {
+        AccessibilityNodeInfo parent=action.getParent();
+        if (parent==null || "android.widget.ListView".contentEquals(parent.getClassName())) break;
+        action=parent;
+      }
+      if(action!=null && action.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {SystemClock.sleep(180);return;}
+      if (!target.isClickable()) {
+        SystemClock.sleep(250);
+        target=await(text); if(!target.refresh()) continue;
+        Rect bounds = new Rect(); target.getBoundsInScreen(bounds);
+        long now = SystemClock.uptimeMillis();
+        MotionEvent down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, bounds.centerX(), bounds.centerY(), 0);
+        MotionEvent up = MotionEvent.obtain(now, now + 40, MotionEvent.ACTION_UP, bounds.centerX(), bounds.centerY(), 0);
+        boolean delivered = ui.injectInputEvent(down, true) && ui.injectInputEvent(up, true);
+        down.recycle(); up.recycle();
+        if (delivered) { SystemClock.sleep(120); return; }
+      }
       // InputConnection restarts can replace the action row between lookup and dispatch.
       SystemClock.sleep(80);
     }
@@ -216,12 +233,12 @@ public class NativeFlowTest {
   public void advisorChecksAccountBeforeCapturingAndPreservesDraft() {
     instrumentation.runOnMainSync(() -> editor.setText("本机验收草稿"));
     instrumentation.waitForIdleSync();
-    click("军师");
+    click("帮我回");
     await("登录后使用军师");
     await("去登录");
     assertNull(node("重试"));
     assertEquals("本机验收草稿", value());
-    click("返回"); await("工具");
+    click("返回键盘"); await("更多");
     assertEquals("本机验收草稿", value());
   }
 
@@ -242,23 +259,48 @@ public class NativeFlowTest {
     click("展开");
     click("六六六");
     assertEquals("六六六", value());
-    await("工具");
+    await("更多");
     screenshot("initials");
   }
 
   @Test
-  public void toolsAndVoiceFailureRemainRecoverable() {
-    click("工具");
-    await("随手工具");
-    for (String title : new String[] {"语音输入", "原地军师", "热词短语", "剪贴板", "移动光标", "撤销上屏", "隐私输入", "设置"})
+  public void smallMenuKeepsEditingAndPrivacyWithoutDuplicateModes() {
+    click("更多");
+    for (String title : new String[] {"粘贴文字", "编辑文字", "隐私输入", "键盘设置"})
       await(title);
+    assertNull(node("语音输入")); assertNull(node("原地军师")); assertNull(node("热词短语"));
     screenshot("tools");
-    click("语音输入");
+    click("编辑文字");
+    await("左移"); await("右移"); await("全选"); await("q");
+    click("完成"); click("更多");
+    click("隐私输入");
+    await("隐私输入已开启");
+    assertNull(node("帮我回"));
+    screenshot("privacy-changed");
+    click("更多"); click("隐私输入");
+    assertNotNull(await("帮我回"));
+    assertTrue(await("空格").performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK));
     await("登录后使用语音");
     await("去登录");
-    click("返回");
-    await("工具");
+    click("返回键盘");
+    await("更多");
     assertEquals("", value());
+  }
+
+  @Test
+  public void deniedLongHoldDoesNotAccidentallyInsertASpace() {
+    instrumentation.runOnMainSync(() -> { editor.setText("原草稿"); editor.setSelection(editor.length()); });
+    instrumentation.waitForIdleSync();
+    Rect key = new Rect(); await("空格").getBoundsInScreen(key);
+    long down = SystemClock.uptimeMillis();
+    MotionEvent press = MotionEvent.obtain(down, down, MotionEvent.ACTION_DOWN, key.centerX(), key.centerY(), 0);
+    assertTrue(ui.injectInputEvent(press, true)); press.recycle();
+    await("登录后使用语音");
+    MotionEvent release = MotionEvent.obtain(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, key.centerX(), key.centerY(), 0);
+    assertTrue(ui.injectInputEvent(release, true)); release.recycle();
+    assertEquals("原草稿", value());
+    click("返回键盘"); await("更多");
+    assertEquals("原草稿", value());
   }
 
   @Test
@@ -276,8 +318,8 @@ public class NativeFlowTest {
     click("中");
     click("a");
     assertEquals("a", value());
-    click("军师");
-    await("此输入框不启用军师读屏。");
+    assertNull(node("帮我回"));
+    assertNull(node("按住说话"));
     assertEquals("a", value());
   }
 }

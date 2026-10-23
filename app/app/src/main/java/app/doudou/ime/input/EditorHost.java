@@ -49,9 +49,13 @@ public interface EditorHost {
 
   void message(String title, String detail, String actionLabel, Runnable action);
 
-  void openVoice();
+  void voiceFeedback(app.doudou.ime.voice.VoiceState state, String hint, boolean held, app.doudou.ime.voice.VoiceGesture.Target target);
 
-  void openAdvisor();
+  void voiceLevel(float rmsDb);
+
+  void voiceRecovery(String hint, boolean hasText);
+
+  void vibrate();
 
   void cancelVoice();
 
@@ -68,4 +72,7 @@ public interface EditorHost {
   String full();
 
   void selectAll();
+
+  void editText();
+
 }

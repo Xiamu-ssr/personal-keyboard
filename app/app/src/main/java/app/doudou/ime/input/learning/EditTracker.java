@@ -35,13 +35,14 @@ public final class EditTracker {
   }
 
   public String undo(String full, long gen) {
-    if (expected == null
-        || generation != gen
-        || full == null
-        || !full.equals(left + expected + right)) return null;
+    if (!canUndo(full, gen)) return null;
     String out = left + original + right;
     clear();
     return out;
+  }
+
+  public boolean canUndo(String full, long gen) {
+    return expected != null && generation == gen && full != null && full.equals(left + expected + right);
   }
 
   public Change observe(String full, long gen) {

@@ -53,11 +53,11 @@ public final class ProductFlowTest {
     activity = ins.startActivitySync(new Intent(app, PracticeActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     editor = field(activity.getWindow().getDecorView()); assertNotNull(editor);
     long keyboardUntil=SystemClock.uptimeMillis()+8000;
-    while(node("工具")==null && SystemClock.uptimeMillis()<keyboardUntil) {
+    while(node("更多")==null && SystemClock.uptimeMillis()<keyboardUntil) {
       ins.runOnMainSync(()->{editor.requestFocus();((InputMethodManager)app.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).showSoftInput(editor,InputMethodManager.SHOW_IMPLICIT);});
       SystemClock.sleep(100);
     }
-    await("工具", 8000);
+    await("更多", 8000);
   }
 
   @After public void close() throws Exception {
@@ -110,7 +110,7 @@ public final class ProductFlowTest {
     ins.runOnMainSync(() -> { editor.setText("已有草稿："); editor.setSelection(editor.length()); });
     ins.waitForIdleSync(); SystemClock.sleep(350);
     long started = SystemClock.elapsedRealtime();
-    click("军师");
+    click("帮我回");
     await("看懂聊天，想想怎么回…", 10000);
     shot("advisor-loading");
     await("温和回复", 85000);
@@ -124,7 +124,7 @@ public final class ProductFlowTest {
     await("温和回复",85000);
     click("更多");click("上一组");
     assertEquals("Returning to prior replies needs no new request",originalReply,await("温和回复",4000).getChild(1).getText().toString());
-    click("温和回复"); await("工具",8000);
+    click("温和回复"); await("更多",8000);
     assertTrue(value().startsWith("已有草稿：")); assertTrue(value().length()>6);
     assertFalse("Never sends the practice message", value().isEmpty());
     shot("advisor-inserted");
@@ -139,7 +139,7 @@ public final class ProductFlowTest {
     Rect key = new Rect(); await("空格",8000).getBoundsInScreen(key);
     long down = SystemClock.uptimeMillis();
     event(MotionEvent.ACTION_DOWN,key.centerX(),key.centerY(),down);
-    await("停止录音",8000);
+    await("松手填入",8000);
     new File(app.getCacheDir(),"product-voice-ready").createNewFile();
     long until = SystemClock.uptimeMillis()+10000;
     while (value().equals("保留前文：") && SystemClock.uptimeMillis()<until) SystemClock.sleep(100);
@@ -149,14 +149,14 @@ public final class ProductFlowTest {
     while (!new File(app.getCacheDir(),"product-voice-audio-done").exists() && SystemClock.uptimeMillis()<until) SystemClock.sleep(100);
     assertTrue("Fixture audio reached emulator microphone",new File(app.getCacheDir(),"product-voice-audio-done").exists());
     event(MotionEvent.ACTION_UP,key.centerX(),key.centerY(),down);
-    await("工具",30000);
+    await("更多",30000);
     shot("voice-inserted");
     try(FileOutputStream out=new FileOutputStream(new File(app.getCacheDir(),"product-voice-proof.json"))) {out.write(new JSONObject().put("result",value()).toString().getBytes("UTF-8"));}
     assertTrue(value().startsWith("保留前文："));
     assertTrue("Not a canned transcript",value().contains("离谱"));
     assertTrue("The end of the spoken sentence is retained",value().contains("解决"));
     assertTrue("Ordinary profanity is preserved",value().contains("他妈"));
-    click("工具"); click("撤销上屏"); await("工具",4000);
+    click("撤销"); await("更多",4000);
     assertEquals("保留前文：",value());
   }
 
@@ -166,19 +166,22 @@ public final class ProductFlowTest {
     Rect key = new Rect(); await("空格",8000).getBoundsInScreen(key);
     long down = SystemClock.uptimeMillis();
     event(MotionEvent.ACTION_DOWN,key.centerX(),key.centerY(),down);
-    await("松手填入 · 上滑锁定 · 左滑取消",4000);
+    await("松手填入 · 上滑免按 · 左滑取消",4000);
     event(MotionEvent.ACTION_MOVE,key.centerX()-240,key.centerY(),down);
     await("松手取消",2000); shot("voice-cancel");
     event(MotionEvent.ACTION_UP,key.centerX()-240,key.centerY(),down);
-    await("工具",4000); assertEquals("原草稿",value());
+    await("更多",4000); assertEquals("原草稿",value());
     await("空格",4000).getBoundsInScreen(key); down=SystemClock.uptimeMillis();
     event(MotionEvent.ACTION_DOWN,key.centerX(),key.centerY(),down);
-    await("松手填入 · 上滑锁定 · 左滑取消",4000);
+    await("松手填入 · 上滑免按 · 左滑取消",4000);
     event(MotionEvent.ACTION_MOVE,key.centerX(),key.centerY()-240,down);
-    await("松手锁定，继续说话",2000);
+    await("松手后免按说话",2000);
     event(MotionEvent.ACTION_UP,key.centerX(),key.centerY()-240,down);
-    await("说完点停止，文字会自动填入",3000); shot("voice");
-    click("取消"); await("工具",4000); assertEquals("原草稿",value());
+    await("免按说话 · 点空格完成",3000); shot("voice");
+    ins.runOnMainSync(() -> ((InputMethodManager)app.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(editor.getWindowToken(),0));
+    SystemClock.sleep(250);
+    ins.runOnMainSync(() -> { editor.requestFocus(); ((InputMethodManager)app.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).showSoftInput(editor,InputMethodManager.SHOW_IMPLICIT); });
+    await("更多",8000); assertTrue(await("q",4000).isEnabled()); assertEquals("原草稿",value());
     shot("voice-restored");
   }
 }

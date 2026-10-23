@@ -1,66 +1,70 @@
 {
-  "reviewedAt": "2026-10-23T15:23:28.448978+00:00",
-  "version": "0.7.0-alpha.1",
-  "status": "Invited product preview; physical visual checks and live advisor verified; human continuous dictation remains unverified",
+  "reviewedAt": "2026-10-23T16:32:00.382764+00:00",
+  "version": "0.7.1-alpha.1",
+  "status": "Invited development preview; final physical keyboard and live advisor checked. Human continuous dictation, one-handed use and full screen-reader flows remain unverified.",
   "checks": [
     {
       "name": "JVM and JNI state",
       "status": "passed",
-      "tests": 27,
+      "tests": 28,
       "failures": 0
     },
     {
-      "name": "Android build, lint and signing",
+      "name": "Android build, lint and update signing",
       "status": "passed",
       "artifact": {
         "package": "app.doudou.ime",
-        "version": "0.7.0-alpha.1",
-        "sha256": "53390f08cca5698ebff17e15e98d91c571fd137073fb24bd35f2cd2334a97a29",
-        "bytes": 9897452,
+        "version": "0.7.1-alpha.1",
+        "sha256": "d686dc4d4a447a02a8ff451631da7d0160470dd13d0e4b0d5d68722d9d38e802",
+        "bytes": 9941000,
         "buildType": "debug",
         "production": false,
         "modelsBundled": false
       },
       "lintErrors": 0,
-      "sameSignerAsPrevious": true
+      "sameSignerAsInstalledPreviousVersion": true,
+      "lintWarnings": 23
     },
     {
       "name": "Android 15 native controls and data",
-      "status": "passed",
-      "uniqueTests": 21,
+      "status": "passed-after-focused-retest",
+      "uniqueTests": 23,
+      "focusedRetestTests": 9,
       "failuresAfterRetest": 0,
-      "staleAccessibilityNodeRetested": 1,
       "ownedPracticeOnly": true,
-      "threeButtonNavigation": "passed"
+      "recordingKeepsKeyPositions": true,
+      "spaceLongClickCannotRestartBusySession": true,
+      "passedUniqueTests": 22,
+      "skippedUniqueTests": 1,
+      "skippedReason": "Invited registration-form test requires a separate explicit disposable invitation; real disposable QA login and model flows verified separately."
     },
     {
       "name": "Live advisor and recording gestures",
       "status": "passed",
+      "tests": 2,
       "realModelAdvisor": true,
       "sameSessionPreviousGroupRestored": true,
       "selectedReplyInsertedWithoutSending": true,
       "slideCancelRestoresDraft": true,
       "slideUpLocks": true,
-      "doesNotClaimHumanAudioAccuracy": true,
-      "fontScale130Percent": "passed with scrolling"
+      "hideReopenRestoresTyping": true,
+      "doesNotClaimHumanAudioAccuracy": true
     },
     {
-      "name": "Physical OPPO",
+      "name": "Physical OPPO inspected keyboard and menu",
       "status": "passed-for-inspected-surfaces",
       "sameApkAsDownload": true,
       "preservedAppData": true,
-      "keyboardNavigationOverlapFixed": true,
+      "keyboardNavigationOverlapAbsentInOwnedPractice": true,
       "originalDisplayAndNavigationPreserved": true,
       "noPrivateChatInspected": true,
       "doesNotClaimEveryHostAppVerified": true
     },
     {
-      "name": "ASR fixture boundaries",
-      "status": "partial",
-      "productionCloudFullAudioTranscription": true,
-      "ordinaryProfanityPreservedInOwnedFixture": true,
-      "nativeEditorPreviewCancelAndExternalEditProtection": true,
-      "virtualMicrophoneCompleteSentence": "not-verified: SDK input was unstable and crashed; no incomplete recording published",
+      "name": "ASR accuracy boundaries",
+      "status": "not-revalidated-with-human-audio",
+      "productionCloudProtocol": "unchanged from 0.7.0",
+      "nativeGestureClip": "silent emulator; demonstrates controls only",
       "humanContinuousDictation": "not-yet-verified"
     },
     {
@@ -72,26 +76,16 @@
       "maxDirectedLinesPerPair": 2
     },
     {
-      "name": "Light Cloud deployment",
+      "name": "Existing Light Cloud readiness",
       "status": "passed",
-      "containers": [
-        "api",
-        "database"
-      ],
+      "version": "0.7.0-alpha.1",
+      "changedThisRelease": false,
+      "account": true,
+      "asr": true,
+      "text": true,
+      "vision": true,
       "tls": true,
-      "supplierCredentialsConfigured": true,
-      "databaseVolumesPreserved": true,
-      "purchasesEnabled": false
-    },
-    {
-      "name": "Independent product review",
-      "status": "passed-for-reviewed-material",
-      "reviewer": "\u6bd2\u820c\u4f46\u5ba2\u89c2\u7684\u9ad8\u5ba1\u7f8e\u5185\u6d4b\u5458",
-      "fixed": "navigation overlap, reply reading, one-tap advisor, space gestures, account form retention, explicit prerequisite actions, previous groups and direct punctuation",
-      "remainingMustFixFindings": 0,
-      "finalPhoneKeyboardProof": true,
-      "fontScale130PercentProof": true,
-      "humanContinuousDictation": "not-yet-verified"
+      "paidPurchases": false
     },
     {
       "name": "Native public media",
@@ -99,36 +93,49 @@
       "screenshots": 9,
       "recordings": {
         "keyboard-tour.mp4": {
-          "sha256": "df2cc5bb52fa4d8cc1dbb9c4857f72c09645a143cddfd9ec4bbd851e93551816",
-          "bytes": 84000,
-          "durationSeconds": 6.393304,
+          "sha256": "3e4bba3c7d42887ed75306f74a6b807ffe0b23d51198687aafd4b7dfa44d172e",
+          "bytes": 181566,
+          "durationSeconds": 7.35859,
           "width": 720,
           "height": 1600,
           "codec": "h264"
         },
         "advisor-tour.mp4": {
-          "sha256": "0104fb5719ff458a16ff4bfa6cb345ab8b49afc035e6a8f40632a082ba8eb6a5",
-          "bytes": 156247,
-          "durationSeconds": 13.456809,
+          "sha256": "9c9952601c8ae9a134ec701aca0052b24d4c6985374843df0cc5db848241c862",
+          "bytes": 196420,
+          "durationSeconds": 12.761493,
           "width": 720,
           "height": 1600,
           "codec": "h264"
         }
       },
-      "sourceApkSha256": "53390f08cca5698ebff17e15e98d91c571fd137073fb24bd35f2cd2334a97a29",
+      "sourceApkSha256": "d686dc4d4a447a02a8ff451631da7d0160470dd13d0e4b0d5d68722d9d38e802",
       "syntheticPracticeOnly": true,
       "containsPrivateChats": false,
       "publicAndroidHost": false
     },
     {
+      "name": "Independent Product Design final review",
+      "status": "passed-for-reviewed-material",
+      "reviewer": "毒舌但客观的高审美内测员",
+      "previousBlockingStateFindingsClosed": 3,
+      "remainingMustFixFindings": 0,
+      "nonBlockingFinding": "Practice introduction uses the feature name 军师 while its action button is named 帮我回.",
+      "limits": [
+        "human continuous dictation",
+        "real one-handed use",
+        "full screen-reader flow"
+      ]
+    },
+    {
       "name": "Local cleanup",
       "status": "passed",
       "emulatorStopped": true,
-      "emulatorPortsCleared": [
-        5554,
-        5555,
-        8554
-      ],
+      "emulatorPortsCleared": {
+        "5554": true,
+        "5555": true,
+        "8554": true
+      },
       "qaAccountDeleted": true,
       "qaDeviceCredentialsCleared": true,
       "phoneAdbRetained": true

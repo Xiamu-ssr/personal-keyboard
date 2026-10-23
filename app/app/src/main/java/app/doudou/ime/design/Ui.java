@@ -157,6 +157,10 @@ public final class Ui {
     return v;
   }
 
+  public static PopupMenu menu(Context c, View anchor) {
+    return new PopupMenu(new ContextThemeWrapper(c, android.R.style.Theme_Material), anchor);
+  }
+
   public static LinearLayout cell(
       Context c, String icon, String title, String detail, String value, Runnable click) {
     LinearLayout row = row(c);

@@ -50,7 +50,7 @@ public final class TypingSurfaceTest {
     try {
       EditText edit=field(activity.getWindow().getDecorView());assertNotNull(edit);
       ins.runOnMainSync(()->{edit.setText("");edit.requestFocus();((InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE)).showSoftInput(edit,InputMethodManager.SHOW_IMPLICIT);});
-      await("工具");
+      await("更多");
       boolean originalEnglish=node("EN")!=null;
       if(node("中")!=null)click("中");
       String expected="3.14 a_b@example.com https://a.cn/x";

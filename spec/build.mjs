@@ -25,6 +25,8 @@ const json = JSON.stringify({
   .replace(/\u2028/g, "\\u2028")
   .replace(/\u2029/g, "\\u2029");
 const output = template
+  .replace(/(src|poster|href)="\.\/demo\/([^"?]+\.(?:png|mp4|apk))"/g,
+    (_, attr, name) => `${attr}="./demo/${name}?v=${encodeURIComponent(spec.meta.version)}"`)
   .replace("<!-- SPEC_STYLE -->", "<style>" + css + "</style>")
   .replace(
     "<!-- SPEC_DATA -->",

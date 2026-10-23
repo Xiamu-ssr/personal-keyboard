@@ -7,6 +7,9 @@ import android.os.Looper;
 import android.view.*;
 import android.widget.*;
 import app.doudou.ime.design.Ui;
+import app.doudou.ime.voice.VoiceSpaceKey;
+import app.doudou.ime.voice.VoiceState;
+import app.doudou.ime.voice.VoiceGesture;
 
 /** Key geometry and candidate/action row. No dictionary, editor or model work lives here. */
 public final class KeyboardView extends LinearLayout {
@@ -27,7 +30,9 @@ public final class KeyboardView extends LinearLayout {
 
     void cursor(int delta);
 
-    void tools();
+    void more(View anchor);
+
+    void undo();
 
     void voice();
 
@@ -35,7 +40,15 @@ public final class KeyboardView extends LinearLayout {
 
     void advisor();
 
-    void hide();
+    void finishVoice();
+
+    void cancelVoice();
+
+    void recoverVoice();
+
+    void selectAll();
+
+    void finishEditing();
 
     void expand();
 
@@ -43,9 +56,14 @@ public final class KeyboardView extends LinearLayout {
   }
 
   private final Actions actions;
-  private final LinearLayout candidateRow, idle;
+  private final LinearLayout candidateRow, idle, busy, editing;
   private final HorizontalScrollView candidateScroll;
-  private final View expand;
+  private final View expand, undo, recover;
+  private final TextView voiceHint;
+  private final java.util.List<View> typingKeys = new java.util.ArrayList<>();
+  private VoiceSpaceKey spaceKey;
+  private VoiceState voiceState = VoiceState.IDLE;
+  private boolean holding;
   private final Handler repeats = new Handler(Looper.getMainLooper());
   private final boolean english;
 
@@ -56,6 +74,7 @@ public final class KeyboardView extends LinearLayout {
       boolean symbols,
       boolean privacy,
       boolean nested,
+      boolean canUndo,
       Actions a) {
     super(c);
     this.english = english;
@@ -64,24 +83,33 @@ public final class KeyboardView extends LinearLayout {
     LinearLayout bar = Ui.row(c);
     bar.setPadding(Ui.dp(c, 4), 0, Ui.dp(c, 4), 0);
     idle = Ui.row(c);
-    idle.addView(Ui.icon(c, "工具", a::tools), new LayoutParams(Ui.dp(c, 40), Ui.dp(c, 44)));
-    LinearLayout voice = Ui.row(c);
-    voice.setGravity(Gravity.CENTER);
-    voice.setPadding(Ui.dp(c, 4), 0, Ui.dp(c, 12), 0);
-    voice.setBackground(Ui.pressable(c, Ui.SPECIAL_KEY, 22));
-    voice.addView(
-        Ui.icon(c, privacy ? "隐私" : "语音", a::voice), new LayoutParams(Ui.dp(c, 30), Ui.dp(c, 32)));
-    TextView prompt = Ui.text(c, privacy ? "隐私输入" : "点击说话", 14, Ui.SUB);
-    voice.addView(prompt);
-    voice.setContentDescription(privacy ? "隐私输入" : "语音");
-    voice.setOnClickListener(v -> a.voice());
-    LayoutParams voiceLp = new LayoutParams(-2, Ui.dp(c, 34));
-    voiceLp.setMargins(Ui.dp(c, 8), 0, 0, 0);
-    idle.addView(voice, voiceLp);
+    if (!nested) {
+      View more = Ui.icon(c, "更多", () -> {});
+      more.setOnClickListener(v -> a.more(v));
+      more.setTooltipText("粘贴、编辑文字、隐私输入与键盘设置");
+      idle.addView(more, new LayoutParams(Ui.dp(c, 44), Ui.dp(c, 44)));
+    }
+    undo = Ui.button(c, "撤销", a::undo);
+    undo.setBackground(Ui.pressable(c, Color.TRANSPARENT, 12));
+    undo.setTooltipText("撤销刚才填入的文字");
+    undo.setMinimumWidth(Ui.dp(c, 64));
+    undo.setVisibility(canUndo && !nested ? VISIBLE : GONE);
+    idle.addView(undo, new LayoutParams(-2, Ui.dp(c, 44)));
+    if (privacy) {
+      TextView privateLabel = Ui.text(c, "隐私输入", 13, Ui.SUB);
+      privateLabel.setContentDescription("隐私输入已开启");
+      idle.addView(privateLabel);
+    }
     idle.addView(new Space(c), new LayoutParams(0, 1, 1));
-    if (!nested)
-      idle.addView(Ui.icon(c, "军师", a::advisor), new LayoutParams(Ui.dp(c, 42), Ui.dp(c, 44)));
-    idle.addView(Ui.icon(c, "收起", a::hide), new LayoutParams(Ui.dp(c, 40), Ui.dp(c, 44)));
+    if (!nested && !privacy) {
+      TextView advisor = Ui.button(c, "帮我回", a::advisor);
+      advisor.setTooltipText("军师：看聊天，帮你回");
+      advisor.setBackground(Ui.pressable(c, Ui.SPECIAL_KEY, 20));
+      advisor.setMinWidth(Ui.dp(c, 82));
+      LayoutParams advisorSize = new LayoutParams(-2, Ui.dp(c, 44));
+      advisorSize.setMargins(Ui.dp(c, 4), 0, Ui.dp(c, 2), 0);
+      idle.addView(advisor, advisorSize);
+    }
     bar.addView(idle, new LayoutParams(-1, -1));
     candidateRow = Ui.row(c);
     candidateScroll = new HorizontalScrollView(c);
@@ -92,6 +120,29 @@ public final class KeyboardView extends LinearLayout {
     expand = Ui.icon(c, "展开", a::expand);
     expand.setVisibility(GONE);
     bar.addView(expand, new LayoutParams(Ui.dp(c, 36), -1));
+    busy = Ui.row(c);
+    busy.setVisibility(GONE);
+    TextView cancel = Ui.button(c, "取消", a::cancelVoice);
+    cancel.setBackground(Ui.pressable(c, Color.TRANSPARENT, 12));
+    cancel.setMinWidth(Ui.dp(c, 58));
+    busy.addView(cancel, new LayoutParams(-2, -1));
+    voiceHint = Ui.text(c, "", 12, Ui.INK);
+    voiceHint.setGravity(Gravity.CENTER);
+    voiceHint.setMaxLines(2);
+    voiceHint.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
+    busy.addView(voiceHint, new LayoutParams(0, -1, 1));
+    recover = Ui.button(c, "填入文字", a::recoverVoice);
+    recover.setMinimumWidth(Ui.dp(c, 84));
+    recover.setVisibility(GONE);
+    busy.addView(recover, new LayoutParams(-2, -1));
+    bar.addView(busy, new LayoutParams(-1, -1));
+    editing = Ui.row(c);
+    editing.setVisibility(GONE);
+    editButton(editing, "左移", () -> a.cursor(-1), true);
+    editButton(editing, "全选", a::selectAll, false);
+    editButton(editing, "右移", () -> a.cursor(1), true);
+    editButton(editing, "完成", a::finishEditing, false);
+    bar.addView(editing, new LayoutParams(-1, -1));
     addView(bar, new LayoutParams(-1, Ui.dp(c, 44)));
     if (symbols) {
       for (String chars : new String[] {"1234567890", "@#¥%&*+-=_", ".,/?!:;()'"}) {
@@ -100,7 +151,7 @@ public final class KeyboardView extends LinearLayout {
       }
       LinearLayout row = row();
       key(row, "ABC", 1.4f, a::symbols, true);
-      key(row, "空格", 4, a::space, false);
+      space(row, 4, !privacy && !nested);
       icon(row, "退格", 1.4f, a::delete, false);
       icon(row, "换行", 1.6f, a::enter, true);
     } else {
@@ -122,7 +173,7 @@ public final class KeyboardView extends LinearLayout {
       LinearLayout row = row();
       key(row, "123", 1.3f, a::symbols, true);
       key(row, english ? "," : "，", .7f, () -> a.letter(english ? ',' : '，'), false);
-      key(row, "空格", 3.2f, a::space, false);
+      space(row, 3.2f, !privacy && !nested);
       key(row, english ? "." : "。", .7f, () -> a.letter(english ? '.' : '。'), false);
       key(row, english ? "EN" : "中", .85f, a::language, true);
       icon(row, "换行", 1.6f, a::enter, true);
@@ -160,42 +211,65 @@ public final class KeyboardView extends LinearLayout {
           click.run();
         });
     row.addView(key, geometry(weight));
+    typingKeys.add(key);
     if (label.equals("，") || label.equals(",")) {
       key.setTooltipText("长按选择标点");
       key.setOnLongClickListener(v -> {
-        PopupMenu punctuation = new PopupMenu(c, v);
+        PopupMenu punctuation = Ui.menu(c, v);
         for (String mark : new String[] {"。", "？", "！", "、", ".", "/", "_", "：", "；", "…"})
-          punctuation.getMenu().add(mark).setOnMenuItemClickListener(item -> { actions.letter(mark.charAt(0)); return true; });
+          punctuation.getMenu().add(mark).setOnMenuItemClickListener(item -> { v.post(() -> actions.letter(mark.charAt(0))); return true; });
         punctuation.show();
         return true;
       });
     }
-    if (label.equals("空格")) {
-      key.setTooltipText("长按说话 · 上滑锁定 · 左滑取消");
-      final float[] down = {0, 0};
-      final boolean[] moved = {false};
-      Runnable hold = () -> {
-        actions.haptic(key);
-        actions.holdVoice(down[0], down[1]);
-      };
-      key.setOnTouchListener(
+  }
+
+  private void space(LinearLayout row, float weight, boolean speech) {
+    Context c = getContext();
+    spaceKey = new VoiceSpaceKey(c, speech, () -> {
+      if (voiceState == VoiceState.IDLE) { actions.haptic(this); actions.space(); }
+      else if (!holding && (voiceState == VoiceState.RECORDING || voiceState == VoiceState.CONNECTING)) actions.finishVoice();
+    });
+    row.addView(spaceKey, geometry(weight));
+    if (speech) {
+      spaceKey.setOnLongClickListener(v -> { if (voiceState != VoiceState.IDLE) return false; actions.voice(); return true; });
+      spaceKey.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+        @Override public void onInitializeAccessibilityNodeInfo(View host, android.view.accessibility.AccessibilityNodeInfo info) {
+          super.onInitializeAccessibilityNodeInfo(host, info);
+          info.removeAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_LONG_CLICK);
+          if (voiceState == VoiceState.IDLE)
+            info.addAction(new android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_LONG_CLICK, "开始免按录音"));
+        }
+      });
+    }
+    final float[] down = {0, 0};
+    final boolean[] moved = {false}, held = {false};
+    Runnable hold = () -> {
+      held[0] = true;
+      spaceKey.setPressed(false);
+      actions.haptic(spaceKey);
+      actions.holdVoice(down[0], down[1]);
+    };
+    spaceKey.setOnTouchListener(
           (v, e) -> {
             switch (e.getActionMasked()) {
               case MotionEvent.ACTION_DOWN:
-                down[0] = e.getRawX(); down[1] = e.getRawY(); moved[0] = false;
+                down[0] = e.getRawX(); down[1] = e.getRawY(); moved[0] = held[0] = false;
                 v.setPressed(true);
-                repeats.postDelayed(hold, 280);
+                if (speech && voiceState == VoiceState.IDLE) repeats.postDelayed(hold, 280);
                 break;
               case MotionEvent.ACTION_MOVE:
-                if (Math.abs(e.getRawX() - down[0]) > Ui.dp(c, 20)) {
+                if (!held[0] && Math.abs(e.getRawX() - down[0]) > Ui.dp(c, 20)) {
                   moved[0] = true;
                   repeats.removeCallbacks(hold);
                 }
                 break;
               case MotionEvent.ACTION_UP:
                 repeats.removeCallbacks(hold); v.setPressed(false);
-                if (moved[0]) actions.cursor(e.getRawX() > down[0] ? 1 : -1);
-                else v.performClick();
+                if (!held[0]) {
+                  if (moved[0] && voiceState == VoiceState.IDLE) actions.cursor(e.getRawX() > down[0] ? 1 : -1);
+                  else if (!moved[0]) v.performClick();
+                }
                 break;
               case MotionEvent.ACTION_CANCEL:
                 repeats.removeCallbacks(hold); v.setPressed(false);
@@ -203,7 +277,6 @@ public final class KeyboardView extends LinearLayout {
             }
             return true;
           });
-    }
   }
 
   private void icon(LinearLayout row, String name, float weight, Runnable click, boolean primary) {
@@ -220,6 +293,7 @@ public final class KeyboardView extends LinearLayout {
     key.setBackground(Ui.pressable(c, primary ? Ui.ACCENT : Ui.SPECIAL_KEY, 7));
     key.setElevation(Ui.dp(c, .8f));
     row.addView(key, geometry(weight));
+    typingKeys.add(key);
     if (name.equals("退格")) {
       Runnable repeat =
           new Runnable() {
@@ -240,9 +314,52 @@ public final class KeyboardView extends LinearLayout {
 
   public void clearCandidates() {
     idle.setVisibility(GONE);
+    busy.setVisibility(GONE);
+    editing.setVisibility(GONE);
     candidateScroll.setVisibility(VISIBLE);
     expand.setVisibility(VISIBLE);
     candidateRow.removeAllViews();
+  }
+
+  public void undoAvailable(boolean available) { undo.setVisibility(available ? VISIBLE : GONE); }
+
+  public void voice(VoiceState state, String hint, boolean held, VoiceGesture.Target target) {
+    boolean cancelling = target == VoiceGesture.Target.CANCEL;
+    voiceState = state; holding = held;
+    idle.setVisibility(state == VoiceState.IDLE ? VISIBLE : GONE);
+    busy.setVisibility(state == VoiceState.IDLE ? GONE : VISIBLE);
+    candidateScroll.setVisibility(GONE); expand.setVisibility(GONE); recover.setVisibility(GONE);
+    editing.setVisibility(GONE);
+    voiceHint.setText(hint); voiceHint.setTextColor(cancelling ? Ui.RED : Ui.INK);
+    for (View key : typingKeys) { key.setEnabled(state == VoiceState.IDLE); key.setAlpha(state == VoiceState.IDLE ? 1 : .55f); }
+    spaceKey.present(state, held, target);
+  }
+
+  public void voiceLevel(float rmsDb) { spaceKey.level(rmsDb); }
+
+  public void recovery(String hint, boolean hasText) {
+    voice(VoiceState.IDLE, "", false, VoiceGesture.Target.FINISH);
+    idle.setVisibility(GONE); busy.setVisibility(VISIBLE);
+    voiceHint.setText(hint);
+    recover.setVisibility(hasText ? VISIBLE : GONE);
+  }
+
+  public void edit() {
+    idle.setVisibility(GONE); busy.setVisibility(GONE); candidateScroll.setVisibility(GONE); expand.setVisibility(GONE);
+    editing.setVisibility(VISIBLE);
+  }
+
+  private void editButton(LinearLayout parent, String name, Runnable action, boolean repeat) {
+    TextView button = Ui.button(getContext(), name, action);
+    button.setBackground(Ui.pressable(getContext(), Color.TRANSPARENT, 10));
+    parent.addView(button, new LayoutParams(0, -1, 1));
+    if (!repeat) return;
+    Runnable again = new Runnable() { public void run() { action.run(); repeats.postDelayed(this, 80); } };
+    button.setOnTouchListener((v, e) -> {
+      if (e.getActionMasked() == MotionEvent.ACTION_DOWN) { v.setPressed(true); v.performClick(); repeats.postDelayed(again, 350); }
+      if (e.getActionMasked() == MotionEvent.ACTION_UP || e.getActionMasked() == MotionEvent.ACTION_CANCEL) { repeats.removeCallbacks(again); v.setPressed(false); }
+      return true;
+    });
   }
 
   public void addCandidate(String text, Runnable click) {

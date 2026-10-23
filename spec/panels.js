@@ -1,6 +1,7 @@
 (function () {
   const data = JSON.parse(document.getElementById("spec-data").textContent);
   const el = (id) => document.getElementById(id);
+  const mediaAsset = (name) => "./demo/" + name + "?v=" + encodeURIComponent(data.meta.version);
   const text = (s) =>
     String(s)
       .replace(/&/g, "&amp;")
@@ -113,12 +114,12 @@
       video.hidden = !movie;
       still.hidden = !!movie;
       if (movie) {
-        video.poster = "./demo/" + button.dataset.poster;
-        video.src = "./demo/" + movie;
+        video.poster = mediaAsset(button.dataset.poster);
+        video.src = mediaAsset(movie);
         video.setAttribute("aria-label", "真实 APK 录屏：" + button.querySelector("span").textContent);
         playPreview();
       } else {
-        still.src = "./demo/" + button.dataset.image;
+        still.src = mediaAsset(button.dataset.image);
         still.alt = "豆豆输入法 · " + button.querySelector("span").textContent;
       }
     });
