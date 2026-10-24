@@ -17,7 +17,8 @@ public final class DictationSurface extends FrameLayout {
   }
 
   private final SpeechWaveform wave;
-  private final TextView withdraw, newline, leftHint, rightHint, release, status, finish;
+  private final ArcAction withdraw, newline;
+  private final TextView leftHint, rightHint, release, status, finish;
   private final View close;
   private final Backdrop backdrop;
   private final ProgressBar progress;
@@ -32,9 +33,9 @@ public final class DictationSurface extends FrameLayout {
     setBackground(backdrop);
     wave = new SpeechWaveform(context);
     addView(wave);
-    withdraw = action("撤回输入", actions::cancel);
-    newline = action("换行", () -> actions.finish(true));
-    withdraw.setRotation(-12); newline.setRotation(12);
+    withdraw = new ArcAction(context, "撤回输入", false, actions::cancel);
+    newline = new ArcAction(context, "换行", true, () -> actions.finish(true));
+    addView(withdraw); addView(newline);
     leftHint = label("松手撤回", 13, 0xffff5a67); leftHint.setRotation(-12);
     rightHint = label("松手换行", 13, Ui.SUB); rightHint.setRotation(12);
     release = label("松手结束", 13, Ui.SUB);
@@ -84,16 +85,10 @@ public final class DictationSurface extends FrameLayout {
     wave.setVisibility(waiting ? GONE : VISIBLE);
     wave.listening(next == VoiceState.RECORDING);
     release.setContentDescription(hint);
-    select(withdraw, target == VoiceGesture.Target.CANCEL, true);
-    select(newline, target == VoiceGesture.Target.NEWLINE, false);
+    withdraw.select(target == VoiceGesture.Target.CANCEL);
+    newline.select(target == VoiceGesture.Target.NEWLINE);
     backdrop.invalidateSelf();
     requestLayout();
-  }
-
-  private void select(TextView button, boolean selected, boolean destructive) {
-    button.setTextColor(selected ? destructive ? 0xffff5a67 : Ui.BG : Ui.INK);
-    button.setBackground(Ui.pressable(getContext(), selected ? Color.WHITE : 0x18ffffff, 100));
-    button.animate().scaleX(selected ? 1.035f : 1).scaleY(selected ? 1.035f : 1).setDuration(90).start();
   }
 
   public void level(float rmsDb) { wave.level(rmsDb); }
@@ -117,8 +112,8 @@ public final class DictationSurface extends FrameLayout {
     int touch = Ui.dp(getContext(), 44);
     boolean waiting = state == VoiceState.FINISHING || state == VoiceState.REWRITING;
     place(wave, (int)(w * .33f), (int)(h * .13f), (int)(w * .34f), (int)(h * .10f));
-    place(withdraw, (int)(w * -.08f), (int)(h * .43f), (int)(w * .53f), (int)(h * .22f));
-    place(newline, (int)(w * .55f), (int)(h * .43f), (int)(w * .53f), (int)(h * .22f));
+    place(withdraw, 0, (int)(h * .37f), (int)(w * .53f), (int)(h * .27f));
+    place(newline, (int)(w * .47f), (int)(h * .37f), (int)(w * .53f), (int)(h * .27f));
     place(leftHint, 0, (int)(h * .32f), (int)(w * .40f), (int)(h * .08f));
     place(rightHint, (int)(w * .60f), (int)(h * .32f), (int)(w * .40f), (int)(h * .08f));
     place(release, (int)(w * .30f), (int)(h * .74f), (int)(w * .40f), touch);

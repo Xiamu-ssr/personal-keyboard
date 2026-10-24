@@ -196,7 +196,7 @@ public class CoreTest {
     AdvisorSession s = new AdvisorSession();
     s.begin(1, "chat");
     assertFalse(s.canGenerate());
-    s.image("jpeg-one");
+    s.image("jpeg-one", false);
     assertTrue(s.canGenerate());
     assertEquals("", s.conversationRef());
     s.identify("person-id", "小林");
@@ -207,7 +207,7 @@ public class CoreTest {
   public void selectionInvalidatesPendingInference() {
     AdvisorSession s = new AdvisorSession();
     int old = s.begin(1, "chat");
-    s.image("jpeg");
+    s.image("jpeg", false);
     s.identify("person-id", "小林");
     assertFalse(s.valid(old, 1));
     assertTrue(s.valid(s.token(), 1));
@@ -217,7 +217,7 @@ public class CoreTest {
   public void newJobCannotKeepOldPersonOrScreenshot() {
     AdvisorSession s = new AdvisorSession();
     s.begin(1, "a");
-    s.image("jpeg");
+    s.image("jpeg", false);
     s.identify("id", "name");
     s.begin(2, "b");
     assertEquals("", s.personId);
@@ -245,11 +245,11 @@ public class CoreTest {
   public void screenshotLimitDoesNotDiscardEarlierScreens() {
     AdvisorSession a = new AdvisorSession();
     a.begin(1, "chat");
-    a.image("one");
-    a.image("two");
-    a.image("three");
+    a.image("one", false);
+    a.image("two", false);
+    a.image("three", false);
     try {
-      a.image("four");
+      a.image("four", false);
       fail();
     } catch (IllegalArgumentException expected) {
     }

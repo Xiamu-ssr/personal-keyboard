@@ -13,6 +13,7 @@ import app.doudou.ime.BuildConfig;
 import app.doudou.ime.account.AccountSummary;
 import app.doudou.ime.app.*;
 import app.doudou.ime.capture.CaptureService;
+import app.doudou.ime.setup.PermissionActions;
 import app.doudou.ime.design.Ui;
 import app.doudou.ime.memory.LearningBatch;
 import java.io.*;
@@ -64,11 +65,11 @@ public final class SettingsScreen extends Screen {
     LinearLayout c = section("按需开启", "语音需要麦克风；军师需要主动截屏。");
     c.addView(Ui.cell(activity, "工具", "豆豆键盘", "", enabled() ? "已启用" : "去开启", () -> activity.startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))));
     c.addView(Ui.divider(activity));
-    c.addView(Ui.cell(activity, "语音", "麦克风", "", activity.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED ? "已允许" : "去允许", () -> activity.requestPermissions(new String[] {Manifest.permission.RECORD_AUDIO}, 20)));
+    c.addView(Ui.cell(activity, "语音", "麦克风", "", activity.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED ? "已允许" : "去允许", () -> PermissionActions.microphone(activity,app)));
     c.addView(Ui.divider(activity));
     c.addView(Ui.cell(activity, "军师", "主动截屏", "只在你点「帮我回」时截图", CaptureService.current != null ? "已开启" : "去开启", () -> new AlertDialog.Builder(activity)
       .setTitle("允许军师看当前屏幕")
-      .setMessage("只在你点「帮我回」时截图，上传用于生成回复。开启历史后保存在手机，可随时删除。")
+      .setMessage("点「帮我回」时截图；点「多看一屏」时翻到较早聊天再截图，上传用于生成回复。开启历史后保存在手机，可随时删除。")
       .setPositiveButton("去开启", (d, w) -> activity.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)))
       .setNegativeButton("取消", null).show()));
     add(c);

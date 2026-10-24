@@ -36,7 +36,7 @@ public final class ProductFlowTest {
     JSONObject qa = new JSONObject(new String(java.nio.file.Files.readAllBytes(credentials.toPath()), "UTF-8"));
     app.cloud.login(qa.getString("handle"), qa.getString("password"));
     app.cloud.account(); app.personalization.activate();
-    app.prefs().edit().putBoolean("personalRewrite", false).apply();
+    app.prefs().edit().putBoolean("personalRewrite", false).putBoolean("history",true).apply();
     ui = ins.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
     android.accessibilityservice.AccessibilityServiceInfo info = ui.getServiceInfo();
     info.flags |= android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
@@ -70,6 +70,13 @@ public final class ProductFlowTest {
     if (view instanceof EditText) return (EditText)view;
     if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup)view).getChildCount(); i++) {
       EditText found = field(((ViewGroup)view).getChildAt(i)); if (found != null) return found;
+    }
+    return null;
+  }
+  private ScrollView chat(View view){
+    if(view instanceof ScrollView)return (ScrollView)view;
+    if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++){
+      ScrollView found=chat(((ViewGroup)view).getChildAt(i));if(found!=null)return found;
     }
     return null;
   }
@@ -119,18 +126,65 @@ public final class ProductFlowTest {
     assertNull("No preparation form", node("生成三条回复"));
     assertEquals("已有草稿：", value());
     shot("advisor");
+    String firstReply=await("温和回复",4000).getChild(1).getText().toString();
+    app.doudou.ime.history.HistoryStore.Entry history=app.histories.list(1).get(0);
+    assertEquals(1,history.screenshots.length());
+    BitmapFactory.Options dimensions=new BitmapFactory.Options();dimensions.inJustDecodeBounds=true;
+    BitmapFactory.decodeFile(app.histories.imageFile(history.screenshots.getString(0)).getAbsolutePath(),dimensions);
+    Bitmap fullDisplay=ui.takeScreenshot();int displayHeight=fullDisplay.getHeight();fullDisplay.recycle();
+    assertTrue("Shrunk-IME screenshot contains most of the display, not half",dimensions.outHeight>displayHeight*.75);
+    click("多看一屏");await("看懂聊天，想想怎么回…",10000);await("温和回复",85000);
+    await("2 屏",3000);shot("advisor-two-pages");
+    history=app.histories.get(history.id);assertEquals(2,history.screenshots.length());
     String originalReply=await("温和回复",4000).getChild(1).getText().toString();
     click("换一组 · 1次");
     await("看懂聊天，想想怎么回…",5000);
     await("温和回复",85000);
     click("更多");click("上一组");
     assertEquals("Returning to prior replies needs no new request",originalReply,await("温和回复",4000).getChild(1).getText().toString());
+    click("更多");click("上一组");await("1屏旧组",3000);
+    assertEquals(firstReply,await("温和回复",4000).getChild(1).getText().toString());
     click("温和回复"); await("更多",8000);
+    history=app.histories.get(history.id);
+    assertTrue("The older reply retains actual message evidence",history.messages.length()>0);
+    for(int i=0;i<history.messages.length();i++)
+      assertEquals("Old reply evidence still points at the original latest screenshot after prepend",2,history.messages.getJSONObject(i).getInt("image"));
     assertTrue(value().startsWith("已有草稿：")); assertTrue(value().length()>6);
     assertFalse("Never sends the practice message", value().isEmpty());
     shot("advisor-inserted");
-    JSONObject proof = new JSONObject().put("advisorMilliseconds",elapsed).put("oneTap",true).put("insertedWithoutSending",true);
+    JSONObject proof = new JSONObject().put("advisorMilliseconds",elapsed).put("oneTap",true).put("insertedWithoutSending",true)
+        .put("capturedHeight",dimensions.outHeight).put("displayHeight",displayHeight).put("capturedFraction",(double)dimensions.outHeight/displayHeight).put("pages",history.screenshots.length()).put("screenshots",history.screenshots).put("oldReplyImageReferencesRemapped",true);
     try (FileOutputStream out = new FileOutputStream(new File(app.getCacheDir(),"product-advisor-proof.json"))) { out.write(proof.toString().getBytes("UTF-8")); }
+  }
+
+  @Test public void supplementCaptureFailureRetriesTheCurrentPage() throws Exception {
+    click("帮我回");await("温和回复",85000);
+    ScrollView chat=chat(activity.getWindow().getDecorView());assertNotNull(chat);
+    int[] original={0};ins.runOnMainSync(()->original[0]=chat.getScrollY());
+    CaptureService bound=CaptureService.current;
+    int[] before={0},after={0};
+    try {
+      click("多看一屏");
+      long deadline=SystemClock.uptimeMillis()+4000;
+      while(SystemClock.uptimeMillis()<deadline){
+        ins.runOnMainSync(()->before[0]=chat.getScrollY());
+        if(before[0]!=original[0])break;SystemClock.sleep(20);
+      }
+      assertNotEquals("The real earlier-page gesture moved the owned sample chat",original[0],before[0]);
+      SystemClock.sleep(360);
+      CaptureService.current=null; // Inject service unavailability after the actual gesture, before screenshot.
+      await("重试截图",10000);
+      CaptureService.current=bound;ins.runOnMainSync(()->before[0]=chat.getScrollY());
+      shot("advisor-capture-error");
+      click("重试截图");await("温和回复",85000);await("2 屏",3000);
+      ins.runOnMainSync(()->after[0]=chat.getScrollY());
+      assertEquals("Retry captures the page already reached; it does not silently skip another page",before[0],after[0]);
+      assertEquals(2,app.histories.list(1).get(0).screenshots.length());
+    }finally{CaptureService.current=bound;}
+    shot("advisor-capture-retried");
+    JSONObject proof=new JSONObject().put("injectedScreenshotServiceUnavailable",true).put("retryCapturedSecondPage",true)
+        .put("scrollBeforeRetry",before[0]).put("scrollAfterRetry",after[0]);
+    try(FileOutputStream out=new FileOutputStream(new File(app.getCacheDir(),"product-capture-retry-proof.json"))){out.write(proof.toString().getBytes("UTF-8"));}
   }
 
   @Test public void spokenAudioStreamsIntoEditorAndReleaseInsertsWithoutSending() throws Exception {

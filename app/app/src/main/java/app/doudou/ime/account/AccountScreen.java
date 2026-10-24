@@ -239,7 +239,8 @@ public final class AccountScreen extends Screen {
                 busy = false;
                 if (success) form.clear();
                 status = value;
-                nav.refresh();
+                if(success && app.cloud.loggedIn() && !app.prefs().getBoolean("setupComplete",false))nav.open("setup",0);
+                else nav.refresh();
                 showRecovery();
               });
         });

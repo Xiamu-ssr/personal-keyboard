@@ -94,7 +94,7 @@ public final class KeyboardView extends LinearLayout {
     idle = Ui.row(c);
     if (!nested) {
       View more = Icons.button(c, R.drawable.ic_grid_view, "更多", a::more);
-      more.setTooltipText("粘贴、免按说话、隐私输入与键盘设置");
+      more.setTooltipText("剪贴板、输入历史、免按说话与键盘设置");
       idle.addView(more, new LayoutParams(Ui.dp(c, 44), Ui.dp(c, 44)));
     }
     undo = Ui.button(c, "撤销", a::undo);
@@ -110,11 +110,17 @@ public final class KeyboardView extends LinearLayout {
     }
     idle.addView(new Space(c), new LayoutParams(0, 1, 1));
     if (!nested && !privacy) {
-      TextView advisor = Ui.button(c, "帮我回", a::advisor);
-      advisor.setTooltipText("军师：看聊天，帮你回");
-      advisor.setBackground(Ui.pressable(c, Ui.SPECIAL_KEY, 20));
-      advisor.setMinWidth(Ui.dp(c, 82));
-      LayoutParams advisorSize = new LayoutParams(-2, Ui.dp(c, 44));
+      FrameLayout advisor = new FrameLayout(c);
+      advisor.setContentDescription("帮我回"); advisor.setFocusable(true);
+      advisor.setOnClickListener(v -> a.advisor());
+      advisor.setTooltipText("看聊天，帮你回");
+      TextView pill = Ui.text(c, "帮我回", 14, Ui.INK);
+      pill.setGravity(Gravity.CENTER);
+      pill.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+      android.graphics.drawable.GradientDrawable surface = Ui.bg(c, Ui.SPECIAL_KEY, 17);
+      surface.setStroke(Ui.dp(c, 1), 0xff535353); pill.setBackground(surface);
+      advisor.addView(pill, new FrameLayout.LayoutParams(-1, Ui.dp(c, 34), Gravity.CENTER));
+      LayoutParams advisorSize = new LayoutParams(Ui.dp(c, 84), Ui.dp(c, 44));
       advisorSize.setMargins(Ui.dp(c, 4), 0, Ui.dp(c, 2), 0);
       idle.addView(advisor, advisorSize);
     }

@@ -14,6 +14,7 @@ public final class KeyboardMenu {
 
   public void show() {
     Context context = host.context();
+    host.cancelVoice();
     host.commitComposing();
     LinearLayout root = host.openPanel("tools", KeyboardView.HEIGHT_DP);
     root.setBackgroundColor(Ui.KEYBOARD);
@@ -21,19 +22,26 @@ public final class KeyboardMenu {
     View back = Icons.button(context, R.drawable.ic_arrow_back, "返回键盘", host::typing);
     heading.addView(back, new LinearLayout.LayoutParams(Ui.dp(context, 44), Ui.dp(context, 44)));
     TextView title = Ui.text(context, "常用工具", 15, Ui.SUB);
-    heading.addView(title);
+    heading.addView(title,new LinearLayout.LayoutParams(0,-2,1));
+    TextView privacy=Ui.button(context,host.privateMode() ? "隐私已开" : "隐私输入",host::togglePrivacy);
+    privacy.setContentDescription("隐私输入");
+    privacy.setSelected(host.privateMode());
+    privacy.setTextSize(13);privacy.setTextColor(host.privateMode() ? Ui.ACCENT : Ui.SUB);
+    heading.addView(privacy,new LinearLayout.LayoutParams(Ui.dp(context,86),Ui.dp(context,44)));
     root.addView(heading, new LinearLayout.LayoutParams(-1, Ui.dp(context, 48)));
 
     LinearLayout grid = Ui.col(context);
     Ui.pad(context, grid, 14, 10);
     LinearLayout first = row(grid), second = row(grid);
-    View clipboard = tile(first, R.drawable.ic_content_paste, "粘贴文字", this::paste, false);
+    KeyboardLibrary library=new KeyboardLibrary(host,this::show);
+    View clipboard = tile(first, R.drawable.ic_content_paste, "剪贴板", ()->library.show(false), false);
     clipboard.setEnabled(!host.privateMode());
     clipboard.setAlpha(host.privateMode() ? .4f : 1);
-    View handsFree = tile(first, R.drawable.ic_graphic_eq, "免按说话", host::showVoice, false);
+    View history = tile(first, R.drawable.ic_edit_note, "输入历史", ()->library.show(true), false);
+    history.setEnabled(!host.privateMode());history.setAlpha(host.privateMode() ? .4f : 1);
+    View handsFree = tile(second, R.drawable.ic_graphic_eq, "免按说话", host::showVoice, false);
     handsFree.setEnabled(!host.privateMode());
     handsFree.setAlpha(host.privateMode() ? .4f : 1);
-    tile(second, R.drawable.ic_visibility_off, "隐私输入", host::togglePrivacy, host.privateMode());
     tile(second, R.drawable.ic_settings, "键盘设置", () -> host.settings("input-settings"), false);
     root.addView(grid, new LinearLayout.LayoutParams(-1, 0, 1));
   }
@@ -67,15 +75,4 @@ public final class KeyboardMenu {
     return tile;
   }
 
-  private void paste() {
-    if (host.privateMode()) { Ui.toast(host.context(), "隐私输入不读取剪贴板"); return; }
-    ClipboardManager manager = (ClipboardManager) host.context().getSystemService(Context.CLIPBOARD_SERVICE);
-    ClipData clip = manager.getPrimaryClip();
-    CharSequence text = clip == null || clip.getItemCount() == 0 ? null : clip.getItemAt(0).getText();
-    if (text == null || text.length() == 0) { Ui.toast(host.context(), "剪贴板里没有文字"); return; }
-    if (text.length() > 10000) { Ui.toast(host.context(), "这段文字太长，请在输入框中粘贴"); return; }
-    host.commitComposing();
-    host.insert(text.toString());
-    host.typing();
-  }
 }

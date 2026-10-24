@@ -8,6 +8,7 @@ public final class ReplyHistory {
     public final List<String> replies;
     public final String style;
     public final String messages;
+    private int imageOffset;
 
     Page(List<String> values, String name, String evidence) {
       replies = Collections.unmodifiableList(new ArrayList<>(values));
@@ -39,6 +40,13 @@ public final class ReplyHistory {
   public String messages() {
     return current == null ? "[]" : current.messages;
   }
+
+  /** Older screenshots are prepended; existing reply evidence still points at the same image. */
+  public void prependImage() {
+    if(current!=null)current.imageOffset++;
+    for(Page page:older)page.imageOffset++;
+  }
+  public int imageOffset() { return current==null ? 0 : current.imageOffset; }
 
   public boolean canBack() {
     return !older.isEmpty();

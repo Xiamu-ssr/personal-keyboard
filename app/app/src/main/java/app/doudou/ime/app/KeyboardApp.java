@@ -14,6 +14,7 @@ public final class KeyboardApp extends Application {
   public app.doudou.ime.cloud.CloudClient cloud;
   public app.doudou.ime.sync.ManagedSync sync;
   public app.doudou.ime.history.HistoryStore histories;
+  public app.doudou.ime.clipboard.ClipboardHistory clips;
   public app.doudou.ime.memory.CloudMemory personalization;
   public final ExecutorService worker = Executors.newSingleThreadExecutor();
   public final ExecutorService network = Executors.newFixedThreadPool(2);
@@ -27,6 +28,7 @@ public final class KeyboardApp extends Application {
     cloud = new app.doudou.ime.cloud.CloudClient(this);
     store = new MemoryStore(this);
     histories = new app.doudou.ime.history.HistoryStore(this);
+    clips = new app.doudou.ime.clipboard.ClipboardHistory(this);
     personalization = new app.doudou.ime.memory.CloudMemory(this);
     sync = new app.doudou.ime.sync.ManagedSync(this);
     if (prefs().getInt("productMigration", 0) < 4) {

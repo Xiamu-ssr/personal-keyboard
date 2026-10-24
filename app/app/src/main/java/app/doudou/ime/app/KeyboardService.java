@@ -1,6 +1,7 @@
 package app.doudou.ime.app;
 
 import android.content.*;
+import android.content.ClipboardManager;
 import android.graphics.*;
 import android.inputmethodservice.InputMethodService;
 import android.os.*;
@@ -30,6 +31,8 @@ public final class KeyboardService extends InputMethodService
   private app.doudou.ime.voice.VoiceController voice;
   private app.doudou.ime.advisor.AdvisorController advisorController;
   private app.doudou.ime.input.KeyboardMenu keyboardMenu;
+  private ClipboardManager clipboard;
+  private final ClipboardManager.OnPrimaryClipChangedListener clipListener=()->rememberClipboard(true);
   private long generation;
   private int candidateSerial;
   private boolean english, shift, caps, symbols, incognito, sensitive;
@@ -58,11 +61,26 @@ public final class KeyboardService extends InputMethodService
     voice = new app.doudou.ime.voice.VoiceController(this);
     advisorController = new app.doudou.ime.advisor.AdvisorController(this);
     keyboardMenu = new app.doudou.ime.input.KeyboardMenu(this);
+    clipboard=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+    clipboard.addPrimaryClipChangedListener(clipListener);
+  }
+
+  private void rememberClipboard(boolean changed) {
+    String selected=android.provider.Settings.Secure.getString(getContentResolver(),android.provider.Settings.Secure.DEFAULT_INPUT_METHOD);
+    if(selected==null || !selected.startsWith(getPackageName()+"/"))return;
+    if(privateMode() || ((android.app.KeyguardManager)getSystemService(KEYGUARD_SERVICE)).isDeviceLocked()){
+      app.prefs().edit().putBoolean("clipboardAwaitNewCopy",true).apply();return;
+    }
+    // A private copy must not be imported later merely because the keyboard reopens.
+    if(!changed && app.prefs().getBoolean("clipboardAwaitNewCopy",false))return;
+    if(changed)app.prefs().edit().remove("clipboardAwaitNewCopy").apply();
+    app.clips.capture(clipboard.getPrimaryClip());
   }
 
   @Override
   public View onCreateInputView() {
     Window window = getWindow().getWindow();
+    window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
     window.setDecorFitsSystemWindows(false);
     window.setNavigationBarColor(Ui.KEYBOARD);
     window.setNavigationBarContrastEnforced(false);
@@ -150,6 +168,7 @@ public final class KeyboardService extends InputMethodService
     super.onStartInputView(info, restarting);
     // Hiding cancels dictation. Reopening the same editor must not retain a disabled key surface.
     if (root != null) typing();
+    rememberClipboard(false);
   }
 
   @Override
@@ -162,6 +181,7 @@ public final class KeyboardService extends InputMethodService
   @Override public boolean onKeyDown(int keyCode, KeyEvent event) {
     if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
       if (voice != null && voice.active()) { voice.leave(); return true; }
+      if (mode.equals("library")) { keyboardMenu.show(); return true; }
       if (mode.equals("tools")) { typing(); return true; }
     }
     return super.onKeyDown(keyCode, event);
@@ -169,6 +189,7 @@ public final class KeyboardService extends InputMethodService
 
   @Override
   public void onDestroy() {
+    if(clipboard!=null)clipboard.removePrimaryClipChangedListener(clipListener);
     cancelJobs();
     main.removeCallbacksAndMessages(null);
     super.onDestroy();
@@ -189,12 +210,13 @@ public final class KeyboardService extends InputMethodService
     mode = next;
     contentHeight = height;
     root.removeAllViews();
+    root.setClipToOutline(false);
     sizeInputView();
   }
 
   private void sizeInputView() {
     int total = Ui.dp(this, contentHeight) + bottomInset;
-    int sides = mode.equals("typing") ? 0 : Ui.dp(this, 3);
+    int sides = mode.equals("typing") || mode.equals("advisor") || mode.equals("capturing") ? 0 : Ui.dp(this, 3);
     root.setPadding(sides, 0, sides, Ui.dp(this, 4) + bottomInset);
     root.setLayoutParams(new android.widget.FrameLayout.LayoutParams(-1, total));
     root.setMinimumHeight(total);

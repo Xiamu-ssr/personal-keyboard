@@ -163,16 +163,26 @@ public final class HistoryStore extends SQLiteOpenHelper {
     update(id, v);
   }
 
-  public synchronized String screenshot(String id, Bitmap image) throws Exception {
+  public synchronized String screenshot(String id, Bitmap image, boolean earlier) throws Exception {
     Entry e = get(id);
     if (e == null) throw new IOException("历史不存在");
     String ref = UUID.randomUUID().toString() + ".jpg";
     try (FileOutputStream out = new FileOutputStream(imageFile(ref))) {
       if (!image.compress(Bitmap.CompressFormat.JPEG, 82, out)) throw new IOException("截图保存失败");
     }
-    e.screenshots.put(ref);
+    JSONArray refs=new JSONArray();
+    if(earlier)refs.put(ref);
+    for(int i=0;i<e.screenshots.length();i++)refs.put(e.screenshots.get(i));
+    if(!earlier)refs.put(ref);
     ContentValues v = new ContentValues();
-    v.put("screenshots", e.screenshots.toString());
+    v.put("screenshots", refs.toString());
+    if(earlier){
+      for(int i=0;i<e.messages.length();i++){
+        JSONObject message=e.messages.getJSONObject(i);
+        if(message.has("image"))message.put("image",message.getInt("image")+1);
+      }
+      v.put("messages",e.messages.toString());
+    }
     update(id, v);
     return ref;
   }
@@ -185,16 +195,21 @@ public final class HistoryStore extends SQLiteOpenHelper {
   }
 
   public synchronized List<Entry> list(int limit) {
-    return entries(limit, KeyboardApp.instance == null ? "" : KeyboardApp.instance.cloud.userId());
+    return entries(limit, KeyboardApp.instance == null ? "" : KeyboardApp.instance.cloud.userId(), false);
   }
 
-  private List<Entry> entries(int limit, String account) {
+  public synchronized List<Entry> reusable(int limit) {
+    return entries(limit, KeyboardApp.instance == null ? "" : KeyboardApp.instance.cloud.userId(), true);
+  }
+
+  private List<Entry> entries(int limit, String account, boolean adoptedOnly) {
     List<Entry> out = new ArrayList<>();
     try (Cursor c =
         getReadableDatabase()
             .rawQuery(
-                "SELECT * FROM history WHERE deleted=0 AND (account=? OR account='') ORDER BY"
-                    + " updated DESC LIMIT ?",
+                "SELECT * FROM history WHERE deleted=0 AND (account=? OR account='')"
+                    + (adoptedOnly ? " AND inserted_text<>'' AND result_text<>''" : "")
+                    + " ORDER BY updated DESC LIMIT ?",
                 new String[] {account, "" + limit})) {
       while (c.moveToNext()) out.add(read(c));
     }
@@ -302,7 +317,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
     JSONArray entries = new JSONArray();
     JSONObject images = new JSONObject();
     long size = 0;
-    for (Entry e : entries(10000, account)) {
+    for (Entry e : entries(10000, account, false)) {
       JSONObject row = e.json();
       size += row.toString().getBytes("UTF-8").length;
       entries.put(row);

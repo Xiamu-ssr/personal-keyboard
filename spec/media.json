@@ -1,21 +1,21 @@
 {
-  "version": "0.7.2-alpha.1",
-  "sourceApkSha256": "d4dbd28d6a6c675583d65e5832ecdcbdf34a6e7db6e0f8eceaa53e6e046b34aa",
-  "source": "Actual Android 15 final APK recordings of owned practice. Launcher/bootstrap and subsequent separate test cases omitted; the displayed gesture task is continuous, with original frame order and speed and no generated or substituted UI. Advisor uses production Cloud/Aliyun and a disposable QA account. The silent keyboard clip demonstrates held capture, withdrawal, slide-back, newline and immediate editing recovery, not ASR accuracy. Hands-free Done and real microphone text were separately verified on the old phone.",
+  "version": "0.7.3-alpha.1",
+  "sourceApkSha256": "0d6d11e98c509f9911e0a556e9f691745911400929cb478e43d73019a26d4679",
+  "source": "Actual Android 15 final APK recordings of owned practice. Only the contiguous task range is retained, at original frame order and speed. No generated or substituted UI. Advisor uses production Cloud/Aliyun with a disposable QA account and includes the real wait for two-screen inference. Silent held-space video demonstrates gestures and editing recovery, not speech accuracy. Physical microphone tested separately using local TTS through room audio.",
   "cloudModelsConfigured": true,
   "files": {
     "keyboard-tour.mp4": {
-      "sha256": "b8ebb92c1f40545b0e12fd8a8890809007135a440e8482743a40ad7e1d32c525",
-      "bytes": 190551,
-      "durationSeconds": 8.319252,
+      "sha256": "bec2c24857f66c44ce934a0b160f585128df1870c15bf6937c8bfe260a25d292",
+      "bytes": 202037,
+      "durationSeconds": 9.757881,
       "width": 720,
       "height": 1600,
       "codec": "h264"
     },
     "advisor-tour.mp4": {
-      "sha256": "e0172ed349c256ebd40a8d489dbfd803f8e24954854354ae395344ceb64f221b",
-      "bytes": 225365,
-      "durationSeconds": 11.057926,
+      "sha256": "46943285219ef7793b20afaf9b518d5e85861e569f7809839acf06358045a9ae",
+      "bytes": 728053,
+      "durationSeconds": 29.022971,
       "width": 720,
       "height": 1600,
       "codec": "h264"

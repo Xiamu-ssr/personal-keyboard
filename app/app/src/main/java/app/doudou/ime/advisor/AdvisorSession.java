@@ -18,6 +18,7 @@ public final class AdvisorSession {
 
   public static final int MAX_PAGES = 3;
   public Stage stage = Stage.IDLE;
+  public boolean retryCapture;
   public long generation;
   public String packageName = "", personId = "", personName = "", historyId = "", error = "";
   private volatile int revision;
@@ -31,6 +32,7 @@ public final class AdvisorSession {
     historyId = "";
     images.clear();
     error = "";
+    retryCapture=false;
     stage = Stage.RESIZING;
     return ++revision;
   }
@@ -50,9 +52,9 @@ public final class AdvisorSession {
     return images.size();
   }
 
-  public void image(String jpeg) {
+  public void image(String jpeg, boolean earlier) {
     if (images.size() >= MAX_PAGES) throw new IllegalArgumentException("最多补充三屏");
-    images.add(jpeg);
+    images.add(earlier ? 0 : images.size(), jpeg);
     error = "";
     stage = Stage.READY;
   }
@@ -78,6 +80,7 @@ public final class AdvisorSession {
   }
 
   public void fail(String why) {
+    retryCapture=stage==Stage.RESIZING || stage==Stage.CAPTURING || stage==Stage.READING;
     error = why;
     stage = Stage.ERROR;
   }

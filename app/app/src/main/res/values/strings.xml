@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">豆豆输入法</string>
     <string name="subtype">豆豆拼音</string>
-    <string name="capture_description">仅在你点击军师或补充一屏时截图，经豆豆 Cloud 交给模型理解并生成回复。开启历史后，截图保存在手机，可删除。不会后台读屏、自动滚动或代发消息；禁止截图的页面会停止并提示。</string>
+    <string name="capture_description">点「帮我回」时缩下键盘并截图；点「多看一屏」时向较早的聊天翻一屏，再截图。图片经豆豆 Cloud 交给模型生成回复；开启历史后保存在手机，可删除。不会后台读屏或代发消息；禁止截图的页面会停止并提示。</string>
 </resources>

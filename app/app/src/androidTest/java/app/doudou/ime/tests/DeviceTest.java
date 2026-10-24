@@ -98,6 +98,19 @@ public class DeviceTest {
   }
 
   @Test
+  public void keyboardHistoryFiltersUnadoptedRowsBeforeItsLimit() {
+    String used=h.create("voice","原文");h.inserted(used,"更早的有效结果","");
+    for(int i=0;i<60;i++) {
+      String id=h.create("voice","未采用 "+i);
+      if(i%2==0){h.inserted(id,"撤回 "+i,"");h.withdraw(id);}
+    }
+    assertEquals(50,h.list(50).size());
+    assertEquals(1,h.reusable(50).size());
+    assertEquals(used,h.reusable(50).get(0).id);
+    assertEquals("更早的有效结果",h.reusable(50).get(0).resultText);
+  }
+
+  @Test
   public void clearDoesNotMeanSentAndUndoRemovesTheInsertedResult() {
     String id = h.create("voice", "你好");
     h.inserted(id, "你好", "");
@@ -114,7 +127,7 @@ public class DeviceTest {
     Bitmap b = Bitmap.createBitmap(30, 30, Bitmap.Config.ARGB_8888);
     String ref;
     try {
-      ref = h.screenshot(id, b);
+      ref = h.screenshot(id, b, false);
     } finally {
       b.recycle();
     }

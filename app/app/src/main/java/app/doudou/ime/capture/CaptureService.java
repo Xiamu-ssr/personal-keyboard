@@ -1,18 +1,47 @@
 package app.doudou.ime.capture;
 
 import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.GestureDescription;
 import android.graphics.*;
 import android.hardware.HardwareBuffer;
 import android.view.Display;
 import android.view.accessibility.AccessibilityEvent;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Explicit screenshot only; intentionally cannot enumerate chat accessibility nodes. */
+/** Explicit screenshots and an explicit earlier-page gesture; never enumerates chat nodes. */
 public final class CaptureService extends AccessibilityService {
   public static volatile CaptureService current;
 
   public interface Result {
     void complete(Bitmap image, String error);
+  }
+
+  public interface Scrolled { void complete(boolean success); }
+
+  /** A downward finger stroke reveals earlier chat, wholly above the shrunken IME. */
+  public static void earlier(int keyboardTop, Scrolled callback) {
+    CaptureService service=current;
+    if(service==null){callback.complete(false);return;}
+    float width=service.getResources().getDisplayMetrics().widthPixels;
+    Path path=new Path();path.moveTo(width*.5f,keyboardTop*.28f);path.lineTo(width*.5f,keyboardTop*.74f);
+    AtomicBoolean done=new AtomicBoolean();
+    android.os.Handler main=new android.os.Handler(android.os.Looper.getMainLooper());
+    main.postDelayed(()->{if(done.compareAndSet(false,true))callback.complete(false);},1800);
+    boolean accepted=service.dispatchGesture(new GestureDescription.Builder()
+        .addStroke(new GestureDescription.StrokeDescription(path,0,320)).build(),
+        new GestureResultCallback(){
+          @Override public void onCompleted(GestureDescription gesture){if(done.compareAndSet(false,true))callback.complete(true);}
+          @Override public void onCancelled(GestureDescription gesture){if(done.compareAndSet(false,true))callback.complete(false);}
+        },main);
+    if(!accepted && done.compareAndSet(false,true))callback.complete(false);
+  }
+
+  public static int[] signature(Bitmap bitmap) {
+    int[] pixels=new int[96*128];
+    for(int y=0;y<128;y++)for(int x=0;x<96;x++)
+      pixels[y*96+x]=bitmap.getPixel(Math.min(bitmap.getWidth()-1,(2*x+1)*bitmap.getWidth()/192),
+          Math.min(bitmap.getHeight()-1,(2*y+1)*bitmap.getHeight()/256));
+    return pixels;
   }
 
   @Override

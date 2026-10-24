@@ -23,6 +23,7 @@ public final class MainActivity extends Activity implements Navigator {
   private PeopleScreen people;
   private SettingsScreen settings;
   private app.doudou.ime.account.AccountScreen account;
+  private app.doudou.ime.setup.SetupScreen setup;
 
   @Override
   public void onCreate(Bundle state) {
@@ -35,6 +36,7 @@ public final class MainActivity extends Activity implements Navigator {
     people = new PeopleScreen(this, app, this);
     settings = new SettingsScreen(this, app, this);
     account = new app.doudou.ime.account.AccountScreen(this, app, this);
+    setup = new app.doudou.ime.setup.SetupScreen(this,app,this);
     if (state != null) {
       page = state.getString("page", "home");
       person = state.getLong("person");
@@ -42,6 +44,7 @@ public final class MainActivity extends Activity implements Navigator {
     }
     String requested = getIntent().getStringExtra("page");
     if (requested != null && !requested.isEmpty()) page = requested;
+    else if(state==null && !app.prefs().getBoolean("setupComplete",false))page="setup";
     render();
   }
 
@@ -92,7 +95,8 @@ public final class MainActivity extends Activity implements Navigator {
 
   @Override public void onBackPressed() {
     if (page.equals("person")) open("people", 0);
-    else if (settingsDetail() || page.equals("account")) open("settings", 0);
+    else if (settingsDetail() || page.equals("account")) open(app.prefs().getBoolean("setupComplete",false) ? "settings" : "setup", 0);
+    else if(page.equals("setup")){app.prefs().edit().putBoolean("setupComplete",true).apply();open("home",0);}
     else if (!page.equals("home")) open("home", 0);
     else super.onBackPressed();
   }
@@ -104,10 +108,10 @@ public final class MainActivity extends Activity implements Navigator {
     Ui.pad(this, heading, 20, 10);
     if (page.equals("person") || page.equals("account") || settingsDetail())
       heading.addView(
-          Ui.icon(this, "返回", () -> open(page.equals("person") ? "people" : "settings", 0)),
+          Ui.icon(this, "返回", () -> open(page.equals("person") ? "people" : app.prefs().getBoolean("setupComplete",false) ? "settings" : "setup", 0)),
           new LinearLayout.LayoutParams(Ui.dp(this, 36), Ui.dp(this, 48)));
     String title =
-        page.equals("home")
+        page.equals("setup") ? "欢迎用豆豆" : page.equals("home")
             ? "豆豆输入法"
             : page.equals("memory")
                 ? "我的记忆"
@@ -137,6 +141,7 @@ public final class MainActivity extends Activity implements Navigator {
     scroll.addView(body);
     root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
     if (page.equals("home")) home.render(body);
+    else if(page.equals("setup"))setup.render(body);
     else if (page.equals("memory")) memory.render(body);
     else if (page.equals("people") || page.equals("person")) {
       people.person(person);
@@ -146,6 +151,7 @@ public final class MainActivity extends Activity implements Navigator {
     notice = Ui.col(this);
     Ui.pad(this, notice, 20, 0);
     root.addView(notice);
+    if(page.equals("setup")){Ui.content(this,root);return;}
     root.addView(Ui.divider(this));
     LinearLayout nav = Ui.row(this);
     nav.setBackgroundColor(Ui.PANEL);
@@ -176,6 +182,7 @@ public final class MainActivity extends Activity implements Navigator {
   @Override
   public void onRequestPermissionsResult(int request, String[] names, int[] grants) {
     super.onRequestPermissionsResult(request, names, grants);
+    for(String name:names)if(name.equals(android.Manifest.permission.RECORD_AUDIO))app.prefs().edit().putBoolean("microphoneRequested",true).apply();
     render();
   }
 }

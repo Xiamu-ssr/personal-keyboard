@@ -30,16 +30,33 @@ public final class PracticeActivity extends Activity {
     TextView privacy = Ui.text(this, "练习对话 · 不会发送给任何人", 12, Ui.SUB);
     Ui.pad(this, privacy, 8, 8); root.addView(privacy);
     Ui.gap(this, root, 18);
-    TextView sender = Ui.text(this, "小林 · 示例消息", 13, Ui.SUB);
-    Ui.pad(this, sender, 8, 4); root.addView(sender);
-    LinearLayout note = Ui.card(this);
-    TextView example = Ui.text(this, "今晚有空吗？要不要一起吃个饭？", 17, Ui.INK);
-    example.setLineSpacing(Ui.dp(this, 5), 1); note.addView(example);
-    root.addView(note);
-    Ui.gap(this, root, 20);
-    TextView help = Ui.text(this, "按住空格说话，或点「帮我回」试着回复。", 14, Ui.SUB);
-    Ui.pad(this, help, 8, 4); root.addView(help);
-    root.addView(new Space(this), new LinearLayout.LayoutParams(1, 0, 1));
+    ScrollView chat=new ScrollView(this){
+      @Override protected void onSizeChanged(int w,int h,int oldW,int oldH){
+        boolean bottom=oldH==0 || getChildCount()==0 || getScrollY()+oldH>=getChildAt(0).getHeight()-Ui.dp(getContext(),4);
+        super.onSizeChanged(w,h,oldW,oldH);
+        if(bottom)post(()->fullScroll(View.FOCUS_DOWN));
+      }
+    };chat.setFillViewport(true);
+    chat.setContentDescription("示例聊天记录");
+    LinearLayout messages=Ui.col(this);chat.addView(messages);
+    root.addView(chat,new LinearLayout.LayoutParams(-1,0,1));
+    String[] examples={
+      "小林|最近忙完了吗？", "我|项目昨天交了，终于能歇一下。",
+      "小林|那找个时间一起吃饭吧。", "我|好啊，你想吃什么？",
+      "小林|想吃火锅，听说附近新开了一家。", "我|我都行，别太辣就好。",
+      "小林|可以点鸳鸯锅，我来找位置。", "我|那我下班后过去。",
+      "小林|地铁口出来走五分钟就到。", "我|行，确定了把地址发我。",
+      "小林|对了，听说你最近在做输入法？", "我|对，还在打磨语音和帮我回。",
+      "小林|等做好了我也来试试。", "我|没问题，到时候叫你。",
+      "小林|今晚有空吗？要不要一起吃个饭？"};
+    for(String example:examples){
+      String[] parts=example.split("\\|",2);
+      TextView sender=Ui.text(this,parts[0]+" · 示例",12,Ui.SUB);
+      Ui.pad(this,sender,8,5);messages.addView(sender);
+      LinearLayout note=Ui.card(this);
+      TextView line=Ui.text(this,parts[1],17,Ui.INK);line.setLineSpacing(Ui.dp(this,4),1);note.addView(line);
+      messages.addView(note);Ui.gap(this,messages,12);
+    }
     LinearLayout composer = Ui.row(this);
     EditText editor = Ui.edit(this, "写点什么…", "");
     editor.setId(View.generateViewId());
@@ -57,6 +74,7 @@ public final class PracticeActivity extends Activity {
     Ui.gap(this, root, 8);
     Ui.content(this, root);
     editor.requestFocus();
+    chat.post(()->chat.fullScroll(View.FOCUS_DOWN));
     editor.postDelayed(
         () ->
             ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))

@@ -269,7 +269,7 @@ public class NativeFlowTest {
     click("更多");
     await("常用工具"); assertNull(node("q"));
     assertEquals("Opening tools does not resize the host editor", height, keyboardHeight());
-    for (String title : new String[] {"粘贴文字", "免按说话", "隐私输入", "键盘设置"})
+    for (String title : new String[] {"剪贴板", "输入历史", "免按说话", "隐私输入", "键盘设置"})
       await(title);
     assertNull(node("语音输入")); assertNull(node("原地军师")); assertNull(node("热词短语"));
     screenshot("tools");
@@ -283,7 +283,8 @@ public class NativeFlowTest {
     screenshot("privacy-changed");
     click("更多");
     assertFalse("Private input does not advertise an available microphone", await("免按说话").isEnabled());
-    assertFalse("Private input does not read the clipboard", await("粘贴文字").isEnabled());
+    assertFalse("Private input does not read the clipboard", await("剪贴板").isEnabled());
+    assertFalse("Private input does not expose local input history", await("输入历史").isEnabled());
     click("隐私输入");
     assertNotNull(await("帮我回"));
     assertTrue(await("空格").performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK));
@@ -292,6 +293,45 @@ public class NativeFlowTest {
     click("返回键盘");
     await("更多");
     assertEquals("", value());
+  }
+
+  @Test public void clipboardAndHistoryReuseWordsInTheOriginalEditor() {
+    app.doudou.ime.app.KeyboardApp app=(app.doudou.ime.app.KeyboardApp)instrumentation.getTargetContext().getApplicationContext();
+    app.clips.clear();
+    instrumentation.runOnMainSync(()->{
+      editor.setText("草稿：");editor.setSelection(editor.length());
+      ((android.content.ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("fixture","今晚七点见"));
+    });
+    long until=SystemClock.uptimeMillis()+3000;
+    while(app.clips.list().isEmpty() && SystemClock.uptimeMillis()<until)SystemClock.sleep(60);
+    assertFalse("The actual system clipboard listener retained the copied text",app.clips.list().isEmpty());
+    click("更多");click("剪贴板");
+    click("清空");await("已清空 · 撤销");click("已清空 · 撤销");
+    await("填入：今晚七点见");SystemClock.sleep(8000);screenshot("clipboard");
+    click("填入：今晚七点见");await("更多");assertEquals("草稿：今晚七点见",value());
+    String id=app.histories.create("voice","历史转写");app.histories.inserted(id,"之前说过的话","");
+    String raw=app.histories.create("voice","未填入的转写");
+    String withdrawn=app.histories.create("voice","已撤回的转写");app.histories.inserted(withdrawn,"撤回结果","");app.histories.withdraw(withdrawn);
+    click("更多");click("输入历史");screenshot("keyboard-history");
+    assertNull("Raw uninserted text is not offered as the user's result",node("填入：未填入的转写"));
+    assertNull("Withdrawn text is not offered as the user's result",node("填入：已撤回的转写"));
+    click("填入：之前说过的话");await("更多");assertEquals("草稿：今晚七点见之前说过的话",value());
+    app.histories.remove(id);
+    app.histories.remove(raw);app.histories.remove(withdrawn);
+    click("更多");click("隐私输入");await("隐私输入已开启");
+    instrumentation.runOnMainSync(()->((android.content.ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("fixture","private sample not retained")));
+    SystemClock.sleep(200);
+    assertFalse(app.clips.list().stream().anyMatch(c->c.text.equals("private sample not retained")));
+    click("更多");click("隐私输入");await("更多");
+    ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK);SystemClock.sleep(200);
+    instrumentation.runOnMainSync(()->{editor.requestFocus();((InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE)).showSoftInput(editor,InputMethodManager.SHOW_IMPLICIT);});
+    await("更多");
+    assertFalse("A private copy is not imported after privacy is disabled and the keyboard reopens",app.clips.list().stream().anyMatch(c->c.text.equals("private sample not retained")));
+    instrumentation.runOnMainSync(()->((android.content.ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("fixture","正常模式重新复制")));
+    until=SystemClock.uptimeMillis()+2000;
+    while(app.clips.list().stream().noneMatch(c->c.text.equals("正常模式重新复制")) && SystemClock.uptimeMillis()<until)SystemClock.sleep(40);
+    assertTrue("An explicit normal copy resumes collection",app.clips.list().stream().anyMatch(c->c.text.equals("正常模式重新复制")));
+    app.clips.clear();
   }
 
   @Test
