@@ -15,7 +15,9 @@ public final class HistoryStore extends SQLiteOpenHelper {
 
   public static final class Entry {
     public String id, type, asrText, insertedText, resultText, conversationRef, account;
-    public JSONArray messages, screenshots;
+    public JSONArray messages, screenshots, replyGroups;
+    public JSONObject identity;
+    public String audioRef;
     public int revision, uploaded;
     public boolean deleted;
     public long created, updated;
@@ -30,12 +32,15 @@ public final class HistoryStore extends SQLiteOpenHelper {
           .put("resultText", resultText)
           .put("conversationRef", conversationRef)
           .put("messages", messages)
+          .put("identity", identity)
           .put("deleted", deleted);
     }
 
     public JSONObject json() throws JSONException {
       return increment()
           .put("screenshots", screenshots)
+          .put("replyGroups", replyGroups)
+          .put("audioRef", audioRef)
           .put("account", account)
           .put("created", created)
           .put("updated", updated);
@@ -47,7 +52,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
   }
 
   public HistoryStore(Context c, String name) {
-    super(c, name, null, 1);
+    super(c, name, null, 2);
     context = c.getApplicationContext();
     setWriteAheadLoggingEnabled(true);
   }
@@ -61,12 +66,27 @@ public final class HistoryStore extends SQLiteOpenHelper {
             + " '[]',screenshots TEXT NOT NULL DEFAULT '[]',revision INTEGER NOT NULL DEFAULT"
             + " 1,uploaded INTEGER NOT NULL DEFAULT 0,account TEXT NOT NULL DEFAULT '',created"
             + " INTEGER NOT NULL,updated INTEGER NOT NULL,deleted INTEGER NOT NULL DEFAULT 0)");
+    d.execSQL("ALTER TABLE history ADD COLUMN identity TEXT NOT NULL DEFAULT '{}'");
+    d.execSQL("ALTER TABLE history ADD COLUMN reply_groups TEXT NOT NULL DEFAULT '[]'");
+    d.execSQL("ALTER TABLE history ADD COLUMN audio_ref TEXT NOT NULL DEFAULT ''");
     d.execSQL("CREATE INDEX history_pending ON history(account,uploaded,revision)");
     d.execSQL("CREATE TABLE meta(key TEXT PRIMARY KEY,value TEXT NOT NULL)");
   }
 
   @Override
-  public void onUpgrade(SQLiteDatabase d, int old, int next) {}
+  public void onUpgrade(SQLiteDatabase d, int old, int next) {
+    if (old < 2) {
+      d.execSQL("ALTER TABLE history ADD COLUMN identity TEXT NOT NULL DEFAULT '{}'");
+      d.execSQL("ALTER TABLE history ADD COLUMN reply_groups TEXT NOT NULL DEFAULT '[]'");
+      d.execSQL("ALTER TABLE history ADD COLUMN audio_ref TEXT NOT NULL DEFAULT ''");
+      d.execSQL("UPDATE history SET revision=revision+1 WHERE deleted=0");
+      // Re-submit retained evidence through the new automatic-learning policy. Remove only
+      // failed/empty historical attempts. Existing successful evidence remains.
+      d.execSQL(
+          "UPDATE history SET deleted=1,revision=revision+1 WHERE type='advisor' AND messages='[]'"
+              + " AND inserted_text='' AND result_text=''");
+    }
+  }
 
   private Entry read(Cursor c) {
     Entry e = new Entry();
@@ -79,6 +99,9 @@ public final class HistoryStore extends SQLiteOpenHelper {
     try {
       e.messages = new JSONArray(c.getString(6));
       e.screenshots = new JSONArray(c.getString(7));
+      e.identity = new JSONObject(c.getString(14));
+      e.replyGroups = new JSONArray(c.getString(15));
+      e.audioRef = c.getString(16);
     } catch (JSONException ex) {
       throw new IllegalStateException(ex);
     }
@@ -99,7 +122,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
   }
 
   public synchronized String create(String type, String asr) {
-    if (!type.equals("voice") && !type.equals("advisor"))
+    if (!type.equals("voice") && !type.equals("advisor") && !type.equals("recording"))
       throw new IllegalArgumentException("未知历史类型");
     String id = UUID.randomUUID().toString();
     long now = System.currentTimeMillis();
@@ -157,6 +180,119 @@ public final class HistoryStore extends SQLiteOpenHelper {
     update(id, v);
   }
 
+  public synchronized void advisorResult(String id, JSONObject result) throws Exception {
+    Entry e = get(id);
+    if (e == null || e.deleted) return;
+    JSONArray groups = e.replyGroups;
+    groups.put(
+        new JSONObject()
+            .put("created", System.currentTimeMillis())
+            .put("replies", result.getJSONArray("replies")));
+    ContentValues v = new ContentValues();
+    v.put("reply_groups", groups.toString());
+    v.put("messages", result.getJSONArray("messages").toString());
+    v.put(
+        "identity",
+        result.optJSONObject("identity") == null
+            ? "{}"
+            : result.getJSONObject("identity").toString());
+    update(id, v);
+  }
+
+  /** A successful answer and its screenshots become one visible history atomically. */
+  public synchronized String saveAdvisor(
+      String existing, JSONObject result, List<String> images, String account) throws Exception {
+    if (!existing.isEmpty()) {
+      Entry entry = get(existing);
+      if (entry == null || entry.deleted || !entry.account.equals(account))
+        throw new IOException("历史已变化");
+      advisorResult(existing, result);
+      return existing;
+    }
+    JSONArray refs = new JSONArray();
+    List<File> created = new ArrayList<>();
+    boolean committed = false;
+    try {
+      for (String image : images) {
+        byte[] bytes =
+            android.util.Base64.decode(
+                image.substring(image.indexOf(',') + 1), android.util.Base64.DEFAULT);
+        if (bytes.length < 2
+            || bytes.length > 600000
+            || bytes[0] != (byte) 255
+            || bytes[1] != (byte) 216) throw new IOException("截图格式错误");
+        String ref = UUID.randomUUID() + ".jpg";
+        File file = imageFile(ref);
+        created.add(file);
+        try (FileOutputStream out = new FileOutputStream(file)) {
+          out.write(bytes);
+          out.getFD().sync();
+        }
+        refs.put(ref);
+      }
+      String id = UUID.randomUUID().toString();
+      long now = System.currentTimeMillis();
+      ContentValues row = new ContentValues();
+      row.put("id", id);
+      row.put("type", "advisor");
+      row.put("account", account);
+      row.put("created", now);
+      row.put("updated", now);
+      row.put("screenshots", refs.toString());
+      row.put("messages", result.getJSONArray("messages").toString());
+      row.put(
+          "identity",
+          result.optJSONObject("identity") == null
+              ? "{}"
+              : result.getJSONObject("identity").toString());
+      row.put(
+          "reply_groups",
+          new JSONArray()
+              .put(
+                  new JSONObject()
+                      .put("created", now)
+                      .put("replies", result.getJSONArray("replies")))
+              .toString());
+      getWritableDatabase().insertOrThrow("history", null, row);
+      committed = true;
+      changed();
+      return id;
+    } finally {
+      if (!committed) for (File file : created) file.delete();
+    }
+  }
+
+  public synchronized void collectImages() {
+    Set<String> retained = new HashSet<>();
+    try (Cursor cursor =
+        getReadableDatabase().rawQuery("SELECT screenshots FROM history WHERE deleted=0", null)) {
+      while (cursor.moveToNext())
+        try {
+          JSONArray images = new JSONArray(cursor.getString(0));
+          for (int i = 0; i < images.length(); i++) retained.add(images.getString(i));
+        } catch (JSONException ignored) {
+        }
+    }
+    File directory = new File(context.getFilesDir(), "history-screenshots");
+    File[] files = directory.listFiles();
+    if (files != null)
+      for (File file : files)
+        if (file.getName().matches("[a-f0-9-]{36}\\.jpg") && !retained.contains(file.getName()))
+          file.delete();
+  }
+
+  public synchronized void recording(String id, String audioRef, String text) {
+    ContentValues v = new ContentValues();
+    v.put("audio_ref", audioRef);
+    v.put("asr_text", text);
+    Entry e = get(id);
+    if (e != null && (e.resultText.isEmpty() || e.resultText.equals(e.insertedText))) {
+      v.put("result_text", text);
+      v.put("inserted_text", text);
+    }
+    update(id, v);
+  }
+
   public synchronized void interpreted(String id, JSONArray messages) {
     ContentValues v = new ContentValues();
     v.put("messages", messages.toString());
@@ -170,18 +306,18 @@ public final class HistoryStore extends SQLiteOpenHelper {
     try (FileOutputStream out = new FileOutputStream(imageFile(ref))) {
       if (!image.compress(Bitmap.CompressFormat.JPEG, 82, out)) throw new IOException("截图保存失败");
     }
-    JSONArray refs=new JSONArray();
-    if(earlier)refs.put(ref);
-    for(int i=0;i<e.screenshots.length();i++)refs.put(e.screenshots.get(i));
-    if(!earlier)refs.put(ref);
+    JSONArray refs = new JSONArray();
+    if (earlier) refs.put(ref);
+    for (int i = 0; i < e.screenshots.length(); i++) refs.put(e.screenshots.get(i));
+    if (!earlier) refs.put(ref);
     ContentValues v = new ContentValues();
     v.put("screenshots", refs.toString());
-    if(earlier){
-      for(int i=0;i<e.messages.length();i++){
-        JSONObject message=e.messages.getJSONObject(i);
-        if(message.has("image"))message.put("image",message.getInt("image")+1);
+    if (earlier) {
+      for (int i = 0; i < e.messages.length(); i++) {
+        JSONObject message = e.messages.getJSONObject(i);
+        if (message.has("image")) message.put("image", message.getInt("image") + 1);
       }
-      v.put("messages",e.messages.toString());
+      v.put("messages", e.messages.toString());
     }
     update(id, v);
     return ref;
@@ -195,11 +331,13 @@ public final class HistoryStore extends SQLiteOpenHelper {
   }
 
   public synchronized List<Entry> list(int limit) {
-    return entries(limit, KeyboardApp.instance == null ? "" : KeyboardApp.instance.cloud.userId(), false);
+    return entries(
+        limit, KeyboardApp.instance == null ? "" : KeyboardApp.instance.cloud.userId(), false);
   }
 
   public synchronized List<Entry> reusable(int limit) {
-    return entries(limit, KeyboardApp.instance == null ? "" : KeyboardApp.instance.cloud.userId(), true);
+    return entries(
+        limit, KeyboardApp.instance == null ? "" : KeyboardApp.instance.cloud.userId(), true);
   }
 
   private List<Entry> entries(int limit, String account, boolean adoptedOnly) {
@@ -208,7 +346,10 @@ public final class HistoryStore extends SQLiteOpenHelper {
         getReadableDatabase()
             .rawQuery(
                 "SELECT * FROM history WHERE deleted=0 AND (account=? OR account='')"
-                    + (adoptedOnly ? " AND inserted_text<>'' AND result_text<>''" : "")
+                    + (adoptedOnly
+                        ? " AND inserted_text<>'' AND result_text<>''"
+                        : " AND (asr_text<>'' OR result_text<>'' OR reply_groups<>'[]' OR"
+                            + " audio_ref<>'')")
                     + " ORDER BY updated DESC LIMIT ?",
                 new String[] {account, "" + limit})) {
       while (c.moveToNext()) out.add(read(c));
@@ -249,6 +390,31 @@ public final class HistoryStore extends SQLiteOpenHelper {
     }
   }
 
+  public synchronized String advisorContext(String platform, int maxChars) {
+    JSONArray out = new JSONArray();
+    int size = 0;
+    for (Entry e : list(50)) {
+      if (e.resultText.isEmpty()
+          || e.insertedText.isEmpty()
+          || !e.type.equals("advisor")
+          || (!e.identity.optString("application").equals(platform)
+              && !e.conversationRef.startsWith(platform + ":"))) continue;
+      try {
+        JSONObject row =
+            new JSONObject()
+                .put("identity", e.identity)
+                .put("conversationRef", e.conversationRef)
+                .put("text", e.resultText);
+        int length = row.toString().length();
+        if (size + length > maxChars) break;
+        out.put(row);
+        size += length;
+      } catch (Exception ignored) {
+      }
+    }
+    return out.toString();
+  }
+
   public synchronized String recent(String conversation, int maxChars) {
     if (conversation.isEmpty()) return "";
     String account = KeyboardApp.instance == null ? "" : KeyboardApp.instance.cloud.userId(),
@@ -286,7 +452,12 @@ public final class HistoryStore extends SQLiteOpenHelper {
     v.put("conversation_ref", "");
     v.put("messages", "[]");
     v.put("screenshots", "[]");
+    v.put("reply_groups", "[]");
+    v.put("identity", "{}");
+    v.put("audio_ref", "");
     update(id, v);
+    if (!old.audioRef.isEmpty())
+      app.doudou.ime.recording.RecordingStore.erase(context, old.audioRef);
     for (int i = 0; i < old.screenshots.length(); i++)
       imageFile(old.screenshots.optString(i)).delete();
   }
@@ -297,7 +468,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
     try (Cursor c =
         getReadableDatabase()
             .rawQuery(
-                "SELECT id FROM history WHERE deleted=0 AND created<?",
+                "SELECT id FROM history WHERE deleted=0 AND type<>'recording' AND created<?",
                 new String[] {"" + (System.currentTimeMillis() - days * 86400000L)})) {
       while (c.moveToNext()) ids.add(c.getString(0));
     }
@@ -356,7 +527,8 @@ public final class HistoryStore extends SQLiteOpenHelper {
         UUID.fromString(id);
         if (get(id) != null) continue;
         String type = raw.getString("type");
-        if (!type.equals("voice") && !type.equals("advisor")) throw new IOException("历史类型无效");
+        if (!type.equals("voice") && !type.equals("advisor") && !type.equals("recording"))
+          throw new IOException("历史类型无效");
         JSONArray refs = raw.getJSONArray("screenshots");
         for (int j = 0; j < refs.length(); j++) {
           String ref = refs.getString(j);
@@ -380,6 +552,16 @@ public final class HistoryStore extends SQLiteOpenHelper {
         v.put("result_text", raw.optString("resultText"));
         v.put("conversation_ref", raw.optString("conversationRef"));
         v.put("messages", raw.getJSONArray("messages").toString());
+        v.put(
+            "identity",
+            raw.optJSONObject("identity") == null
+                ? "{}"
+                : raw.getJSONObject("identity").toString());
+        v.put(
+            "reply_groups",
+            raw.optJSONArray("replyGroups") == null
+                ? "[]"
+                : raw.getJSONArray("replyGroups").toString());
         v.put("screenshots", refs.toString());
         v.put("revision", raw.getInt("revision"));
         v.put("account", account);

@@ -10,7 +10,10 @@ import app.doudou.ime.design.Ui;
 /** A keyboard-sized tool surface. Opening it never launches a popup over the host editor. */
 public final class KeyboardMenu {
   private final EditorHost host;
-  public KeyboardMenu(EditorHost host) { this.host = host; }
+
+  public KeyboardMenu(EditorHost host) {
+    this.host = host;
+  }
 
   public void show() {
     Context context = host.context();
@@ -20,29 +23,38 @@ public final class KeyboardMenu {
     root.setBackgroundColor(Ui.KEYBOARD);
     LinearLayout heading = Ui.row(context);
     View back = Icons.button(context, R.drawable.ic_arrow_back, "返回键盘", host::typing);
-    heading.addView(back, new LinearLayout.LayoutParams(Ui.dp(context, 44), Ui.dp(context, 44)));
+    heading.addView(back, new LinearLayout.LayoutParams(Ui.dp(context, 48), Ui.dp(context, 48)));
     TextView title = Ui.text(context, "常用工具", 15, Ui.SUB);
-    heading.addView(title,new LinearLayout.LayoutParams(0,-2,1));
-    TextView privacy=Ui.button(context,host.privateMode() ? "隐私已开" : "隐私输入",host::togglePrivacy);
+    heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+    TextView privacy =
+        Ui.button(context, host.privateMode() ? "隐私已开" : "隐私输入", host::togglePrivacy);
     privacy.setContentDescription("隐私输入");
     privacy.setSelected(host.privateMode());
-    privacy.setTextSize(13);privacy.setTextColor(host.privateMode() ? Ui.ACCENT : Ui.SUB);
-    heading.addView(privacy,new LinearLayout.LayoutParams(Ui.dp(context,86),Ui.dp(context,44)));
+    privacy.setTextSize(13);
+    privacy.setTextColor(host.privateMode() ? Ui.ACCENT : Ui.SUB);
+    if (host.canUndoInsertion())
+      heading.addView(
+          Ui.button(context, "撤销", host::undoInsertion),
+          new LinearLayout.LayoutParams(Ui.dp(context, 64), Ui.dp(context, 48)));
+    heading.addView(privacy, new LinearLayout.LayoutParams(-2, Ui.dp(context, 48)));
     root.addView(heading, new LinearLayout.LayoutParams(-1, Ui.dp(context, 48)));
 
     LinearLayout grid = Ui.col(context);
     Ui.pad(context, grid, 14, 10);
     LinearLayout first = row(grid), second = row(grid);
-    KeyboardLibrary library=new KeyboardLibrary(host,this::show);
-    View clipboard = tile(first, R.drawable.ic_content_paste, "剪贴板", ()->library.show(false), false);
+    KeyboardLibrary library = new KeyboardLibrary(host, this::show);
+    KeyboardExtras extras = new KeyboardExtras(host);
+    tile(first, R.drawable.ic_emoji, "表情", extras::emoji, false);
+    View clipboard =
+        tile(first, R.drawable.ic_content_paste, "剪贴板", () -> library.show(false), false);
+    View history = tile(first, R.drawable.ic_edit_note, "输入历史", () -> library.show(true), false);
     clipboard.setEnabled(!host.privateMode());
+    history.setEnabled(!host.privateMode());
     clipboard.setAlpha(host.privateMode() ? .4f : 1);
-    View history = tile(first, R.drawable.ic_edit_note, "输入历史", ()->library.show(true), false);
-    history.setEnabled(!host.privateMode());history.setAlpha(host.privateMode() ? .4f : 1);
-    View handsFree = tile(second, R.drawable.ic_graphic_eq, "免按说话", host::showVoice, false);
-    handsFree.setEnabled(!host.privateMode());
-    handsFree.setAlpha(host.privateMode() ? .4f : 1);
-    tile(second, R.drawable.ic_settings, "键盘设置", () -> host.settings("input-settings"), false);
+    history.setAlpha(host.privateMode() ? .4f : 1);
+    tile(second, R.drawable.ic_grid_view, "键盘选择", extras::keyboards, false);
+    tile(second, R.drawable.ic_symbols, "符号", extras::symbols, false);
+    tile(second, R.drawable.ic_settings, "键盘设置", () -> host.settings("settings"), false);
     root.addView(grid, new LinearLayout.LayoutParams(-1, 0, 1));
   }
 
@@ -52,7 +64,8 @@ public final class KeyboardMenu {
     return row;
   }
 
-  private View tile(LinearLayout row, int resource, String name, Runnable action, boolean selected) {
+  private View tile(
+      LinearLayout row, int resource, String name, Runnable action, boolean selected) {
     Context context = host.context();
     LinearLayout tile = Ui.col(context);
     tile.setGravity(Gravity.CENTER);
@@ -62,7 +75,8 @@ public final class KeyboardMenu {
     tile.setFocusable(true);
     tile.setSelected(selected);
     tile.setOnClickListener(v -> action.run());
-    tile.addView(Icons.image(context, resource, Ui.INK),
+    tile.addView(
+        Icons.image(context, resource, Ui.INK),
         new LinearLayout.LayoutParams(Ui.dp(context, 28), Ui.dp(context, 28)));
     Ui.gap(context, tile, 9);
     TextView label = Ui.text(context, name, 14, Ui.INK);
@@ -74,5 +88,4 @@ public final class KeyboardMenu {
     row.addView(tile, size);
     return tile;
   }
-
 }

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { uuid } from '../security.mjs';
-import { emptyMemory, changeMemory, resolveCandidate, memoryDelta } from '../memory/domain.mjs';
+import { emptyMemory, changeMemory, resolveCandidate, memoryDelta, retractRevision, validateReferences } from '../memory/domain.mjs';
 import { historyEvent } from '../memory/history.mjs';
-import { MemoryModel, historyRequest } from '../memory/model.mjs';
+import { MemoryModel, historyRequest, historyBatch } from '../memory/model.mjs';
 import { QwenCounter } from '../memory/counter.mjs';
 
 const history = () => ({ id: uuid(), revision: 2, type: 'voice', asrText: '豆包', insertedText: '豆包', resultText: '豆豆', conversationRef: '' });
@@ -16,16 +16,16 @@ test('only explicit inserted-to-result corrections add reversible hotwords autom
   assert.deepEqual(Object.values(result.memory.origins), [{ historyId: h.id, revision: 2 }]);
   const rewritten = { ...h, asrText: '豆包', insertedText: '豆豆', resultText: '豆豆' };
   const candidate = changeMemory(initial, [wordOp(rewritten)], options(rewritten)).memory;
-  assert.equal(candidate.hotwords.length, 0); assert.equal(candidate.candidates.length, 1);
+  assert.equal(candidate.hotwords.length, 0); assert.equal(candidate.candidates.length, 0);
   assert.throws(() => changeMemory(initial, [{ ...wordOp(h), sourceId: uuid() }], options(h)), /来源/);
   assert.throws(() => changeMemory(initial, [{ ...wordOp(h), confidence: '1' }], options(h)), /置信度/);
   const removed = changeMemory(result.memory, [{ kind: 'hotword', action: 'delete', id: result.memory.hotwords[0].id }], { manual: true }).memory;
   const repeated = changeMemory(removed, [wordOp(h)], options(h)).memory;
-  assert.equal(repeated.hotwords.length, 0); assert.equal(repeated.candidates.length, 1);
+  assert.equal(repeated.hotwords.length, 0); assert.equal(repeated.candidates.length, 0);
   assert.equal(memoryDelta(result.memory, removed)[0].deleted, true);
 });
 
-test('person facts update individually; manual protection and style confirmation preserve other fields', () => {
+test('person facts retain manual protection; reliable anchored styles apply directly', () => {
   const personId = uuid(), companyId = uuid(), nicknameId = uuid();
   let current = changeMemory(emptyMemory(), [
     { kind: 'person', action: 'upsert', id: personId, value: { name: '小林', aliases: [] } },
@@ -40,9 +40,13 @@ test('person facts update individually; manual protection and style confirmation
   assert.equal(current.people[0].facts[0].value, '云杉'); assert.equal(current.people[0].facts[1].value, '林同学');
   const style = { kind: 'style', action: 'upsert', id: 'new:style', value: { scene: '工作', rules: ['简洁'], examples: [] }, sourceId: h.id, sourceRevision: h.revision, category: 'observation', confidence: 1 };
   current = changeMemory(current, [style], options(h)).memory;
-  assert.equal(current.styles.length, 0);
-  current = resolveCandidate(current, current.candidates[0].id, true);
-  assert.equal(current.styles[0].scene, '工作');
+  assert.equal(current.styles.length, 0, 'an unanchored style is skipped, not made into a chore');
+  const anchored={...style,value:{...style.value,examples:[h.resultText]}};
+  current=changeMemory(current,[anchored],options(h)).memory;
+  assert.equal(current.styles[0].scene,'工作');assert.equal(current.candidates.length,0);
+  current=retractRevision(current,h.id,h.revision+1);
+  assert.equal(current.styles.length,0,'deleted/revised evidence retracts automatic style');
+  assert.equal(current.people[0].facts[1].value,'林同学','manual records survive');
   assert.throws(() => changeMemory(current, [{ kind: 'relation', action: 'upsert', personId, id: uuid(), value: { targetId: uuid(), type: '同事' } }], { manual: true }), /人物不存在/);
 });
 
@@ -94,4 +98,23 @@ test('generation cannot commit an over-budget or unverified provider token count
   model.cfg.memoryMaxInputTokens = 499;
   await assert.rejects(model.generate(request), { code: 'MEMORY_CAPACITY' });
   assert.equal(calls, 1);
+});
+
+test('whole histories batch together while every request includes all old memory', async()=>{
+  const memory=emptyMemory();memory.hotwords.push({id:uuid(),text:'全量旧词',variants:[]});
+  const histories=[history(),history(),history()];const seen=[];
+  const model={request:(m,v,h)=>({memory:m,version:v,history:h}),fits:async request=>{seen.push(request);return request.history.length<=2;}};
+  const result=await historyBatch(model,{memory,version:8},histories.map(h=>({history:h,next_offset:0})));
+  assert.equal(result.accepted.length,2);assert.deepEqual(result.request.history,histories.slice(0,2));
+  for(const request of seen)assert.deepEqual(request.memory,memory);
+  const operations=histories.slice(0,2).map((h,i)=>({...wordOp(h),id:'new:word'+i,value:{text:'豆豆'+i,variants:['豆包']},category:'observation'}));
+  assert.throws(()=>changeMemory(memory,[{...operations[0],sourceId:uuid()}],{histories}),/来源/);
+});
+
+test('person facts are bounded independently and identities do not collapse same-name people',()=>{
+  const memory=emptyMemory();const one=uuid(),two=uuid();
+  const changed=changeMemory(memory,[{kind:'person',action:'upsert',id:one,value:{name:'小林',identities:[{platform:'微信',nickname:'小林',handle:'lin1'}]}},{kind:'person',action:'upsert',id:two,value:{name:'小林',identities:[{platform:'微信',nickname:'小林',handle:'lin2'}]}}],{manual:true}).memory;
+  assert.equal(changed.people.length,2);
+  changed.people[0].facts=Array.from({length:101},(_,i)=>({id:uuid(),key:'事实'+i,value:'内容',scope:'当前'}));
+  assert.throws(()=>validateReferences(changed),/100条/);
 });

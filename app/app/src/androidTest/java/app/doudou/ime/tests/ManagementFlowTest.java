@@ -8,6 +8,7 @@ import android.graphics.Bitmap;
 import android.os.*;
 import android.view.accessibility.*;
 import androidx.test.platform.app.InstrumentationRegistry;
+import app.doudou.ime.advisor.PaletteStore;
 import app.doudou.ime.app.*;
 import java.io.*;
 import java.util.*;
@@ -18,73 +19,119 @@ public final class ManagementFlowTest {
   private UiAutomation ui;
   private MainActivity activity;
 
-  @Test public void permanentlyDeniedMicrophoneOffersAnAppSettingsRoute() throws Exception {
-    org.junit.Assume.assumeTrue("Isolated emulator only",android.os.Build.HARDWARE.equals("ranchu"));
-    android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();
-    KeyboardApp app=(KeyboardApp)ins.getTargetContext().getApplicationContext();
-    org.junit.Assume.assumeTrue("External denied-permission fixture",app.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)==android.content.pm.PackageManager.PERMISSION_DENIED);
-    boolean setup=app.prefs().getBoolean("setupComplete",false),asked=app.prefs().getBoolean("microphoneRequested",false);
-    ui=ins.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+  @Test
+  public void permanentlyDeniedMicrophoneOffersAnAppSettingsRoute() throws Exception {
+    org.junit.Assume.assumeTrue(
+        "Isolated emulator only", android.os.Build.HARDWARE.equals("ranchu"));
+    android.app.Instrumentation ins = InstrumentationRegistry.getInstrumentation();
+    KeyboardApp app = (KeyboardApp) ins.getTargetContext().getApplicationContext();
+    org.junit.Assume.assumeTrue(
+        "External denied-permission fixture",
+        app.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+            == android.content.pm.PackageManager.PERMISSION_DENIED);
+    boolean setup = app.prefs().getBoolean("setupComplete", false),
+        asked = app.prefs().getBoolean("microphoneRequested", false);
+    ui = ins.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
     windows();
-    android.app.Instrumentation.ActivityMonitor monitor=null;
+    android.app.Instrumentation.ActivityMonitor monitor = null;
     try {
-      app.prefs().edit().putBoolean("setupComplete",false).putBoolean("microphoneRequested",true).commit();
-      activity=(MainActivity)ins.startActivitySync(new Intent(app,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-      await("去系统设置允许麦克风");shot("onboarding-denied-microphone");
-      android.content.IntentFilter filter=new android.content.IntentFilter(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);filter.addDataScheme("package");
-      monitor=ins.addMonitor(filter,new android.app.Instrumentation.ActivityResult(Activity.RESULT_CANCELED,null),true);
-      click("去系统设置允许麦克风");assertEquals("Permission recovery opens app settings instead of a dead request",1,monitor.getHits());
+      app.prefs()
+          .edit()
+          .putBoolean("setupComplete", false)
+          .putBoolean("microphoneRequested", true)
+          .commit();
+      activity =
+          (MainActivity)
+              ins.startActivitySync(
+                  new Intent(app, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+      await("去系统设置允许麦克风");
+      shot("onboarding-denied-microphone");
+      android.content.IntentFilter filter =
+          new android.content.IntentFilter(
+              android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+      filter.addDataScheme("package");
+      monitor =
+          ins.addMonitor(
+              filter,
+              new android.app.Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null),
+              true);
+      click("去系统设置允许麦克风");
+      assertEquals(
+          "Permission recovery opens app settings instead of a dead request", 1, monitor.getHits());
     } finally {
-      if(monitor!=null)ins.removeMonitor(monitor);
-      if(activity!=null)ins.runOnMainSync(activity::finish);
+      if (monitor != null) ins.removeMonitor(monitor);
+      if (activity != null) ins.runOnMainSync(activity::finish);
       shell("pm clear-permission-flags app.doudou.ime android.permission.RECORD_AUDIO user-fixed");
       shell("pm grant app.doudou.ime android.permission.RECORD_AUDIO");
-      app.prefs().edit().putBoolean("setupComplete",setup).putBoolean("microphoneRequested",asked).commit();
+      app.prefs()
+          .edit()
+          .putBoolean("setupComplete", setup)
+          .putBoolean("microphoneRequested", asked)
+          .commit();
     }
   }
 
   private void shell(String command) throws Exception {
-    try(android.os.ParcelFileDescriptor fd=ui.executeShellCommand(command);FileInputStream input=new FileInputStream(fd.getFileDescriptor())){
-      byte[] buffer=new byte[1024];while(input.read(buffer)!=-1){}
+    try (android.os.ParcelFileDescriptor fd = ui.executeShellCommand(command);
+        FileInputStream input = new FileInputStream(fd.getFileDescriptor())) {
+      byte[] buffer = new byte[1024];
+      while (input.read(buffer) != -1) {}
     }
   }
-  private void windows(){
-    android.accessibilityservice.AccessibilityServiceInfo info=ui.getServiceInfo();
-    info.flags|=android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
+
+  private void windows() {
+    android.accessibilityservice.AccessibilityServiceInfo info = ui.getServiceInfo();
+    info.flags |=
+        android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
     ui.setServiceInfo(info);
   }
 
-  @Test public void firstUseCanVisitLoginAndReturnWithoutAPermissionWall() throws Exception {
-    org.junit.Assume.assumeTrue("Isolated emulator only",android.os.Build.HARDWARE.equals("ranchu"));
-    android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();
-    KeyboardApp app=(KeyboardApp)ins.getTargetContext().getApplicationContext();
+  @Test
+  public void firstUseCanVisitLoginAndReturnWithoutAPermissionWall() throws Exception {
+    org.junit.Assume.assumeTrue(
+        "Isolated emulator only", android.os.Build.HARDWARE.equals("ranchu"));
+    android.app.Instrumentation ins = InstrumentationRegistry.getInstrumentation();
+    KeyboardApp app = (KeyboardApp) ins.getTargetContext().getApplicationContext();
     org.junit.Assume.assumeFalse(app.cloud.loggedIn());
-    boolean existed=app.prefs().contains("setupComplete"),original=app.prefs().getBoolean("setupComplete",false);
-    app.prefs().edit().putBoolean("setupComplete",false).commit();
-    ui=ins.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+    boolean existed = app.prefs().contains("setupComplete"),
+        original = app.prefs().getBoolean("setupComplete", false);
+    app.prefs().edit().putBoolean("setupComplete", false).commit();
+    ui = ins.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
     windows();
     try {
-      activity=(MainActivity)ins.startActivitySync(new Intent(app,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-      await("欢迎用豆豆");assertNull(node("已就绪 · 在键盘点「帮我回」。"));
-      shot("onboarding");click("登录或注册");await("欢迎回来");
-      ins.runOnMainSync(activity::onBackPressed);await("欢迎用豆豆");
-      for(int i=0;i<4 && node("开始使用")==null;i++) {
-        for(AccessibilityWindowInfo w:ui.getWindows())scroll(w.getRoot());
+      activity =
+          (MainActivity)
+              ins.startActivitySync(
+                  new Intent(app, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+      await("欢迎用豆豆");
+      assertNull(node("已就绪 · 在键盘点「帮我回」。"));
+      shot("onboarding");
+      click("登录或注册");
+      await("欢迎回来");
+      ins.runOnMainSync(activity::onBackPressed);
+      await("欢迎用豆豆");
+      for (int i = 0; i < 4 && node("开始使用") == null; i++) {
+        for (AccessibilityWindowInfo w : ui.getWindows()) scroll(w.getRoot());
         SystemClock.sleep(180);
       }
-      shot("onboarding-ready");click("开始使用");await("试试豆豆");
-      assertTrue(app.prefs().getBoolean("setupComplete",false));
+      shot("onboarding-ready");
+      click("开始使用");
+      await("试试豆豆");
+      assertTrue(app.prefs().getBoolean("setupComplete", false));
     } finally {
-      if(activity!=null)ins.runOnMainSync(activity::finish);
-      android.content.SharedPreferences.Editor restore=app.prefs().edit();
-      if(existed)restore.putBoolean("setupComplete",original);else restore.remove("setupComplete");restore.commit();
+      if (activity != null) ins.runOnMainSync(activity::finish);
+      android.content.SharedPreferences.Editor restore = app.prefs().edit();
+      if (existed) restore.putBoolean("setupComplete", original);
+      else restore.remove("setupComplete");
+      restore.commit();
     }
   }
 
-  private boolean scroll(AccessibilityNodeInfo node){
-    if(node==null)return false;
-    if(node.isScrollable() && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD))return true;
-    for(int i=0;i<node.getChildCount();i++)if(scroll(node.getChild(i)))return true;
+  private boolean scroll(AccessibilityNodeInfo node) {
+    if (node == null) return false;
+    if (node.isScrollable() && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD))
+      return true;
+    for (int i = 0; i < node.getChildCount(); i++) if (scroll(node.getChild(i))) return true;
     return false;
   }
 
@@ -158,7 +205,7 @@ public final class ManagementFlowTest {
         (MainActivity)
             ins.startActivitySync(
                 new Intent(ins.getTargetContext(), MainActivity.class)
-                    .putExtra("page","home")
+                    .putExtra("page", "home")
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     KeyboardApp app = (KeyboardApp) activity.getApplication();
     org.json.JSONObject original = app.store.cache(app.cloud.userId());
@@ -205,6 +252,7 @@ public final class ManagementFlowTest {
     app.store.cache(app.cloud.userId(), 1, fixture);
     try {
       click("记忆");
+      click("热词");
       await("豆豆输入法");
       set("搜索这份记忆", "没有这个热词");
       await("没有找到");
@@ -221,7 +269,7 @@ public final class ManagementFlowTest {
       await("周末约球");
       shot("person");
       click("我的");
-      await("系统权限");
+      await("主动截屏");
       shot("settings");
       click("输入");
       await("试试豆豆");
@@ -258,10 +306,70 @@ public final class ManagementFlowTest {
       await("欢迎回来");
       shot("account");
       click("返回");
-      if(((KeyboardApp)activity.getApplication()).prefs().getBoolean("setupComplete",false))await("系统权限");
+      if (((KeyboardApp) activity.getApplication()).prefs().getBoolean("setupComplete", false))
+        await("主动截屏");
       else await("欢迎用豆豆");
     } finally {
       ins.runOnMainSync(() -> activity.finish());
+    }
+  }
+
+  @Test
+  public void livePaletteEditAndCanonicalMemoryAreImmediatelyVisible() throws Exception {
+    org.junit.Assume.assumeTrue(
+        "Explicit owned emulator live fixture",
+        android.os.Build.HARDWARE.equals("ranchu")
+            && "true".equals(InstrumentationRegistry.getArguments().getString("liveModels")));
+    android.app.Instrumentation ins = InstrumentationRegistry.getInstrumentation();
+    KeyboardApp app = (KeyboardApp) ins.getTargetContext().getApplicationContext();
+    org.json.JSONObject qa =
+        new org.json.JSONObject(
+            new String(
+                java.nio.file.Files.readAllBytes(
+                    new File(app.getCacheDir(), "product-qa.json").toPath()),
+                "UTF-8"));
+    app.cloud.login(qa.getString("handle"), qa.getString("password"));
+    app.personalization.activate();
+    app.personalization.sync();
+    PaletteStore store = new PaletteStore(app);
+    org.json.JSONObject original = store.sync();
+    ui = ins.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+    windows();
+    activity =
+        (MainActivity)
+            ins.startActivitySync(
+                new Intent(app, MainActivity.class)
+                    .putExtra("page", "home")
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    try {
+      await("编辑自然");
+      await("我的文风");
+      shot("home");
+      click("编辑自然");
+      await("这格怎么表达");
+      set("自然", "随口说");
+      click("俏皮");
+      click("保存");
+      await("编辑随口说");
+      org.json.JSONObject changed = store.sync();
+      assertEquals("随口说", changed.getJSONArray("slots").getJSONObject(0).getString("name"));
+      assertEquals(
+          "playful", changed.getJSONArray("slots").getJSONObject(0).getString("expression"));
+      shot("palette-edited");
+      store.save(changed, 0, "自然", "natural");
+      click("人物");
+      await("沐星");
+      click("沐星");
+      await("北辰实验室");
+      shot("person-live");
+      click("记忆");
+      click("文风");
+      await("工作沟通/即时消息");
+      shot("style-live");
+    } finally {
+      if (activity != null) ins.runOnMainSync(activity::finish);
+      app.cloud.logout();
+      app.personalization.activate();
     }
   }
 }

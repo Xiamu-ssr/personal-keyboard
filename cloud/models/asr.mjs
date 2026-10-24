@@ -164,7 +164,8 @@ export function connectAsr(
         client.close();
         return;
       }
-      const words = (await memory.snapshot(user.id)).memory.hotwords.slice(-50).map(w => w.text);
+      const hotwords=(await memory.snapshot(user.id)).memory.hotwords;
+      const words=[...hotwords].sort((a,b)=>Number(input.context.includes(b.text))-Number(input.context.includes(a.text)) || Number(b.confidence||0)-Number(a.confidence||0)).slice(0,2000).map(w=>w.text);
       send({
         type: "accepted",
         jobId: job.id,

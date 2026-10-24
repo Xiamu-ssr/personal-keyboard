@@ -1,0 +1,12 @@
+{
+  "url": "https://raw.githubusercontent.com/amzxyz/rime-wanxiang-data/210f74f2041d6a050ec30cd23afb2e02d6711679/dicts/jichu.dict.yaml",
+  "revision": "210f74f2041d6a050ec30cd23afb2e02d6711679",
+  "sha256": "6be75b1d63306d2939367f48e45ec65961bf787c0f9ac8226c8971f3799bf6fe",
+  "author": "amzxyz and rime-wanxiang-data contributors",
+  "license": "CC-BY-4.0",
+  "upstream": "https://github.com/amzxyz/rime-wanxiang-data",
+  "file": "dicts/jichu.dict.yaml",
+  "entries": 400000,
+  "assetSha256": "6b5203840c7a212bf2b209d002ffb97b35eb1996e2018a06b7f196ffb1b3ed75",
+  "transform": "top 400000 readings, length 2..8, tone-free pinyin with v for ü; indexed full and initial codes"
+}

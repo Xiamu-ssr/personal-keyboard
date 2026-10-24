@@ -229,6 +229,21 @@ public final class MemoryStore extends SQLiteOpenHelper {
     getWritableDatabase().delete("items", "kind='learned'", null);
   }
 
+  public synchronized void eraseAccount(String account) {
+    SQLiteDatabase db = getWritableDatabase();
+    db.beginTransaction();
+    try {
+      for (String prefix :
+          new String[] {"cache.body:", "cache.version:", "memory.status:", "palette:"})
+        db.delete("meta", "key=?", new String[] {prefix + account});
+      db.delete("items", null, null);
+      db.delete("meta", "key LIKE 'word.code:%'", null);
+      db.setTransactionSuccessful();
+    } finally {
+      db.endTransaction();
+    }
+  }
+
   public long cacheVersion(String account) {
     return Long.parseLong(meta("cache.version:" + account, "0"));
   }

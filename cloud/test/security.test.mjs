@@ -11,7 +11,7 @@ import {
   canonical,
 } from "../security.mjs";
 import { normalizeHandle, createPassword, verifyPassword } from "../identity/passwords.mjs";
-import { modelInput, validateModelResult } from "../models/text.mjs";
+import { modelInput, validateModelResult, advisorResponseFormat, advisorDirective } from "../models/text.mjs";
 import { limitText } from "../models/asr.mjs";
 test("encrypted records are bound to account and reject tampering", () => {
   const k = crypto.randomBytes(32),
@@ -57,4 +57,29 @@ test('password hashes are salted, asynchronous and verify without plaintext stor
   assert(!await verifyPassword('wrong-password', a));
   assert(!await verifyPassword(password, undefined));
   await assert.rejects(createPassword('short'), /12/);
+});
+
+
+test('advisor output follows six configured slots or three variants without inventing identity', async()=>{
+  const {defaultPalette,requestedSlots}=await import('../advisor/palette.mjs');
+  const jpeg='data:image/jpeg;base64,'+Buffer.from([255,216,...Array(30).fill(1)]).toString('base64');
+  const input={...modelInput('advisor',{images:[jpeg],platform:'fixture'}),people:[],slots:requestedSlots(defaultPalette())};
+  const payload={replies:input.slots.map(s=>({slotId:s.id,text:'reply '+s.id})),messages:[{speaker:'other',image:1,text:'Hello'}],identity:{personId:'00000000-0000-4000-8000-000000000001',platform:'fixture',nickname:'小林',confidence:.9}};
+  const full=validateModelResult('advisor',JSON.stringify(payload),input);
+  assert.equal(full.replies.length,6);assert.equal(full.replies[0].style,'自然');assert.equal(full.identity.personId,'');
+  assert.throws(()=>validateModelResult('advisor',JSON.stringify({...payload,replies:payload.replies.slice(0,3)}),input),/完整/);
+  const variants={...input,slotId:'slot3',slots:requestedSlots(defaultPalette(),'slot3')};
+  const format=advisorResponseFormat(variants);
+  assert.equal(format.type,'json_schema');assert.equal(format.json_schema.strict,true);
+  assert.equal(format.json_schema.schema.properties.replies.minItems,3);
+  assert.equal(format.json_schema.schema.properties.replies.maxItems,3);
+  assert.deepEqual(format.json_schema.schema.properties.replies.items.properties.slotId.enum,['slot3']);
+  const result=validateModelResult('advisor',JSON.stringify({...payload,replies:[{text:'a'},{text:'b'},{text:'c'}]}),variants);
+  assert(result.replies.every(r=>r.slotId==='slot3'&&r.style==='直说'));
+  assert.throws(()=>validateModelResult('advisor',JSON.stringify({...payload,replies:[{text:'a'},{text:'a'},{text:'c'}]}),variants),/重复/);
+  assert.throws(()=>validateModelResult('advisor',JSON.stringify({...payload,replies:[{text:'a'},{text:'b'},{text:'c'}]}),{...variants,previousReplies:['b']}),/重复/);
+  const {readFile}=await import('node:fs/promises');
+  const template=JSON.parse(await readFile(new URL('../prompts/reply-request.json',import.meta.url),'utf8'));
+  const literal='保留 $& 和 $` 以及 {{replyCount}} 的原文';
+  assert(advisorDirective({...variants,intent:literal},template).includes(literal));
 });

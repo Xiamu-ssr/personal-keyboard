@@ -1,10 +1,10 @@
 {
-  "name": "双豆声纹",
+  "name": "豆豆 · 对话声纹",
   "created": "2026-10-24",
   "method": "Built-in OpenAI image generation",
-  "concept": "两颗豆子围出声纹；炭黑与暖白。",
-  "prompt": "Original flat app icon. Charcoal square, two complementary warm-ivory bean/comma shapes separated by a smooth S-shaped negative-space channel. Centered within the adaptive icon safe zone. No text, ornament or enclosing rounded tile.",
+  "concept": "单一暖白对话气泡与三段声音条，矢车菊蓝底色。",
+  "prompt": "Edit target Image 1: the existing Doudou Android app icon. Change ONLY its dark jade green background and the three green sound-bar cutouts to a uniform rich cornflower blue (#3E6BE6). Keep the exact single ivory speech bubble silhouette, short lower-left tail, three short-tall-medium rounded sound bars, spacing, safe area, proportions and centering unchanged. Flat, clean polished icon, no textures, no extra tile, no text, no new symbols, no green. Output a square opaque app icon.",
   "source": "logo.png",
   "androidAsset": "../app/src/main/res/drawable-nodpi/brand_logo.png",
-  "androidExport": "512px PNG resized from the original generated square; Android applies the adaptive launcher mask."
+  "androidExport": "512px PNG export from the generated original; Android applies the adaptive mask."
 }

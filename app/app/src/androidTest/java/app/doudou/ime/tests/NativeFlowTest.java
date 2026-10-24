@@ -14,7 +14,6 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
 import androidx.test.platform.app.InstrumentationRegistry;
 import app.doudou.ime.app.PracticeActivity;
-import app.doudou.ime.capture.CaptureService;
 import java.io.*;
 import java.util.*;
 import org.junit.*;
@@ -90,7 +89,7 @@ public class NativeFlowTest {
     } catch (java.util.concurrent.TimeoutException e) {
       throw new AssertionError("IME layout did not settle", e);
     }
-    if (node("EN") != null) click("EN");
+    if (node("英") != null) click("英");
     await("q");
   }
 
@@ -145,31 +144,44 @@ public class NativeFlowTest {
   }
 
   private void click(String text) {
-    long until=SystemClock.uptimeMillis()+2000;
-    while(SystemClock.uptimeMillis()<until) {
-      AccessibilityNodeInfo target=await(text);
-      AccessibilityNodeInfo action=target;
-      for (int depth=0; action!=null && !action.isClickable() && depth<3; depth++) {
-        AccessibilityNodeInfo parent=action.getParent();
-        if (parent==null || "android.widget.ListView".contentEquals(parent.getClassName())) break;
-        action=parent;
+    long until = SystemClock.uptimeMillis() + 2000;
+    while (SystemClock.uptimeMillis() < until) {
+      AccessibilityNodeInfo target = await(text);
+      AccessibilityNodeInfo action = target;
+      for (int depth = 0; action != null && !action.isClickable() && depth < 3; depth++) {
+        AccessibilityNodeInfo parent = action.getParent();
+        if (parent == null || "android.widget.ListView".contentEquals(parent.getClassName())) break;
+        action = parent;
       }
-      if(action!=null && action.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {SystemClock.sleep(180);return;}
+      if (action != null && action.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+        SystemClock.sleep(180);
+        return;
+      }
       if (!target.isClickable()) {
         SystemClock.sleep(250);
-        target=await(text); if(!target.refresh()) continue;
-        Rect bounds = new Rect(); target.getBoundsInScreen(bounds);
+        target = await(text);
+        if (!target.refresh()) continue;
+        Rect bounds = new Rect();
+        target.getBoundsInScreen(bounds);
         long now = SystemClock.uptimeMillis();
-        MotionEvent down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, bounds.centerX(), bounds.centerY(), 0);
-        MotionEvent up = MotionEvent.obtain(now, now + 40, MotionEvent.ACTION_UP, bounds.centerX(), bounds.centerY(), 0);
+        MotionEvent down =
+            MotionEvent.obtain(
+                now, now, MotionEvent.ACTION_DOWN, bounds.centerX(), bounds.centerY(), 0);
+        MotionEvent up =
+            MotionEvent.obtain(
+                now, now + 40, MotionEvent.ACTION_UP, bounds.centerX(), bounds.centerY(), 0);
         boolean delivered = ui.injectInputEvent(down, true) && ui.injectInputEvent(up, true);
-        down.recycle(); up.recycle();
-        if (delivered) { SystemClock.sleep(120); return; }
+        down.recycle();
+        up.recycle();
+        if (delivered) {
+          SystemClock.sleep(120);
+          return;
+        }
       }
       // InputConnection restarts can replace the action row between lookup and dispatch.
       SystemClock.sleep(80);
     }
-    fail("Control did not accept click: "+text);
+    fail("Control did not accept click: " + text);
   }
 
   private String value() {
@@ -230,15 +242,44 @@ public class NativeFlowTest {
   }
 
   @Test
+  public void chineseEnterCommitsLiteralAndModernTermsAreCandidates() {
+    for (char c : "hello".toCharArray()) click("" + c);
+    click("换行");
+    assertEquals("hello", value());
+    clear();
+    for (char c : "dalanguage".toCharArray()) click("" + c);
+    click("换行");
+    assertEquals("dalanguage", value());
+    clear();
+    for (char c : "rengongzhineng".toCharArray()) click("" + c);
+    click("人工智能");
+    assertEquals("人工智能", value());
+    clear();
+    for (char c : "haha".toCharArray()) click("" + c);
+    click("展开");
+    click("😂");
+    assertEquals("😂", value());
+    click("更多");
+    click("符号");
+    click("数学");
+    click("≠");
+    click("ABC");
+    await("q");
+    assertEquals("😂≠", value());
+    screenshot("modern-input");
+  }
+
+  @Test
   public void advisorChecksAccountBeforeCapturingAndPreservesDraft() {
     instrumentation.runOnMainSync(() -> editor.setText("本机验收草稿"));
     instrumentation.waitForIdleSync();
     click("帮我回");
-    await("登录后使用军师");
+    await("登录后使用帮我回");
     await("去登录");
     assertNull(node("重试"));
     assertEquals("本机验收草稿", value());
-    click("返回键盘"); await("更多");
+    click("返回键盘");
+    await("更多");
     assertEquals("本机验收草稿", value());
   }
 
@@ -264,89 +305,141 @@ public class NativeFlowTest {
   }
 
   @Test
-  public void toolCardsStayInsideTheKeyboardAndExposeHandsFreeAndPrivacy() {
+  public void toolCardsStayInsideTheKeyboardAndExposeUsefulCollections() {
     int height = keyboardHeight();
     click("更多");
-    await("常用工具"); assertNull(node("q"));
+    await("常用工具");
+    assertNull(node("q"));
     assertEquals("Opening tools does not resize the host editor", height, keyboardHeight());
-    for (String title : new String[] {"剪贴板", "输入历史", "免按说话", "隐私输入", "键盘设置"})
+    for (String title : new String[] {"剪贴板", "输入历史", "表情", "键盘选择", "符号", "隐私输入", "键盘设置"})
       await(title);
-    assertNull(node("语音输入")); assertNull(node("原地军师")); assertNull(node("热词短语"));
+    assertNull(node("语音输入"));
+    assertNull(node("原地军师"));
+    assertNull(node("热词短语"));
     screenshot("tools");
-    click("返回键盘"); await("q");
-    click("更多");
-    click("免按说话"); await("登录后使用语音"); await("去登录");
-    click("返回键盘"); click("更多");
-    click("隐私输入");
-    await("隐私输入已开启");
-    assertNull(node("帮我回"));
-    screenshot("privacy-changed");
-    click("更多");
-    assertFalse("Private input does not advertise an available microphone", await("免按说话").isEnabled());
-    assertFalse("Private input does not read the clipboard", await("剪贴板").isEnabled());
-    assertFalse("Private input does not expose local input history", await("输入历史").isEnabled());
-    click("隐私输入");
-    assertNotNull(await("帮我回"));
-    assertTrue(await("空格").performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK));
-    await("登录后使用语音");
-    await("去登录");
     click("返回键盘");
-    await("更多");
-    assertEquals("", value());
+    await("q");
+    click("更多");
+    click("表情");
+    await("笑脸");
+    assertEquals(height, keyboardHeight());
+    assertNull(node("q"));
   }
 
-  @Test public void clipboardAndHistoryReuseWordsInTheOriginalEditor() {
-    app.doudou.ime.app.KeyboardApp app=(app.doudou.ime.app.KeyboardApp)instrumentation.getTargetContext().getApplicationContext();
+  @Test
+  public void clipboardAndHistoryReuseWordsInTheOriginalEditor() {
+    app.doudou.ime.app.KeyboardApp app =
+        (app.doudou.ime.app.KeyboardApp) instrumentation.getTargetContext().getApplicationContext();
     app.clips.clear();
-    instrumentation.runOnMainSync(()->{
-      editor.setText("草稿：");editor.setSelection(editor.length());
-      ((android.content.ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("fixture","今晚七点见"));
-    });
-    long until=SystemClock.uptimeMillis()+3000;
-    while(app.clips.list().isEmpty() && SystemClock.uptimeMillis()<until)SystemClock.sleep(60);
-    assertFalse("The actual system clipboard listener retained the copied text",app.clips.list().isEmpty());
-    click("更多");click("剪贴板");
-    click("清空");await("已清空 · 撤销");click("已清空 · 撤销");
-    await("填入：今晚七点见");SystemClock.sleep(8000);screenshot("clipboard");
-    click("填入：今晚七点见");await("更多");assertEquals("草稿：今晚七点见",value());
-    String id=app.histories.create("voice","历史转写");app.histories.inserted(id,"之前说过的话","");
-    String raw=app.histories.create("voice","未填入的转写");
-    String withdrawn=app.histories.create("voice","已撤回的转写");app.histories.inserted(withdrawn,"撤回结果","");app.histories.withdraw(withdrawn);
-    click("更多");click("输入历史");screenshot("keyboard-history");
-    assertNull("Raw uninserted text is not offered as the user's result",node("填入：未填入的转写"));
-    assertNull("Withdrawn text is not offered as the user's result",node("填入：已撤回的转写"));
-    click("填入：之前说过的话");await("更多");assertEquals("草稿：今晚七点见之前说过的话",value());
-    app.histories.remove(id);
-    app.histories.remove(raw);app.histories.remove(withdrawn);
-    click("更多");click("隐私输入");await("隐私输入已开启");
-    instrumentation.runOnMainSync(()->((android.content.ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("fixture","private sample not retained")));
-    SystemClock.sleep(200);
-    assertFalse(app.clips.list().stream().anyMatch(c->c.text.equals("private sample not retained")));
-    click("更多");click("隐私输入");await("更多");
-    ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK);SystemClock.sleep(200);
-    instrumentation.runOnMainSync(()->{editor.requestFocus();((InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE)).showSoftInput(editor,InputMethodManager.SHOW_IMPLICIT);});
+    instrumentation.runOnMainSync(
+        () -> {
+          editor.setText("草稿：");
+          editor.setSelection(editor.length());
+          ((android.content.ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE))
+              .setPrimaryClip(ClipData.newPlainText("fixture", "今晚七点见"));
+        });
+    long until = SystemClock.uptimeMillis() + 3000;
+    while (app.clips.list().isEmpty() && SystemClock.uptimeMillis() < until) SystemClock.sleep(60);
+    assertFalse(
+        "The actual system clipboard listener retained the copied text",
+        app.clips.list().isEmpty());
+    click("更多");
+    click("剪贴板");
+    click("清空");
+    await("已清空 · 撤销");
+    click("已清空 · 撤销");
+    await("填入：今晚七点见");
+    SystemClock.sleep(8000);
+    screenshot("clipboard");
+    click("填入：今晚七点见");
     await("更多");
-    assertFalse("A private copy is not imported after privacy is disabled and the keyboard reopens",app.clips.list().stream().anyMatch(c->c.text.equals("private sample not retained")));
-    instrumentation.runOnMainSync(()->((android.content.ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("fixture","正常模式重新复制")));
-    until=SystemClock.uptimeMillis()+2000;
-    while(app.clips.list().stream().noneMatch(c->c.text.equals("正常模式重新复制")) && SystemClock.uptimeMillis()<until)SystemClock.sleep(40);
-    assertTrue("An explicit normal copy resumes collection",app.clips.list().stream().anyMatch(c->c.text.equals("正常模式重新复制")));
+    assertEquals("草稿：今晚七点见", value());
+    String id = app.histories.create("voice", "历史转写");
+    app.histories.inserted(id, "之前说过的话", "");
+    String raw = app.histories.create("voice", "未填入的转写");
+    String withdrawn = app.histories.create("voice", "已撤回的转写");
+    app.histories.inserted(withdrawn, "撤回结果", "");
+    app.histories.withdraw(withdrawn);
+    click("更多");
+    click("输入历史");
+    screenshot("keyboard-history");
+    assertNull("Raw uninserted text is not offered as the user's result", node("填入：未填入的转写"));
+    assertNull("Withdrawn text is not offered as the user's result", node("填入：已撤回的转写"));
+    click("填入：之前说过的话");
+    await("更多");
+    assertEquals("草稿：今晚七点见之前说过的话", value());
+    app.histories.remove(id);
+    app.histories.remove(raw);
+    app.histories.remove(withdrawn);
+    click("更多");
+    click("隐私输入");
+    await("隐私输入已开启");
+    instrumentation.runOnMainSync(
+        () ->
+            ((android.content.ClipboardManager)
+                    activity.getSystemService(Context.CLIPBOARD_SERVICE))
+                .setPrimaryClip(ClipData.newPlainText("fixture", "private sample not retained")));
+    SystemClock.sleep(200);
+    assertFalse(
+        app.clips.list().stream().anyMatch(c -> c.text.equals("private sample not retained")));
+    click("更多");
+    click("隐私输入");
+    await("更多");
+    ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK);
+    SystemClock.sleep(200);
+    instrumentation.runOnMainSync(
+        () -> {
+          editor.requestFocus();
+          ((InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE))
+              .showSoftInput(editor, InputMethodManager.SHOW_IMPLICIT);
+        });
+    await("更多");
+    assertFalse(
+        "A private copy is not imported after privacy is disabled and the keyboard reopens",
+        app.clips.list().stream().anyMatch(c -> c.text.equals("private sample not retained")));
+    instrumentation.runOnMainSync(
+        () ->
+            ((android.content.ClipboardManager)
+                    activity.getSystemService(Context.CLIPBOARD_SERVICE))
+                .setPrimaryClip(ClipData.newPlainText("fixture", "正常模式重新复制")));
+    until = SystemClock.uptimeMillis() + 2000;
+    while (app.clips.list().stream().noneMatch(c -> c.text.equals("正常模式重新复制"))
+        && SystemClock.uptimeMillis() < until) SystemClock.sleep(40);
+    assertTrue(
+        "An explicit normal copy resumes collection",
+        app.clips.list().stream().anyMatch(c -> c.text.equals("正常模式重新复制")));
     app.clips.clear();
   }
 
   @Test
   public void deniedLongHoldDoesNotAccidentallyInsertASpace() {
-    instrumentation.runOnMainSync(() -> { editor.setText("原草稿"); editor.setSelection(editor.length()); });
+    instrumentation.runOnMainSync(
+        () -> {
+          editor.setText("原草稿");
+          editor.setSelection(editor.length());
+        });
     instrumentation.waitForIdleSync();
-    Rect key = new Rect(); await("空格").getBoundsInScreen(key);
+    Rect key = new Rect();
+    await("空格").getBoundsInScreen(key);
     long down = SystemClock.uptimeMillis();
-    MotionEvent press = MotionEvent.obtain(down, down, MotionEvent.ACTION_DOWN, key.centerX(), key.centerY(), 0);
-    assertTrue(ui.injectInputEvent(press, true)); press.recycle();
+    MotionEvent press =
+        MotionEvent.obtain(down, down, MotionEvent.ACTION_DOWN, key.centerX(), key.centerY(), 0);
+    assertTrue(ui.injectInputEvent(press, true));
+    press.recycle();
     await("登录后使用语音");
-    MotionEvent release = MotionEvent.obtain(down, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, key.centerX(), key.centerY(), 0);
-    assertTrue(ui.injectInputEvent(release, true)); release.recycle();
+    MotionEvent release =
+        MotionEvent.obtain(
+            down,
+            SystemClock.uptimeMillis(),
+            MotionEvent.ACTION_UP,
+            key.centerX(),
+            key.centerY(),
+            0);
+    assertTrue(ui.injectInputEvent(release, true));
+    release.recycle();
     assertEquals("原草稿", value());
-    click("返回键盘"); await("更多");
+    click("返回键盘");
+    await("更多");
     assertEquals("原草稿", value());
   }
 

@@ -146,6 +146,8 @@ test("compiled Spec uses YAML details and prompts without a Markdown document la
     assert.equal(compiled.prompts.find((c) => c.id === p.id).system, p.system);
     assert.equal(p.document, undefined);
   }
+  assert.deepEqual(source.prompts.find(p => p.id === 'reply').requestTemplate,
+    JSON.parse(await fs.readFile(new URL('../cloud/prompts/reply-request.json', import.meta.url), 'utf8')));
   assert.equal(compiled.meta.status, source.meta.status);
   assert(!html.includes("data-doc="));
   assert(!html.includes("#doc/"));

@@ -30,7 +30,12 @@ public final class RelationshipGraph extends View {
   protected void onDraw(Canvas c) {
     super.onDraw(c);
     points.clear();
-    float cx = getWidth() / 2f, cy = getHeight() / 2f, r = Math.min(getWidth(), getHeight()) * .34f;
+    float cx = getWidth() / 2f,
+        cy = getHeight() / 2f,
+        r =
+            Math.min(
+                Math.min(getWidth(), getHeight()) * .34f,
+                Math.min(getWidth(), getHeight()) / 2f - radius() - Ui.dp(getContext(), 4));
     paint.setTextAlign(Paint.Align.CENTER);
     paint.setStrokeWidth(Ui.dp(getContext(), 1));
     int n = Math.min(8, people.size());
@@ -65,14 +70,27 @@ public final class RelationshipGraph extends View {
     for (int i = 0; i < n; i++) {
       PointF p = points.get(i);
       String name = people.get(i).title;
-      node(c, p.x, p.y, name.length() > 4 ? name.substring(0, 4) : name, false);
+      node(
+          c,
+          p.x,
+          p.y,
+          name.length() > (compact() ? 2 : 4) ? name.substring(0, compact() ? 2 : 4) : name,
+          false);
     }
   }
 
+  private boolean compact() {
+    return getHeight() < Ui.dp(getContext(), 180);
+  }
+
+  private int radius() {
+    return Ui.dp(getContext(), compact() ? 18 : 29);
+  }
+
   void node(Canvas c, float x, float y, String name, boolean me) {
-    paint.setColor(me ? Ui.ACCENT : Ui.KEY);
-    c.drawCircle(x, y, Ui.dp(getContext(), 29), paint);
-    paint.setTextSize(Ui.dp(getContext(), 13));
+    paint.setColor(me ? Ui.APP_ACCENT : Ui.KEY);
+    c.drawCircle(x, y, radius(), paint);
+    paint.setTextSize(Ui.dp(getContext(), compact() ? 12 : 13));
     paint.setColor(me ? Ui.BG : Ui.INK);
     c.drawText(name, x, y + Ui.dp(getContext(), 5), paint);
   }

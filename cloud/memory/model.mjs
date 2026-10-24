@@ -6,7 +6,7 @@ import { memoryCounter } from './counter.mjs';
 export const memoryOutputContract = {
   baseVersion: '与输入一致的整数',
   operations: [{ action: 'upsert 或 delete', kind: 'hotword / style / person / fact / relation', id: '已有 UUID；新增必须匹配 ^new:[A-Za-z0-9_-]{1,64}$，例如 new:word1，不能含中文', personId: '仅 fact/relation 填所属人物 UUID 或本批 new:person1，其他类型不填',
-    value: 'hotword={text:结果稿里纠正后的标准词,variants:[填入稿里纠正前的错误写法]}; style={scene,rules,examples}; person={name,aliases}; fact={key,value,scope}; relation={targetId,type}',
+    value: 'hotword={text:结果稿里纠正后的标准词,variants:[填入稿里纠正前的错误写法]}; style={scene,rules,examples}; person={name,aliases,identities:[{platform,nickname,handle}]}; fact={key,value,scope}; relation={targetId,type}',
     sourceId: '本批历史 ID', sourceRevision: '本批历史修订', category: 'correction 或 observation', confidence: '0至1', reason: '简短理由' }],
 };
 
@@ -71,7 +71,7 @@ export class MemoryModel {
 
 export async function historyRequest(model, snapshot, history, offset) {
   const chars = Array.from(JSON.stringify(history));
-  let length = Math.min(16000, chars.length - offset);
+  let length = chars.length - offset;
   requireValue(length > 0, 'MEMORY_HISTORY', '历史游标错误');
   while (true) {
     const piece = { id: history.id, revision: history.revision, type: history.type,
@@ -82,4 +82,21 @@ export async function historyRequest(model, snapshot, history, offset) {
     requireValue(length > 16, 'MEMORY_CAPACITY', '完整记忆无法装入模型上下文，更新已暂停；历史待办保留', 409);
     length = Math.max(16, Math.floor(length / 2));
   }
+}
+
+/** Batch whole revisions first. Only an individually oversized history is fragmented. */
+export async function historyBatch(model, snapshot, rows) {
+  let records = [], accepted = [];
+  for (const row of rows) {
+    const total = Array.from(JSON.stringify(row.history)).length;
+    if (row.next_offset > 0) break;
+    const candidate = [...records, row.history];
+    const request = model.request(snapshot.memory, snapshot.version, candidate);
+    if (!(await model.fits(request))) break;
+    records = candidate;
+    accepted.push({ history: row.history, offset: row.next_offset, end: total, total });
+  }
+  if (accepted.length) return { request: model.request(snapshot.memory, snapshot.version, records), accepted };
+  const first = rows[0], part = await historyRequest(model, snapshot, first.history, first.next_offset);
+  return { request: part.request, accepted: [{ history: first.history, offset: first.next_offset, end: part.end, total: part.total }] };
 }

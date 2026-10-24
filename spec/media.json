@@ -1,24 +1,42 @@
 {
-  "version": "0.7.4-alpha.1",
-  "sourceApkSha256": "8e947eaef855a06e1427d7174b9219c620e2820e9db4f14e86075039800cfb15",
-  "source": "Actual Android 15 recordings of the 0.7.4 APK on owned practice. Each video retains one contiguous task range in original order and speed. Advisor uses production Cloud/Aliyun with a disposable QA account, including real inference waits. Silent held-space footage shows gestures and return to editing, not speech accuracy. Physical-microphone verification belongs to 0.7.3; the speech implementation is unchanged.",
+  "version": "0.8.0-alpha.1",
+  "sourceApkSha256": "1314622f519c34f0c0c03f5465a05b1399c63ce5e6b2b27c305f1204fe61872e",
+  "source": "Actual Android 15 emulator recordings of this APK using owned practice fixtures. Each clip retains a single contiguous task interval, in original order and speed, with no generated UI or replaced waiting states. Synthetic speech enters the guest microphone and goes through real Cloud/Aliyun ASR. Advisor uses the production Cloud/Aliyun with a disposable QA account. No current-version physical-device acceptance is claimed.",
   "cloudModelsConfigured": true,
+  "advisorThinkingBudget": 1024,
+  "screenshotSources": {
+    "runtime": [
+      "typing.png",
+      "tools.png",
+      "voice.png",
+      "advisor.png"
+    ],
+    "localUiFixtures": [
+      "home.png",
+      "memory.png",
+      "people.png",
+      "settings.png",
+      "account.png"
+    ]
+  },
   "files": {
     "keyboard-tour.mp4": {
-      "sha256": "743125a7fffe4d41971cd78132e13416c62eeec6b88e85e012b730c2d31df30c",
-      "bytes": 218242,
-      "durationSeconds": 15.987426,
+      "sha256": "1e9c69034243518046db7cbc4607fab0ee7e4eaf101b31a432f121fc6d348d5b",
+      "bytes": 320829,
+      "durationSeconds": 19.917332,
       "width": 720,
       "height": 1600,
       "codec": "h264"
     },
     "advisor-tour.mp4": {
-      "sha256": "3ead4b2a29ee24c894d7573d204cea2eec94477caaa19a844f7839cc06862206",
-      "bytes": 398929,
-      "durationSeconds": 34.2,
+      "sha256": "4c80bdcea8ed1ba4664c92b8c4393ada414960e1bbe8b48483ba606668f8f9ec",
+      "bytes": 1250333,
+      "durationSeconds": 66.799811,
       "width": 720,
       "height": 1600,
       "codec": "h264"
     }
-  }
+  },
+  "cloudPromptAtRelease": "9abab26a4c4f",
+  "advisorProtocolScope": "Final native recording includes strict schema and 1024 reasoning budget. A later refinement only to the explicit-intent request branch leaves the unspecified-intent native request unchanged."
 }

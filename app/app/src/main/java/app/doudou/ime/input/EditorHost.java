@@ -25,6 +25,8 @@ public interface EditorHost {
 
   void typing();
 
+  void letters();
+
   void commitComposing();
 
   void snapshot();
@@ -53,7 +55,11 @@ public interface EditorHost {
 
   void message(String title, String detail, String actionLabel, Runnable action);
 
-  void voiceFeedback(app.doudou.ime.voice.VoiceState state, String hint, boolean held, app.doudou.ime.voice.VoiceGesture.Target target);
+  void voiceFeedback(
+      app.doudou.ime.voice.VoiceState state,
+      String hint,
+      boolean held,
+      app.doudou.ime.voice.VoiceGesture.Target target);
 
   void voiceLevel(float rmsDb);
 
@@ -75,10 +81,11 @@ public interface EditorHost {
 
   void undoInsertion();
 
+  boolean canUndoInsertion();
+
   String full();
 
   void selectAll();
 
   void editText();
-
 }

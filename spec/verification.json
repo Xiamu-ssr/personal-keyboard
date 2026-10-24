@@ -1,156 +1,199 @@
 {
-  "reviewedAt": "2026-10-24T06:39:54.681079+00:00",
-  "version": "0.7.4-alpha.1",
-  "status": "Logo update to the invited development preview. Native launcher and My card inspected; current APK installed over the previous signed build. Input behavior is unchanged from 0.7.3. Earlier microphone and independent-review evidence retain their original version labels.",
+  "reviewedAt": "2026-10-24T15:59:54.896914+00:00",
+  "version": "0.8.0-alpha.1",
+  "artifact": {
+    "package": "app.doudou.ime",
+    "version": "0.8.0-alpha.1",
+    "sha256": "1314622f519c34f0c0c03f5465a05b1399c63ce5e6b2b27c305f1204fe61872e",
+    "bytes": 25386634,
+    "buildType": "debug",
+    "production": false,
+    "modelsBundled": false
+  },
+  "status": "Invited development preview. Named visual and semantic fixes were independently scored resolved. Real Android 15 emulator and Cloud/Aliyun verification; no current physical-device or all-host acceptance claim.",
   "checks": [
     {
-      "name": "Original brand artwork and native integration",
+      "name": "Android JVM and native decoder",
       "status": "passed",
-      "source": "app/branding/logo.png",
-      "method": "Built-in image generation",
-      "surfaces": [
-        "Android adaptive launcher",
-        "My account card",
-        "Spec header and favicon",
-        "repository README"
-      ],
-      "sourceApkSha256": "8e947eaef855a06e1427d7174b9219c620e2820e9db4f14e86075039800cfb15",
-      "launcherAndAccountVisualInspection": true
-    },
-    {
-      "name": "Current Android build, JVM/JNI and lint",
-      "status": "passed",
-      "artifact": {
-        "package": "app.doudou.ime",
-        "version": "0.7.4-alpha.1",
-        "sha256": "8e947eaef855a06e1427d7174b9219c620e2820e9db4f14e86075039800cfb15",
-        "bytes": 10112315,
-        "buildType": "debug",
-        "production": false,
-        "modelsBundled": false
-      },
       "jvmTests": 32,
       "failures": 0,
+      "addressSanitizer": true,
+      "undefinedBehaviorSanitizer": true,
       "lintErrors": 0,
-      "lintWarnings": 34,
-      "themedMonochromeIconIncluded": false
+      "lintWarnings": 40
     },
     {
-      "name": "Current Android 15 focused interface checks",
+      "name": "Node and YAML graph checks",
       "status": "passed",
-      "passedTests": 6,
-      "skippedTests": 1,
-      "sourceApkSha256": "8e947eaef855a06e1427d7174b9219c620e2820e9db4f14e86075039800cfb15",
-      "skippedReason": "Permanently denied microphone fixture not prepared for this branding-only release. It was verified on 0.7.3.",
-      "firstAttempt": "Emulator System UI ANR obscured the application; dismissed and the focused suite passed on retry."
-    },
-    {
-      "name": "Current real advisor and held-space gestures",
-      "status": "passed",
-      "tests": 2,
-      "sourceApkSha256": "8e947eaef855a06e1427d7174b9219c620e2820e9db4f14e86075039800cfb15",
-      "ownedPracticeOnly": true,
-      "oneTapAdvisor": true,
-      "capturedHeight": 1991,
-      "displayHeight": 2400,
-      "capturedFraction": 0.8295833333333333,
-      "twoScreensChronological": true,
-      "oldReplyImageReferencesRemapped": true,
-      "noAutoSend": true,
-      "heldSurfaceHidesLetters": true,
-      "doesNotClaimSpeechAccuracy": true
-    },
-    {
-      "name": "Old physical phone upgrade",
-      "status": "passed",
-      "version": "0.7.4-alpha.1",
-      "sourceApkSha256": "8e947eaef855a06e1427d7174b9219c620e2820e9db4f14e86075039800cfb15",
-      "sameSignerAsPrevious": true,
-      "upgradedOldPhysicalPhone": true,
-      "preservedAppData": true,
-      "privatePhoneContentRead": false
-    },
-    {
-      "name": "Current Node and graph checks",
-      "status": "passed",
-      "passed": 19,
-      "postgresqlIntegrationSkipped": 2,
+      "passed": 22,
+      "skippedPostgresInDefaultSuite": 2,
       "failures": 0
     },
     {
-      "name": "Current public native media",
+      "name": "Real PostgreSQL integration suite",
       "status": "passed",
-      "sourceApkSha256": "8e947eaef855a06e1427d7174b9219c620e2820e9db4f14e86075039800cfb15",
-      "screenshots": 9,
-      "recordings": 2,
-      "ownedPracticeOnly": true,
-      "publicAndroidHost": false
+      "passed": 16,
+      "skipped": 0,
+      "scope": "Isolated PostgreSQL 17, not production data."
     },
     {
-      "name": "Existing Light Cloud",
-      "status": "unchanged-this-release",
-      "version": "0.7.0-alpha.1",
+      "name": "Android 15 regression suite",
+      "status": "passed-with-scoped-skips",
+      "listedTests": 34,
+      "passed": 31,
+      "assumptionSkipped": 3,
+      "scope": "0.8 implementation snapshot; explicit live tests and final changed UI paths were run separately."
+    },
+    {
+      "name": "Final APK quick speech and late editor changes",
+      "status": "passed",
+      "realCloudAsr": true,
+      "syntheticGuestMicrophone": true,
+      "userEditPreserved": true
+    },
+    {
+      "name": "Final APK advisor journey",
+      "status": "passed-for-owned-host",
+      "proof": {
+        "milliseconds": 63607,
+        "pages": 2,
+        "initialReplies": 6,
+        "slotVariants": 3,
+        "savedGroups": 3,
+        "restorationRequests": 0,
+        "latestMessageVisible": true,
+        "draftPreserved": true
+      },
+      "millisecondsMeaning": "Full multi-generation journey, not first response latency.",
+      "cancelDuringCaptureTest": true,
+      "automaticSend": false,
+      "thirdPartyHostRestorationClaimed": false
+    },
+    {
+      "name": "Final APK recorder ending",
+      "status": "passed",
+      "savedLabel": true,
+      "viewCurrentRecordingAction": true,
+      "returnToKeyboardAction": true,
+      "chatDraftUnchanged": true
+    },
+    {
+      "name": "Persistent audio and deferred transcription",
+      "status": "passed",
+      "scope": "0.8 recording implementation; subsequent changes limited to end-state UI labels and meter color.",
+      "persistedBytes": 468480,
+      "reconnectedToRealCloud": true,
+      "rotation": {
+        "bytes": 1527808,
+        "chunks": 2,
+        "draftPreserved": true,
+        "keyboardDismissed": true,
+        "reopenedSameId": true
+      },
+      "naturalSpeechAccuracyClaimed": false
+    },
+    {
+      "name": "Canonical learning and palette edit",
+      "status": "passed-with-recapture-limit",
+      "learnedHotwords": 2,
+      "learnedPeople": 1,
+      "learnedWorkStyles": 1,
+      "nativeCloudPaletteWriteAndSyncVerified": true,
+      "latestRecapture": "Repeated login reached the unchanged 10-per-15-minute account rate limit; final management screenshots use temporary owned local fixtures. Protection was retained; fixture account deleted after normal cooldown."
+    },
+    {
+      "name": "Final APK small screen and permissions",
+      "status": "passed",
+      "viewports": [
+        "~411dp / fontScale 1.0",
+        "360dp / fontScale 1.3"
+      ],
+      "completeSendAndPrivacyLabels": true,
+      "permanentlyDeniedMicrophoneSettingsRoute": true,
+      "fullExternalPermissionGrantJourneyClaimed": false
+    },
+    {
+      "name": "Visual fix verdicts",
+      "status": "resolved-at-named-fix-scope",
+      "skillReviewerDisposition": "ship",
+      "independentReviewer": "毒舌但客观的高审美内测员",
+      "namedVisualFixesResolved": 7,
+      "semanticUnknownIntentAndVariantCasesResolved": true,
+      "explicitVolitionCasesResolved": true,
+      "wholeProductApprovalClaimed": false,
+      "sourceProofSha256": "12265e6bcbc0bb7b31d5e0b521b0352932021be7ee1ee3797c4bbaa5f899a84b",
+      "designSystemDocumented": true
+    },
+    {
+      "name": "Cloud release",
+      "status": "healthy",
+      "version": "0.8.0-alpha.1",
+      "readiness": {
+        "account": true,
+        "asr": true,
+        "text": true,
+        "vision": true
+      },
+      "databaseVolumesPreserved": true,
+      "schemaMigration": 3,
       "paidPurchases": false
     },
     {
-      "name": "Old physical phone interaction and final upgrade",
-      "status": "passed-for-observed-tasks",
-      "sourceApkSha256": "78cfdcd1dd49f87decdc565fed877306af74d09f812fa31a62f078eb7b358353",
-      "installedApkSha256": "0d6d11e98c509f9911e0a556e9f691745911400929cb478e43d73019a26d4679",
-      "sourceDifferenceToFinal": "Adopted keyboard-history query filtering and immutable screenshot ordering metadata changed; voice rendering and behavior unchanged.",
-      "realMicrophoneInterim": true,
-      "withdrawPreservesPriorDraft": true,
-      "completedDictationEditableInPlace": true,
-      "oneTapAdvisor": true,
-      "extraEarlierScreen": true,
-      "privateChatsInspected": false,
-      "phoneAudio": "Local TTS played through room audio into the actual microphone. Not human continuous-dictation accuracy.",
-      "historyDisabled": true,
-      "clipboardImportBlocked": true,
-      "recordedUnderVersion": "0.7.3-alpha.1"
+      "name": "Public native media",
+      "status": "verified-locally",
+      "screenshots": 9,
+      "recordings": 2,
+      "sourceApkSha256": "1314622f519c34f0c0c03f5465a05b1399c63ce5e6b2b27c305f1204fe61872e",
+      "sources": "spec/media.json",
+      "actualWaitsPreserved": true
     },
     {
-      "name": "Independent Product Design final review",
-      "status": "reviewed-within-observed-scope",
-      "reviewer": "毒舌但客观的高审美内测员",
-      "earlierEvidenceRetainsOriginalVersionLabels": true,
-      "apkSha256": "0d6d11e98c509f9911e0a556e9f691745911400929cb478e43d73019a26d4679",
-      "openConfirmedP0": 0,
-      "openConfirmedP1": 0,
-      "openConfirmedP2": 0,
-      "closedFindings": [
-        "Private clips imported after reopening",
-        "Old-group image references shifted",
-        "Raw and withdrawn text offered as adopted results",
-        "Advisor onboarding ignored account readiness",
-        "History LIMIT preceded adopted-result filtering",
-        "Cancellation mutated in-flight screenshot ordering metadata"
-      ],
-      "limits": [
-        "No deterministic cancel/save barrier injection",
-        "No full system-permission grant/return journey",
-        "No all-host-app acceptance",
-        "No natural human continuous-dictation benchmark"
-      ],
-      "recordedUnderVersion": "0.7.3-alpha.1"
+      "name": "Signing continuity",
+      "status": "passed",
+      "sameSignerAsPrevious": true,
+      "certificateSha256": "472eea0e40824d06fb2cb9c3d9bbfca7505a2971426e9f2c5ccedd4222834940",
+      "currentPhysicalPhoneUpgrade": false
     },
     {
       "name": "Local cleanup",
       "status": "passed",
+      "ownQaAccountDeleted": true,
+      "isolatedPostgresStopped": true,
+      "ownQaAccountsDeleted": 2,
+      "temporaryQaGrantDeletedWithAccount": true,
+      "qaDeviceCredentialsRemoved": true,
       "emulatorStopped": true,
       "portsCleared": {
         "5554": true,
         "5555": true,
-        "8554": true
-      },
-      "ownQaAccountDeleted": true,
-      "qaDeviceCredentialsRemoved": true,
-      "physicalAdbRetained": true,
-      "existingOwnerAccountUntouched": true
+        "8554": true,
+        "55438": true
+      }
     },
     {
-      "name": "Public commercial distribution and merchant payments",
-      "status": "not-enabled"
+      "name": "Current physical device and all-host acceptance",
+      "status": "not-claimed",
+      "reason": "This version was validated in the owned Android 15 emulator; third-party host and natural human speech coverage remain limited."
+    },
+    {
+      "name": "Final advisor protocol",
+      "status": "passed-for-observed-cases",
+      "schema": "Strict JSON Schema, six expressions or three variants; duplicate results fail without consuming the reservation.",
+      "reasoningBudget": 1024,
+      "factAndVolitionCases": [
+        6,
+        3,
+        6,
+        6
+      ],
+      "memoryBeforeAndAfterCases": {
+        "version": 0,
+        "hotwords": 0,
+        "styles": 0,
+        "people": 0,
+        "readAfterFinalCases": true
+      },
+      "scope": "Final explicit-intent branch retested after preserving choice versus inability. Native recording uses the unchanged unspecified-intent branch. These samples do not guarantee future model factual accuracy."
     }
   ]
 }

@@ -51,7 +51,7 @@ public final class LearningWorker extends Worker {
     try {
       new LearningBatch(app).run();
       if (app.cloud.preferences().getBoolean("syncEnabled", false)) app.sync.run();
-      return Result.success();
+      return app.personalization.pending() ? Result.retry() : Result.success();
     } catch (Exception e) {
       return Result.retry();
     }

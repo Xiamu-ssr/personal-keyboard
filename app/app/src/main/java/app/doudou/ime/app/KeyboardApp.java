@@ -67,6 +67,15 @@ public final class KeyboardApp extends Application {
         throw new IllegalStateException("本机历史迁移未完成，原数据库保留", e);
       }
     }
+    if (prefs().getInt("productMigration", 0) < 8) {
+      prefs()
+          .edit()
+          .remove("personalRewrite")
+          .remove("history")
+          .remove("learning")
+          .putInt("productMigration", 8)
+          .apply();
+    }
     try {
       personalization.activate();
     } catch (Exception e) {
@@ -75,9 +84,11 @@ public final class KeyboardApp extends Application {
     app.doudou.ime.memory.LearningWorker.schedule(this);
     app.doudou.ime.memory.LearningWorker.enqueue(this);
     worker.execute(this::openDecoder);
+    worker.execute(() -> app.doudou.ime.recording.RecordingStore.recover(this));
     worker.execute(
         () -> {
           histories.prune(prefs().getInt("retentionDays", 30));
+          histories.collectImages();
           for (File f : getCacheDir().listFiles())
             if (f.getName().startsWith("capture-") || f.getName().startsWith("voice-")) f.delete();
         });
@@ -102,6 +113,7 @@ public final class KeyboardApp extends Application {
               new File(getFilesDir(), "dict.user").getAbsolutePath(),
               InitialLexicon.read(
                   new java.io.InputStreamReader(getAssets().open("initials.tsv"), "UTF-8")));
+      pinyin.lexicon(new app.doudou.ime.input.engine.ModernLexicon(this));
     } catch (Exception | LinkageError ex) {
       dictionaryError = "词库读取失败，请重新安装";
     }

@@ -17,3 +17,7 @@ spec/demo/*.png
 spec/demo/*.mp4
 spec/demo/*.json
 !spec/demo/artifact.json
+
+# Local design-review captures and generated decision evidence
+.impeccable/review/
+.impeccable/mocks/

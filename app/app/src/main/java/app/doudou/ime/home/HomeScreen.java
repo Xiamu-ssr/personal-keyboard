@@ -1,15 +1,17 @@
 package app.doudou.ime.home;
 
-import android.app.Activity;
-import android.content.*;
+import android.app.*;
+import android.content.Intent;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
-import android.provider.Settings;
 import android.view.*;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
+import app.doudou.ime.advisor.PaletteStore;
 import app.doudou.ime.app.*;
 import app.doudou.ime.design.Ui;
+import app.doudou.ime.memory.MemoryStore;
+import app.doudou.ime.people.RelationshipGraph;
+import java.util.*;
+import org.json.*;
 
 public final class HomeScreen extends Screen {
   public HomeScreen(Activity a, KeyboardApp app, Navigator nav) {
@@ -18,41 +20,217 @@ public final class HomeScreen extends Screen {
 
   @Override
   protected void draw() {
-    LinearLayout hero = Ui.col(activity);
-    Ui.pad(activity, hero, 4, 22);
-    TextView title = Ui.text(activity, "开口，\n就写好了。", 34, Ui.INK);
+    LinearLayout practice = Ui.card(activity);
+    practice.setBackground(Ui.bg(activity, Ui.HERO, 22));
+    TextView title = Ui.text(activity, "试试豆豆", 22, Ui.INK);
     title.setTypeface(null, Typeface.BOLD);
-    title.setLineSpacing(Ui.dp(activity, 6), 1);
-    hero.addView(title);
-    Ui.gap(activity, hero, 16);
-    hero.addView(Ui.text(activity, "长按空格说话，松手填入。", 16, Ui.SUB));
-    Ui.gap(activity, hero, 28);
-    hero.addView(Ui.primary(activity, "试试豆豆", () -> activity.startActivity(new Intent(activity, PracticeActivity.class))));
-    add(hero);
-    String selected =
-        Settings.Secure.getString(
-            activity.getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
-    boolean active = selected != null && selected.startsWith(activity.getPackageName() + "/");
-    LinearLayout setup = Ui.card(activity);
-    setup.addView(
-        Ui.cell(
+    practice.addView(title);
+    Ui.gap(activity, practice, 14);
+    LinearLayout scenes = Ui.row(activity);
+    practiceAction(scenes, "聊天", false);
+    practiceAction(scenes, "评论", true);
+    practice.addView(scenes);
+    add(practice);
+    LinearLayout palette = Ui.col(activity);
+    TextView label = Ui.text(activity, "调色盘", 21, Ui.INK);
+    label.setTypeface(null, Typeface.BOLD);
+    palette.addView(label);
+    Ui.gap(activity, palette, 12);
+    try {
+      JSONArray slots = new PaletteStore(app).cached().getJSONArray("slots");
+      for (int row = 0; row < 2; row++) {
+        LinearLayout line = Ui.row(activity);
+        for (int column = 0; column < 3; column++) {
+          int index = row * 3 + column;
+          JSONObject slot = slots.getJSONObject(index);
+          int color =
+              PaletteStore.COLORS[
+                  Arrays.asList(PaletteStore.IDS).indexOf(slot.getString("expression"))];
+          LinearLayout tile = Ui.col(activity);
+          Ui.pad(activity, tile, 14, 10);
+          tile.setGravity(Gravity.CENTER_VERTICAL);
+          tile.setBackground(Ui.pressable(activity, Ui.PANEL, 18));
+          View dot = new View(activity);
+          dot.setBackground(Ui.bg(activity, color, 8));
+          tile.addView(
+              dot, new LinearLayout.LayoutParams(Ui.dp(activity, 14), Ui.dp(activity, 14)));
+          Ui.gap(activity, tile, 8);
+          TextView name = Ui.text(activity, slot.getString("name"), 17, Ui.INK);
+          name.setMaxLines(2);
+          name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+          tile.addView(name);
+          tile.setContentDescription("编辑" + slot.getString("name"));
+          tile.setFocusable(true);
+          tile.setOnClickListener(v -> editSlot(index));
+          LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, -1, 1);
+          size.setMargins(0, 0, column < 2 ? Ui.dp(activity, 8) : 0, 0);
+          line.addView(tile, size);
+        }
+        palette.addView(
+            line,
+            new LinearLayout.LayoutParams(
+                -1,
+                Ui.dp(
+                    activity,
+                    72 * Math.max(1, activity.getResources().getConfiguration().fontScale))));
+        if (row == 0) Ui.gap(activity, palette, 8);
+      }
+    } catch (Exception e) {
+      palette.addView(Ui.button(activity, "重新加载调色盘", nav::refresh));
+    }
+    add(palette);
+    LinearLayout previews = Ui.row(activity);
+    previews.setGravity(Gravity.TOP);
+    previews.setBaselineAligned(false);
+    List<MemoryStore.Item> styles = app.store.list("style", 0);
+    LinearLayout style = Ui.card(activity);
+    Ui.pad(activity, style, 12, 12);
+    style.addView(Ui.cell(activity, "", "我的文风", "", "", () -> nav.open("style", 0)));
+    if (styles.isEmpty()) {
+      TextView waiting = Ui.text(activity, "还在认识你的表达", 15, Ui.SUB);
+      Ui.pad(activity, waiting, 0, 8);
+      style.addView(waiting);
+    } else {
+      MemoryStore.Item first = styles.get(0);
+      TextView scene = Ui.text(activity, first.title, 14, Ui.APP_ACCENT);
+      scene.setMaxLines(2);
+      scene.setEllipsize(android.text.TextUtils.TruncateAt.END);
+      style.addView(scene);
+      Ui.gap(activity, style, 8);
+      TextView rules = Ui.text(activity, first.body, 15, Ui.INK);
+      rules.setMaxLines(3);
+      rules.setEllipsize(android.text.TextUtils.TruncateAt.END);
+      rules.setLineSpacing(Ui.dp(activity, 3), 1);
+      style.addView(rules);
+    }
+    LinearLayout.LayoutParams left = new LinearLayout.LayoutParams(0, -1, 1);
+    left.rightMargin = Ui.dp(activity, 8);
+    previews.addView(style, left);
+    List<MemoryStore.Item> people = app.store.list("person", 0);
+    LinearLayout graph = Ui.card(activity);
+    Ui.pad(activity, graph, 12, 12);
+    graph.addView(Ui.cell(activity, "", "人物星图", "", "", () -> nav.open("people", 0)));
+    if (!people.isEmpty()) {
+      RelationshipGraph preview =
+          new RelationshipGraph(
+              activity,
+              people.subList(0, Math.min(3, people.size())),
+              id -> nav.open("person", id));
+      preview.setMinimumHeight(0);
+      preview.setContentDescription("人物星图预览");
+      graph.addView(preview, new LinearLayout.LayoutParams(-1, Ui.dp(activity, 120)));
+    } else {
+      TextView empty = Ui.text(activity, "还没有人物", 15, Ui.SUB);
+      Ui.pad(activity, empty, 0, 8);
+      graph.addView(empty);
+    }
+    previews.addView(graph, new LinearLayout.LayoutParams(0, -1, 1));
+    add(previews);
+  }
+
+  private void practiceAction(LinearLayout row, String text, boolean comments) {
+    TextView button =
+        Ui.button(
             activity,
-            active ? "闪光" : "工具",
-            active ? "键盘已就绪" : enabled() ? "切换到豆豆输入法" : "开启豆豆输入法",
-            active ? "到任意输入框，开始自己的表达。" : "本地拼音无需登录，语音和军师使用豆豆账户。",
-            active ? "正在使用" : "",
-            () -> {
-              if (enabled())
-                ((InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE))
-                    .showInputMethodPicker();
-              else activity.startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS));
-            }));
-    add(setup);
-    LinearLayout quick = Ui.card(activity);
-    quick.addView(Ui.cell(activity, "历史", "我的历史", "文字与截图，留在手机", "", () -> nav.open("history", 0)));
-    quick.addView(Ui.divider(activity));
-    quick.addView(Ui.cell(activity, "词典", "我的表达习惯", "热词、文风，让豆豆更懂你", "", () -> nav.open("memory", 0)));
-    add(quick);
-    caption("点「帮我回」，看看怎么回。选好后填入，发送由你决定。");
+            text + "  ›",
+            () ->
+                activity.startActivity(
+                    new Intent(activity, PracticeActivity.class)
+                        .putExtra("scene", comments ? "comments" : "chat")));
+    button.setTextColor(Ui.APP_ACCENT);
+    button.setBackground(Ui.pressable(activity, Ui.APP_TINT, 14));
+    LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, Ui.dp(activity, 50), 1);
+    size.setMargins(0, 0, comments ? 0 : Ui.dp(activity, 10), 0);
+    row.addView(button, size);
+  }
+
+  private void editSlot(int index) {
+    if (!app.cloud.loggedIn()) {
+      nav.open("account", 0);
+      return;
+    }
+    PaletteStore store = new PaletteStore(app);
+    app.network.execute(
+        () -> {
+          try {
+            JSONObject snapshot = store.sync();
+            activity.runOnUiThread(() -> dialog(store, snapshot, index));
+          } catch (Exception e) {
+            activity.runOnUiThread(() -> Ui.toast(activity, "暂时无法加载，请联网后再试"));
+          }
+        });
+  }
+
+  private void dialog(PaletteStore store, JSONObject snapshot, int index) {
+    if (activity.isFinishing()) return;
+    try {
+      JSONObject slot = snapshot.getJSONArray("slots").getJSONObject(index);
+      LinearLayout fields = Ui.col(activity);
+      Ui.pad(activity, fields, 20, 16);
+      EditText name = Ui.edit(activity, "名称", slot.getString("name"));
+      name.setSingleLine(true);
+      name.setFilters(
+          new android.text.InputFilter[] {new android.text.InputFilter.LengthFilter(16)});
+      fields.addView(name);
+      Ui.gap(activity, fields, 12);
+      RadioGroup choices = new RadioGroup(activity);
+      int[] selected = {Arrays.asList(PaletteStore.IDS).indexOf(slot.getString("expression"))};
+      for (int i = 0; i < 6; i++) {
+        final int which = i;
+        RadioButton radio = new RadioButton(activity);
+        radio.setText(PaletteStore.NAMES[i]);
+        radio.setTextColor(Ui.INK);
+        radio.setButtonTintList(android.content.res.ColorStateList.valueOf(PaletteStore.COLORS[i]));
+        radio.setId(View.generateViewId());
+        radio.setMinHeight(Ui.dp(activity, 48));
+        choices.addView(radio);
+        radio.setChecked(i == selected[0]);
+        radio.setOnCheckedChangeListener(
+            (v, checked) -> {
+              if (checked) selected[0] = which;
+            });
+      }
+      fields.addView(choices);
+      AlertDialog dialog =
+          new AlertDialog.Builder(activity)
+              .setTitle("这格怎么表达")
+              .setView(fields)
+              .setNegativeButton("取消", null)
+              .setPositiveButton("保存", null)
+              .create();
+      dialog.setOnShowListener(
+          d ->
+              dialog
+                  .getButton(-1)
+                  .setOnClickListener(
+                      v -> {
+                        String value = name.getText().toString().trim();
+                        if (value.isEmpty()) {
+                          name.setError("取个名字");
+                          return;
+                        }
+                        dialog.getButton(-1).setEnabled(false);
+                        app.network.execute(
+                            () -> {
+                              try {
+                                store.save(snapshot, index, value, PaletteStore.IDS[selected[0]]);
+                                activity.runOnUiThread(
+                                    () -> {
+                                      dialog.dismiss();
+                                      nav.refresh();
+                                    });
+                              } catch (Exception e) {
+                                activity.runOnUiThread(
+                                    () -> {
+                                      dialog.getButton(-1).setEnabled(true);
+                                      Ui.toast(activity, e.getMessage());
+                                    });
+                              }
+                            });
+                      }));
+      dialog.show();
+    } catch (Exception e) {
+      Ui.toast(activity, "调色盘需要重新加载");
+    }
   }
 }

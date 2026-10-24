@@ -1,3 +1,4 @@
+import { Palettes } from './advisor/palette.mjs';
 import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -40,8 +41,9 @@ export async function createCloudServer({
   const ledger = new Ledger(db, cfg),
     accounts = new Accounts(db, ledger, cfg),
     invitations = new Invitations(db),
+    palettes = new Palettes(db, cfg),
     memory = new PersonalMemory(db, memoryModel, cfg),
-    jobs = new Jobs(db, ledger, models, cfg, memory),
+    jobs = new Jobs(db, ledger, models, cfg, memory, palettes),
     sync = new SyncService(db, ledger, cfg),
     admin = new Admin(db, ledger, cfg, models);
   await ledger.recover();
@@ -67,7 +69,7 @@ export async function createCloudServer({
         await db.query("SELECT 1");
         return json(res, {
           status: "ok",
-          version: "0.7.0-alpha.1",
+          version: "0.8.0-alpha.1",
           readiness: {
             account: true,
             asr: cfg.asrReady,
@@ -252,6 +254,9 @@ export async function createCloudServer({
             await jobs.submit(user, await jsonBody(req, 2600000)),
             202,
           );
+        if (method === 'GET' && route.startsWith('/v1/asr/requests/')) return json(res, await jobs.byRequest(user, route.slice('/v1/asr/requests/'.length)));
+        if (method === 'GET' && route === '/v1/advisor/palette') return json(res, await palettes.get(user.id));
+        if (method === 'POST' && route === '/v1/advisor/palette') return json(res, await palettes.set(user, await jsonBody(req, 12000)));
         if (method === 'GET' && route === '/v1/memory')
           return json(res, await memory.sync(user, Number(new URL(req.url, 'http://local').searchParams.get('after') || 0)));
         if (method === 'POST' && route === '/v1/memory')

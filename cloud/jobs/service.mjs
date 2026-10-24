@@ -1,10 +1,11 @@
+import { requestedSlots } from '../advisor/palette.mjs';
 import { modelInput } from "../models/text.mjs";
 import { unseal } from "../security.mjs";
 import { isUuid } from "../billing/ledger.mjs";
 import { requireValue, ServiceError } from "../http/errors.mjs";
 export class Jobs {
-  constructor(db, ledger, models, cfg, memory) {
-    Object.assign(this, { db, ledger, models, cfg, memory });
+  constructor(db, ledger, models, cfg, memory, palettes) {
+    Object.assign(this, { db, ledger, models, cfg, memory, palettes });
     this.images = new Map();
     this.controllers = new Map();
     this.running = 0;
@@ -37,6 +38,11 @@ export class Jobs {
       this.images.set(job.id, request.input.images);
     if (created) this.pump();
     return this.ledger.view(job);
+  }
+  async byRequest(user, id) {
+    requireValue(isUuid(id), 'INVALID_REQUEST', '请求标识无效');
+    const row = (await this.db.query("SELECT * FROM jobs WHERE user_id=$1 AND request_id=$2 AND kind='asr'", [user.id,id])).rows[0];
+    return row ? this.ledger.view(row) : { status: 'not_found' };
   }
   async get(user, id) {
     requireValue(isUuid(id), "INVALID_REQUEST", "任务标识无效");
@@ -104,7 +110,7 @@ export class Jobs {
       );
       const { result, provider } = await this.models.run(
         job.kind,
-        await this.memory.forTask(job.user_id, job.kind, input),
+        await this.taskInput(job.user_id, job.kind, input),
         images,
         controller.signal,
       );
@@ -127,6 +133,11 @@ export class Jobs {
       this.images.delete(job.id);
       this.controllers.delete(job.id);
     }
+  }
+  async taskInput(user, kind, input) {
+    const prepared = await this.memory.forTask(user, kind, input);
+    if (kind === 'advisor') prepared.slots = requestedSlots(await this.palettes.get(user), input.slotId);
+    return prepared;
   }
   async stop() {
     this.stopped = true;

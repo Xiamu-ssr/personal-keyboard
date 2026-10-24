@@ -1,0 +1,438 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T15:26:15.616Z",
+  "title": "Design System: 豆豆输入法",
+  "extensions": {
+    "colorMeta": {
+      "app-accent": {
+        "role": "primary",
+        "displayName": "App 浅蓝 / natural 身份色"
+      },
+      "app-tint": {
+        "role": "primary",
+        "displayName": "App 蓝灰容器"
+      },
+      "audio-start": {
+        "role": "secondary",
+        "displayName": "声纹青"
+      },
+      "audio-end": {
+        "role": "secondary",
+        "displayName": "声纹蓝"
+      },
+      "voice-backdrop-center": {
+        "role": "secondary",
+        "displayName": "既有语音蓝灰底材中心"
+      },
+      "slot-caring": {
+        "role": "tertiary",
+        "displayName": "体贴 / caring 身份色"
+      },
+      "slot-direct": {
+        "role": "tertiary",
+        "displayName": "直说 / direct 身份色"
+      },
+      "slot-playful": {
+        "role": "tertiary",
+        "displayName": "俏皮 / playful 身份色"
+      },
+      "slot-considered": {
+        "role": "tertiary",
+        "displayName": "周全 / considered 身份色"
+      },
+      "slot-witty": {
+        "role": "tertiary",
+        "displayName": "机智 / witty 身份色"
+      },
+      "brand-background": {
+        "role": "tertiary",
+        "displayName": "现有品牌资源底蓝"
+      },
+      "red": {
+        "role": "tertiary",
+        "displayName": "风险文字色"
+      },
+      "withdrawal-red": {
+        "role": "tertiary",
+        "displayName": "语音撤回红"
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "App 深灰底",
+        "tonalRamp": [
+          "#222222",
+          "#2c2c2c",
+          "#333333",
+          "#383838",
+          "#464646",
+          "#606060",
+          "#aaaaaa",
+          "#f4f4f4"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "卡片石墨面",
+        "tonalRamp": [
+          "#222222",
+          "#2c2c2c",
+          "#333333",
+          "#383838",
+          "#464646",
+          "#606060",
+          "#aaaaaa",
+          "#f4f4f4"
+        ]
+      },
+      "key": {
+        "role": "neutral",
+        "displayName": "字母与空格键灰",
+        "tonalRamp": [
+          "#222222",
+          "#2c2c2c",
+          "#333333",
+          "#383838",
+          "#464646",
+          "#606060",
+          "#aaaaaa",
+          "#f4f4f4"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "正文白",
+        "tonalRamp": [
+          "#222222",
+          "#2c2c2c",
+          "#333333",
+          "#383838",
+          "#464646",
+          "#606060",
+          "#aaaaaa",
+          "#f4f4f4"
+        ]
+      },
+      "sub": {
+        "role": "neutral",
+        "displayName": "辅助灰",
+        "tonalRamp": [
+          "#222222",
+          "#2c2c2c",
+          "#333333",
+          "#383838",
+          "#464646",
+          "#606060",
+          "#aaaaaa",
+          "#f4f4f4"
+        ]
+      },
+      "accent": {
+        "role": "neutral",
+        "displayName": "暖白动作"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "控件面",
+        "tonalRamp": [
+          "#222222",
+          "#2c2c2c",
+          "#333333",
+          "#383838",
+          "#464646",
+          "#606060",
+          "#aaaaaa",
+          "#f4f4f4"
+        ]
+      },
+      "selected": {
+        "role": "neutral",
+        "displayName": "选中灰",
+        "tonalRamp": [
+          "#222222",
+          "#2c2c2c",
+          "#333333",
+          "#383838",
+          "#464646",
+          "#606060",
+          "#aaaaaa",
+          "#f4f4f4"
+        ]
+      },
+      "keyboard": {
+        "role": "neutral",
+        "displayName": "键盘深灰底",
+        "tonalRamp": [
+          "#222222",
+          "#2c2c2c",
+          "#333333",
+          "#383838",
+          "#464646",
+          "#606060",
+          "#aaaaaa",
+          "#f4f4f4"
+        ]
+      },
+      "special-key": {
+        "role": "neutral",
+        "displayName": "功能键面",
+        "tonalRamp": [
+          "#222222",
+          "#2c2c2c",
+          "#333333",
+          "#383838",
+          "#464646",
+          "#606060",
+          "#aaaaaa",
+          "#f4f4f4"
+        ]
+      },
+      "hero": {
+        "role": "neutral",
+        "displayName": "练习与工具较亮面",
+        "tonalRamp": [
+          "#222222",
+          "#2c2c2c",
+          "#333333",
+          "#383838",
+          "#464646",
+          "#606060",
+          "#aaaaaa",
+          "#f4f4f4"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "分隔线",
+        "tonalRamp": [
+          "#222222",
+          "#2c2c2c",
+          "#333333",
+          "#383838",
+          "#464646",
+          "#606060",
+          "#aaaaaa",
+          "#f4f4f4"
+        ]
+      },
+      "ripple-white": {
+        "role": "neutral",
+        "displayName": "原生 ripple 白，保留 0x24 alpha"
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "App 页标题",
+        "purpose": "MainActivity.java:158–160；Ui.text 的 kern 和 sans 主题，明确 Typeface.BOLD。"
+      },
+      "title": {
+        "displayName": "Home 练习标题",
+        "purpose": "HomeScreen.java:25–26；实际粗体标题。"
+      },
+      "title-palette": {
+        "displayName": "调色盘标题",
+        "purpose": "HomeScreen.java:35–36；保留当前 21sp，不统一成另一个标题阶。"
+      },
+      "title-account": {
+        "displayName": "账户名称",
+        "purpose": "AccountSummary.java:27–28；账户身份。"
+      },
+      "title-panel": {
+        "displayName": "帮我回标题",
+        "purpose": "AdvisorController.java:277–278；明确粗体，不推广到所有 18sp 文本。"
+      },
+      "body-reply": {
+        "displayName": "回复与录音正文 / 槽位名",
+        "purpose": "AdvisorController.java:354–355；RecordingPanel.java:73–74；HomeScreen.java:58。行距按各组件单独实现。"
+      },
+      "field": {
+        "displayName": "原生编辑框",
+        "purpose": "Ui.java:91–101；未设置 kern、额外行距或项目自定义 focus ring。"
+      },
+      "body": {
+        "displayName": "共用按钮与设置行",
+        "purpose": "Ui.java:70–81,186；不编造默认字重数值。"
+      },
+      "label": {
+        "displayName": "标签与场景",
+        "purpose": "HomeScreen.java:95；KeyboardMenu.java:82；KeyboardView.java:131。"
+      },
+      "caption": {
+        "displayName": "状态文字",
+        "purpose": "RecordingPanel.java:81；DictationSurface.java:39–41；KeyboardView.java:167。"
+      },
+      "detail": {
+        "displayName": "次要资料",
+        "purpose": "Ui.java:189,195；默认字距，不继承 eyebrow helper。"
+      },
+      "nav-label": {
+        "displayName": "底部导航标签",
+        "purpose": "Ui.java:222；与上方 60×32dp 胶囊分开布局。"
+      },
+      "key-letter": {
+        "displayName": "单字母键",
+        "purpose": "KeyboardView.java:253；与同为 22sp 的粗体 Home 标题分开记录。"
+      },
+      "quota": {
+        "displayName": "账户可用额度",
+        "purpose": "AccountSummary.java:62–66；26sp 起始，原生 autosize 范围为 18–26sp、步长 1sp。"
+      }
+    },
+    "shadows": [
+      {
+        "name": "key-elevation",
+        "value": "0.8dp",
+        "purpose": "原生 View elevation；KeyboardView.java:257,368 与 VoiceSpaceKey.java:17。由 Android 生成阴影，不等同 CSS box-shadow。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "dictation-enter",
+        "value": "110ms",
+        "purpose": "KeyboardView.java:415–417；口述开始 alpha 0→1；受 ValueAnimator.areAnimatorsEnabled() 保护，没有项目显式 easing。"
+      },
+      {
+        "name": "arc-selection",
+        "value": "90ms",
+        "purpose": "ArcAction.java:26–28；选中 scaleX/scaleY 1→1.025，取消回 1；未显式检查系统动画开关，不扩展为全局动效规则。"
+      },
+      {
+        "name": "speech-level-smoothing",
+        "value": "0.24",
+        "purpose": "SpeechWaveform.java:40；每次绘制 drawnLevel += (level−drawnLevel)×0.24，是测量趋近系数而非时长或 easing；无虚构峰值。"
+      }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "普通按钮",
+      "kind": "button",
+      "refersTo": "button-neutral",
+      "description": "Ui.java:70–81,150–154。minHeight 44dp；样本 hover 原色，focus/active 仅近似原生 ripple 白，不新增状态 token。",
+      "html": "<button type=\"button\" class=\"ds-button-neutral\">查看录音</button>",
+      "css": ".ds-button-neutral{font-family:sans-serif;font-feature-settings:\"kern\";font-size:15px;min-height:44px;padding:8px 14px;border:0;border-radius:12px;background:#333333;color:#f4f4f4;white-space:nowrap;text-overflow:ellipsis;}.ds-button-neutral{position:relative;overflow:hidden;}.ds-button-neutral::after{content:\"\";position:absolute;inset:0;border-radius:inherit;background:transparent;pointer-events:none;}.ds-button-neutral:hover{background:#333333;}.ds-button-neutral:focus-visible{outline:none;}.ds-button-neutral:active::after,.ds-button-neutral:focus-visible::after{background:#ffffff24;}"
+    },
+    {
+      "name": "暖白主按钮",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ui.java:84–88；继承 Ui.button 的 minHeight 44dp。RecordingPanel.java:117–125 的完成后动作使用此变体；实际调用可分配 48dp 高。",
+      "html": "<button type=\"button\" class=\"ds-button-primary\">返回键盘</button>",
+      "css": ".ds-button-primary{font-family:sans-serif;font-feature-settings:\"kern\";font-size:15px;min-height:44px;padding:8px 14px;border:0;border-radius:14px;background:#f1f0ee;color:#222222;white-space:nowrap;text-overflow:ellipsis;}.ds-button-primary{position:relative;overflow:hidden;}.ds-button-primary::after{content:\"\";position:absolute;inset:0;border-radius:inherit;background:transparent;pointer-events:none;}.ds-button-primary:hover{background:#f1f0ee;}.ds-button-primary:focus-visible{outline:none;}.ds-button-primary:active::after,.ds-button-primary:focus-visible::after{background:#ffffff24;}"
+    },
+    {
+      "name": "Home 练习按钮",
+      "kind": "button",
+      "refersTo": "button-practice",
+      "description": "HomeScreen.java:131–144。继承共用按钮，实际高 50dp；样本只展示按钮核心，不收录源码尾部的字符箭头为图标惯例。",
+      "html": "<button type=\"button\" class=\"ds-button-practice\">聊天</button>",
+      "css": ".ds-button-practice{font-family:sans-serif;font-feature-settings:\"kern\";font-size:15px;min-height:44px;height:50px;padding:8px 14px;border:0;border-radius:14px;background:#30394b;color:#a9c4ff;white-space:nowrap;text-overflow:ellipsis;}.ds-button-practice{position:relative;overflow:hidden;}.ds-button-practice::after{content:\"\";position:absolute;inset:0;border-radius:inherit;background:transparent;pointer-events:none;}.ds-button-practice:hover{background:#30394b;}.ds-button-practice:focus-visible{outline:none;}.ds-button-practice:active::after,.ds-button-practice:focus-visible::after{background:#ffffff24;}"
+    },
+    {
+      "name": "原生编辑框",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Ui.java:91–102。minHeight 52dp，hint 为 SUB；没有独立 focus/error/disabled 描边定义。浏览器默认焦点效果不作为 Android token。",
+      "html": "<input type=\"text\" class=\"ds-field\" aria-label=\"名称\" placeholder=\"名称\">",
+      "css": ".ds-field{font-family:sans-serif;font-size:16px;min-height:52px;box-sizing:border-box;padding:12px 14px;border:0;border-radius:12px;background:#2c2c2c;color:#f4f4f4;}.ds-field::placeholder{color:#aaaaaa;opacity:1;}.ds-field:hover,.ds-field:focus-visible,.ds-field:active{background:#2c2c2c;border:0;outline:none;}"
+    },
+    {
+      "name": "共用石墨卡片",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Ui.java:105–109 的卡片基类。这里只展示其面、圆角与 padding；Home 双预览实际覆写为 12dp，账户摘要为 20dp，见 DESIGN.md。",
+      "html": "<article class=\"ds-card\"><div class=\"ds-card-label\">我的文风</div></article>",
+      "css": ".ds-card{padding:16px;background:#2c2c2c;border-radius:18px;}.ds-card-label{font-family:sans-serif;font-feature-settings:\"kern\";font-size:15px;color:#f4f4f4;}"
+    },
+    {
+      "name": "四入口底部导航",
+      "kind": "nav",
+      "refersTo": "nav-pill-selected",
+      "description": "MainActivity.java:197–212；Ui.java:211–229,283–296,362–396。refersTo 仅对应选中胶囊；整项高 58dp，文字另排。内联 SVG 翻译已有 Canvas 几何，没有调用图标字体。",
+      "html": "<nav class=\"ds-nav\" aria-label=\"主导航\"><button type=\"button\" class=\"ds-nav-item ds-nav-selected\" aria-current=\"page\"><span class=\"ds-nav-pill\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 11L12 3L21 11V21H15V14H9V21H3Z\"/></svg></span><span class=\"ds-nav-label\">输入</span></button><button type=\"button\" class=\"ds-nav-item\"><span class=\"ds-nav-pill\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"5\" y=\"3\" width=\"15\" height=\"18\" rx=\"2\"/><path d=\"M9 3V21M12 8H17M12 12H17\"/></svg></span><span class=\"ds-nav-label\">记忆</span></button><button type=\"button\" class=\"ds-nav-item\"><span class=\"ds-nav-pill\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"10\" cy=\"7\" r=\"4\"/><path d=\"M3 19A7 6 0 0 1 17 19M18 8H22M18 12H22\"/></svg></span><span class=\"ds-nav-label\">人物</span></button><button type=\"button\" class=\"ds-nav-item\"><span class=\"ds-nav-pill\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M20 12L23 12\"/><path d=\"M16 18.928203230275507L17.5 21.526279441628823\"/><path d=\"M8.000000000000002 18.92820323027551L6.500000000000003 21.526279441628827\"/><path d=\"M4 12.000000000000002L1 12.000000000000002\"/><path d=\"M7.9999999999999964 5.071796769724492L6.499999999999995 2.473720558371177\"/><path d=\"M16 5.071796769724491L17.5 2.473720558371175\"/></svg></span><span class=\"ds-nav-label\">我的</span></button></nav>",
+      "css": ".ds-nav{display:flex;padding:8px 12px;background:#2c2c2c;}.ds-nav-item{font-family:sans-serif;font-feature-settings:\"kern\";font-size:11px;flex:1;min-width:0;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0;border:0;border-radius:18px;background:transparent;color:#aaaaaa;}.ds-nav-pill{display:flex;align-items:center;justify-content:center;width:60px;height:32px;border-radius:20px;background:transparent;color:#aaaaaa;}.ds-nav-selected .ds-nav-pill{background:#464646;color:#f1f0ee;}.ds-nav-selected .ds-nav-label{color:#f4f4f4;}.ds-nav-item{position:relative;overflow:hidden;}.ds-nav-item::after{content:\"\";position:absolute;inset:0;border-radius:inherit;background:transparent;pointer-events:none;}.ds-nav-item:hover{background:transparent;}.ds-nav-item:focus-visible{outline:none;}.ds-nav-item:active::after,.ds-nav-item:focus-visible::after{background:#ffffff24;}"
+    },
+    {
+      "name": "六格表达槽位",
+      "kind": "chip",
+      "refersTo": "chip-palette",
+      "description": "HomeScreen.java:40–76；PaletteStore.java:9–15。2×3、gap 8dp、点 14dp；样本为 fontScale 1 的 72dp 行高。Android 实际行高随 max(1,fontScale) 增长，样本不伪造浏览器字体设置为原生验收。",
+      "html": "<div class=\"ds-palette\"><button type=\"button\" class=\"ds-palette-chip\" aria-label=\"编辑自然\"><span class=\"ds-palette-dot\" style=\"background:#a9c4ff\" aria-hidden=\"true\"></span><span class=\"ds-palette-name\">自然</span></button><button type=\"button\" class=\"ds-palette-chip\" aria-label=\"编辑体贴\"><span class=\"ds-palette-dot\" style=\"background:#e6b5a6\" aria-hidden=\"true\"></span><span class=\"ds-palette-name\">体贴</span></button><button type=\"button\" class=\"ds-palette-chip\" aria-label=\"编辑直说\"><span class=\"ds-palette-dot\" style=\"background:#a7bce3\" aria-hidden=\"true\"></span><span class=\"ds-palette-name\">直说</span></button><button type=\"button\" class=\"ds-palette-chip\" aria-label=\"编辑俏皮\"><span class=\"ds-palette-dot\" style=\"background:#e3c77d\" aria-hidden=\"true\"></span><span class=\"ds-palette-name\">俏皮</span></button><button type=\"button\" class=\"ds-palette-chip\" aria-label=\"编辑周全\"><span class=\"ds-palette-dot\" style=\"background:#baaada\" aria-hidden=\"true\"></span><span class=\"ds-palette-name\">周全</span></button><button type=\"button\" class=\"ds-palette-chip\" aria-label=\"编辑机智\"><span class=\"ds-palette-dot\" style=\"background:#99c5d1\" aria-hidden=\"true\"></span><span class=\"ds-palette-name\">机智</span></button></div>",
+      "css": ".ds-palette{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}.ds-palette-chip{font-family:sans-serif;font-feature-settings:\"kern\";font-size:17px;min-width:0;height:72px;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:8px;padding:10px 14px;border:0;border-radius:18px;background:#2c2c2c;color:#f4f4f4;text-align:left;}.ds-palette-dot{display:block;flex-shrink:0;width:14px;height:14px;border-radius:8px;}.ds-palette-name{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;}.ds-palette-chip{position:relative;overflow:hidden;}.ds-palette-chip::after{content:\"\";position:absolute;inset:0;border-radius:inherit;background:transparent;pointer-events:none;}.ds-palette-chip:hover{background:#2c2c2c;}.ds-palette-chip:focus-visible{outline:none;}.ds-palette-chip:active::after,.ds-palette-chip:focus-visible::after{background:#ffffff24;}"
+    },
+    {
+      "name": "字母键行切片",
+      "kind": "custom",
+      "refersTo": "key-letter",
+      "description": "KeyboardView.java:19,93,184,235–257；KeyboardService.java:250–256。样本高度只由 (名义286dp − 根底padding4dp − 顶栏48dp) / 四行推导，使用 density 1、无额外系统 inset；不是新固定键高。elevation 只在 extensions.shadows 记录，不编造 CSS 投影。",
+      "html": "<div class=\"ds-key-row\"><button type=\"button\" class=\"ds-key-letter\">q</button><button type=\"button\" class=\"ds-key-letter\">w</button><button type=\"button\" class=\"ds-key-letter\">e</button><button type=\"button\" class=\"ds-key-letter\">r</button><button type=\"button\" class=\"ds-key-letter\">t</button><button type=\"button\" class=\"ds-key-letter\">y</button><button type=\"button\" class=\"ds-key-letter\">u</button><button type=\"button\" class=\"ds-key-letter\">i</button><button type=\"button\" class=\"ds-key-letter\">o</button><button type=\"button\" class=\"ds-key-letter\">p</button></div>",
+      "css": ".ds-key-row{height:calc((286px - 4px - 48px) / 4);display:flex;align-items:stretch;padding:0 3px;background:#222222;}.ds-key-letter{font-family:sans-serif;font-feature-settings:\"kern\";font-size:22px;flex:1;min-width:0;align-self:stretch;margin:3.5px 2.5px;padding:0;border:0;border-radius:7px;background:#606060;color:#f4f4f4;text-align:center;}.ds-key-letter{position:relative;overflow:hidden;}.ds-key-letter::after{content:\"\";position:absolute;inset:0;border-radius:inherit;background:transparent;pointer-events:none;}.ds-key-letter:hover{background:#606060;}.ds-key-letter:focus-visible{outline:none;}.ds-key-letter:active::after,.ds-key-letter:focus-visible::after{background:#ffffff24;}"
+    },
+    {
+      "name": "口述声纹与既有蓝灰底",
+      "kind": "custom",
+      "refersTo": "speech-waveform",
+      "description": "SpeechWaveform.java:26–59；DictationSurface.java:110–144。20 根静音基线柱，位于父容器 33%/13%，占 34%/10%；背景半径为 max(width,height)×0.65。样本只示底材与测量器，不构造语音手势新布局。3px 柱宽对应手机宽度；窄容器继续由 CSS min 限制，原生以 Canvas 公式为准。",
+      "html": "<div class=\"ds-speech\" role=\"img\" aria-label=\"口述声纹静音基线，非实时录音\"><div class=\"ds-speech-backdrop\"></div><svg class=\"ds-speech-meter\" aria-hidden=\"true\"><defs><linearGradient id=\"ds-speech-gradient\" gradientUnits=\"userSpaceOnUse\" x1=\"0\" y1=\"0\" x2=\"100%\" y2=\"0\"><stop offset=\"0\" stop-color=\"#14beca\"/><stop offset=\"1\" stop-color=\"#4c80ff\"/></linearGradient></defs><rect class=\"ds-speech-bar\" x=\"2.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"7.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"12.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"17.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"22.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"27.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"32.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"37.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"42.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"47.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"52.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"57.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"62.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"67.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"72.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"77.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"82.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"87.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"92.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/><rect class=\"ds-speech-bar\" x=\"97.5%\" y=\"50%\" width=\"3\" height=\"4\" rx=\"1.5\" transform=\"translate(-1.5,-2)\" fill=\"url(#ds-speech-gradient)\"/></svg></div>",
+      "css": ".ds-speech{position:relative;container-type:size;isolation:isolate;width:100%;height:286px;overflow:hidden;background:#222222;}.ds-speech-backdrop{position:absolute;inset:0;background:radial-gradient(circle max(65cqw,65cqh) at 50% 60%,#2a3843 0%,#222222 100%);}.ds-speech-meter{position:absolute;left:33%;top:13%;width:34%;height:10%;}.ds-speech-bar{width:min(3px,2.5%);}"
+    },
+    {
+      "name": "录音笔声纹",
+      "kind": "custom",
+      "refersTo": "recording-waveform",
+      "description": "RecordingPanel.java:79–80；RecordingWaveform.java:11,18–37。64×36dp，13 个真实音量样本、2dp 圆头线；这里 value=0，半高 1dp，不用循环动画伪造说话。",
+      "html": "<svg class=\"ds-recording-waveform\" width=\"64\" height=\"36\" viewBox=\"0 0 64 36\" role=\"img\" aria-label=\"录音笔声纹静音基线，非实时录音\"><defs><linearGradient id=\"ds-recording-gradient\" gradientUnits=\"userSpaceOnUse\" x1=\"0\" y1=\"0\" x2=\"64\" y2=\"0\"><stop offset=\"0\" stop-color=\"#14beca\"/><stop offset=\"1\" stop-color=\"#4c80ff\"/></linearGradient></defs><g stroke=\"url(#ds-recording-gradient)\" stroke-width=\"2\" stroke-linecap=\"round\"><line x1=\"6.4\" y1=\"17\" x2=\"6.4\" y2=\"19\"/><line x1=\"10.666666666666666\" y1=\"17\" x2=\"10.666666666666666\" y2=\"19\"/><line x1=\"14.933333333333334\" y1=\"17\" x2=\"14.933333333333334\" y2=\"19\"/><line x1=\"19.2\" y1=\"17\" x2=\"19.2\" y2=\"19\"/><line x1=\"23.466666666666665\" y1=\"17\" x2=\"23.466666666666665\" y2=\"19\"/><line x1=\"27.733333333333334\" y1=\"17\" x2=\"27.733333333333334\" y2=\"19\"/><line x1=\"32\" y1=\"17\" x2=\"32\" y2=\"19\"/><line x1=\"36.266666666666666\" y1=\"17\" x2=\"36.266666666666666\" y2=\"19\"/><line x1=\"40.53333333333333\" y1=\"17\" x2=\"40.53333333333333\" y2=\"19\"/><line x1=\"44.8\" y1=\"17\" x2=\"44.8\" y2=\"19\"/><line x1=\"49.06666666666667\" y1=\"17\" x2=\"49.06666666666667\" y2=\"19\"/><line x1=\"53.333333333333336\" y1=\"17\" x2=\"53.333333333333336\" y2=\"19\"/><line x1=\"57.6\" y1=\"17\" x2=\"57.6\" y2=\"19\"/></g></svg>",
+      "css": ".ds-recording-waveform{display:block;width:64px;height:36px;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "熟悉的灰阶键盘，克制的声音点色",
+    "overview": "深灰底、逐级提亮的石墨面、正文白与暖白动作构成共同语言。豆包输入法的熟悉键位与语音手势是已确认的参照；品牌通过精确的布局、清楚的动作和声音反馈出现。App 的浅蓝只标记练习入口、选项与个人资料中的重点；键盘保持上一版灰阶。\n\n青到蓝的线性渐变用于真实声纹；口述面板保留既有蓝灰径向底色。两者分别是声音读数和原有底材，不把声纹配色扩展成通用按钮或卡片渐变。字体服从 Android 系统的 `sans` 与字号设置，卡片主要靠面色、间隔与圆角分层。",
+    "keyCharacteristics": [
+      "灰阶键盘与暖白主动作，保留既有蓝灰语音底色。",
+      "App 浅蓝点缀与六格表达身份色，各自限定用途。",
+      "系统 sans、原生涟漪、圆角容器和按实际组件取值的密度。",
+      "内容与明确动作优先，只记录已实现的组件。"
+    ],
+    "rules": [
+      {
+        "name": "The Grayscale Keyboard Rule",
+        "body": "普通键盘与键盘内的录音、帮我回动作保持灰阶；既有蓝灰语音底色和真实声纹是已授权的局部例外。",
+        "section": "colors"
+      },
+      {
+        "name": "The Scoped Accent Rule",
+        "body": "App 浅蓝、表达身份色与声纹端点按上述用途使用；不从局部颜色推导全屏品牌底色或新增渐变组件。",
+        "section": "colors"
+      },
+      {
+        "name": "The Native Metrics Rule",
+        "body": "普通文字保持 sp 与主题 sans，显式粗体仅记录代码中的 BOLD；不把 Canvas 的 dp 文字或未设置的默认值编成字体规范。",
+        "section": "typography"
+      },
+      {
+        "name": "The Measured Gutter Rule",
+        "body": "共用布局优先复用源码中的间隔；方向契约的 8dp 沟槽不是所有容器的实测统一值，帮我回 sheet 的 6dp inset 作为差异保留。",
+        "section": "layout"
+      },
+      {
+        "name": "The Tonal Surface Rule",
+        "body": "卡片依靠已实现的面色与间隔分层；键盘只保留源码明确设置的原生轻 elevation，不推广新的阴影配方。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** 沿用灰阶键盘、既有蓝灰口述底色与青蓝真实声纹。",
+      "**Do** 将 App 浅蓝、槽位身份色、品牌图形底色按各自已实现的用途使用。",
+      "**Do** 从 frontmatter 取实际 dp/sp 值，按组件区分 padding、圆角、视觉尺寸与点击布局。",
+      "**Do** 保持系统 sans 与原生 inset、涟漪和可访问性标签；以源码与 manifest 中的原生截图复核外观。"
+    ],
+    "donts": [
+      "**Don't** 新增尚未实现的键盘模式、控件变体、字体、色阶、统一间距基数或网页断点。",
+      "**Don't** 将声纹渐变用于普通键盘按钮、卡片或新的全屏品牌底色。",
+      "**Don't** 把字符箭头、eyebrow helper、局部硬编码、dp Canvas 文字或较小点击布局立为未来界面的惯例。",
+      "**Don't** 用视觉 token 文档、UI fixture 或 sidecar 浏览器样本宣称 F1 模型语义、真实学习或真机体验已验收。",
+      ""
+    ]
+  }
+}

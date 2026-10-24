@@ -19,6 +19,16 @@ public final class PinyinEngine {
   private final String dictionaryPath, userPath;
   private final InitialLexicon initials;
 
+  public interface Lexicon {
+    List<Word> lookup(String input, int limit);
+  }
+
+  private Lexicon lexicon;
+
+  public synchronized void lexicon(Lexicon value) {
+    lexicon = value;
+  }
+
   public static final class Word {
     public final String text, code;
     public final double score;
@@ -66,6 +76,13 @@ public final class PinyinEngine {
               (consumed.equals(code) ? 300 - i : 145 - i)
                   + learnedBoost(learned.getOrDefault(text, 0))));
     }
+    if (lexicon != null)
+      for (Word w : lexicon.lookup(code, limit)) {
+        Word candidate =
+            new Word(w.text, w.code, w.score + learnedBoost(learned.getOrDefault(w.text, 0)));
+        Word old = found.get(w.text);
+        if (old == null || old.score < candidate.score) found.put(w.text, candidate);
+      }
     int initialRank = 0;
     for (InitialLexicon.Entry entry : initials.lookup(code)) {
       double score =
@@ -96,7 +113,7 @@ public final class PinyinEngine {
   }
 
   public synchronized void accept(String code, String word) {
-    nativeLearn(code, word);
+    if (word.codePoints().allMatch(c -> c >= 0x3400 && c <= 0x9fff)) nativeLearn(code, word);
   }
 
   public synchronized void clearLearning() {

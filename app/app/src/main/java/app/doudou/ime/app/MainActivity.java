@@ -8,6 +8,7 @@ import android.widget.*;
 import app.doudou.ime.BuildConfig;
 import app.doudou.ime.design.Ui;
 import app.doudou.ime.home.HomeScreen;
+import app.doudou.ime.memory.MemoryRefresh;
 import app.doudou.ime.memory.MemoryScreen;
 import app.doudou.ime.people.PeopleScreen;
 import app.doudou.ime.settings.SettingsScreen;
@@ -22,6 +23,14 @@ public final class MainActivity extends Activity implements Navigator {
   private MemoryScreen memory;
   private PeopleScreen people;
   private SettingsScreen settings;
+  private ScrollView contentScroll;
+  private final Runnable memoryChanged =
+      () -> {
+        if (isFinishing() || page.equals("account") || page.equals("setup")) return;
+        int y = contentScroll == null ? 0 : contentScroll.getScrollY();
+        render();
+        contentScroll.post(() -> contentScroll.scrollTo(0, y));
+      };
   private app.doudou.ime.account.AccountScreen account;
   private app.doudou.ime.setup.SetupScreen setup;
 
@@ -36,7 +45,7 @@ public final class MainActivity extends Activity implements Navigator {
     people = new PeopleScreen(this, app, this);
     settings = new SettingsScreen(this, app, this);
     account = new app.doudou.ime.account.AccountScreen(this, app, this);
-    setup = new app.doudou.ime.setup.SetupScreen(this,app,this);
+    setup = new app.doudou.ime.setup.SetupScreen(this, app, this);
     if (state != null) {
       page = state.getString("page", "home");
       person = state.getLong("person");
@@ -44,14 +53,24 @@ public final class MainActivity extends Activity implements Navigator {
     }
     String requested = getIntent().getStringExtra("page");
     if (requested != null && !requested.isEmpty()) page = requested;
-    else if(state==null && !app.prefs().getBoolean("setupComplete",false))page="setup";
+    else if (state == null && !app.prefs().getBoolean("setupComplete", false)) page = "setup";
     render();
   }
 
   @Override
   protected void onResume() {
     super.onResume();
-    if (app != null) render();
+    if (app != null) {
+      render();
+      app.personalization.observers.add(memoryChanged);
+      MemoryRefresh.start(app);
+    }
+  }
+
+  @Override
+  protected void onPause() {
+    if (app != null) app.personalization.observers.remove(memoryChanged);
+    super.onPause();
   }
 
   @Override
@@ -90,14 +109,18 @@ public final class MainActivity extends Activity implements Navigator {
   }
 
   private boolean settingsDetail() {
-    return java.util.Arrays.asList("input-settings", "data-settings", "permissions", "about").contains(page);
+    return page.equals("about");
   }
 
-  @Override public void onBackPressed() {
+  @Override
+  public void onBackPressed() {
     if (page.equals("person")) open("people", 0);
-    else if (settingsDetail() || page.equals("account")) open(app.prefs().getBoolean("setupComplete",false) ? "settings" : "setup", 0);
-    else if(page.equals("setup")){app.prefs().edit().putBoolean("setupComplete",true).apply();open("home",0);}
-    else if (!page.equals("home")) open("home", 0);
+    else if (settingsDetail() || page.equals("account"))
+      open(app.prefs().getBoolean("setupComplete", false) ? "settings" : "setup", 0);
+    else if (page.equals("setup")) {
+      app.prefs().edit().putBoolean("setupComplete", true).apply();
+      open("home", 0);
+    } else if (!page.equals("home")) open("home", 0);
     else super.onBackPressed();
   }
 
@@ -108,24 +131,36 @@ public final class MainActivity extends Activity implements Navigator {
     Ui.pad(this, heading, 20, 10);
     if (page.equals("person") || page.equals("account") || settingsDetail())
       heading.addView(
-          Ui.icon(this, "返回", () -> open(page.equals("person") ? "people" : app.prefs().getBoolean("setupComplete",false) ? "settings" : "setup", 0)),
+          Ui.icon(
+              this,
+              "返回",
+              () ->
+                  open(
+                      page.equals("person")
+                          ? "people"
+                          : app.prefs().getBoolean("setupComplete", false) ? "settings" : "setup",
+                      0)),
           new LinearLayout.LayoutParams(Ui.dp(this, 36), Ui.dp(this, 48)));
     String title =
-        page.equals("setup") ? "欢迎用豆豆" : page.equals("home")
-            ? "豆豆输入法"
-            : page.equals("memory")
-                ? "我的记忆"
-                : page.equals("people")
-                    ? "人物关系"
-                    : page.equals("person") ? "人物资料" : page.equals("account") ? "账户与权益"
-            : page.equals("input-settings") ? "语音与键盘" : page.equals("data-settings") ? "数据与隐私"
-            : page.equals("permissions") ? "系统权限" : page.equals("about") ? "关于豆豆" : "我的";
+        page.equals("setup")
+            ? "欢迎用豆豆"
+            : page.equals("home")
+                ? "豆豆输入法"
+                : page.equals("memory")
+                    ? "我的记忆"
+                    : page.equals("people")
+                        ? "人物关系"
+                        : page.equals("person")
+                            ? "人物资料"
+                            : page.equals("account")
+                                ? "账户与权益"
+                                : page.equals("about") ? "关于豆豆" : "我的";
     TextView label = Ui.text(this, title, 28, Ui.INK);
     label.setTypeface(null, android.graphics.Typeface.BOLD);
     heading.addView(label, new LinearLayout.LayoutParams(0, Ui.dp(this, 54), 1));
     label.setGravity(Gravity.CENTER_VERTICAL);
     if (page.equals("home")) {
-      TextView mark = Ui.text(this, BuildConfig.VERSION_NAME.split("-", 2)[0], 11, Ui.ACCENT);
+      TextView mark = Ui.text(this, BuildConfig.VERSION_NAME.split("-", 2)[0], 11, Ui.APP_ACCENT);
       Ui.pad(this, mark, 10, 6);
       mark.setBackground(Ui.bg(this, Ui.SELECTED, 20));
       mark.setOnClickListener(v -> open("about", 0));
@@ -134,6 +169,7 @@ public final class MainActivity extends Activity implements Navigator {
     }
     root.addView(heading);
     ScrollView scroll = new ScrollView(this);
+    contentScroll = scroll;
     scroll.setFillViewport(true);
     scroll.setClipToPadding(false);
     scroll.setPadding(Ui.dp(this, 20), Ui.dp(this, 4), Ui.dp(this, 20), Ui.dp(this, 10));
@@ -141,17 +177,23 @@ public final class MainActivity extends Activity implements Navigator {
     scroll.addView(body);
     root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
     if (page.equals("home")) home.render(body);
-    else if(page.equals("setup"))setup.render(body);
+    else if (page.equals("setup")) setup.render(body);
     else if (page.equals("memory")) memory.render(body);
     else if (page.equals("people") || page.equals("person")) {
       people.person(person);
       people.render(body);
     } else if (page.equals("account")) account.render(body);
-    else { settings.page(page); settings.render(body); }
+    else {
+      settings.page(page);
+      settings.render(body);
+    }
     notice = Ui.col(this);
     Ui.pad(this, notice, 20, 0);
     root.addView(notice);
-    if(page.equals("setup")){Ui.content(this,root);return;}
+    if (page.equals("setup")) {
+      Ui.content(this, root);
+      return;
+    }
     root.addView(Ui.divider(this));
     LinearLayout nav = Ui.row(this);
     nav.setBackgroundColor(Ui.PANEL);
@@ -182,7 +224,9 @@ public final class MainActivity extends Activity implements Navigator {
   @Override
   public void onRequestPermissionsResult(int request, String[] names, int[] grants) {
     super.onRequestPermissionsResult(request, names, grants);
-    for(String name:names)if(name.equals(android.Manifest.permission.RECORD_AUDIO))app.prefs().edit().putBoolean("microphoneRequested",true).apply();
+    for (String name : names)
+      if (name.equals(android.Manifest.permission.RECORD_AUDIO))
+        app.prefs().edit().putBoolean("microphoneRequested", true).apply();
     render();
   }
 }

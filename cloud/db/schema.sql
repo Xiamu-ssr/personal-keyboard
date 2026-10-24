@@ -27,3 +27,12 @@ ALTER TABLE memory_work ADD COLUMN IF NOT EXISTS attempts integer NOT NULL DEFAU
 CREATE TABLE IF NOT EXISTS invitations(id uuid PRIMARY KEY,code_hash text UNIQUE NOT NULL,label text NOT NULL DEFAULT '',revoked boolean NOT NULL DEFAULT false,created_at timestamptz NOT NULL DEFAULT now(),expires_at timestamptz NOT NULL,used_at timestamptz,used_by uuid REFERENCES users(id));
 CREATE TABLE IF NOT EXISTS auth_attempts(action text NOT NULL,ip_hash text NOT NULL,subject_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
 CREATE INDEX IF NOT EXISTS auth_attempts_throttle ON auth_attempts(action,created_at DESC);
+
+CREATE TABLE IF NOT EXISTS advisor_palettes (
+ user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+ version bigint NOT NULL, body_cipher text NOT NULL
+);
+CREATE TABLE IF NOT EXISTS palette_receipts (
+ user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+ request_id uuid NOT NULL, payload_hash text NOT NULL, PRIMARY KEY(user_id,request_id)
+);

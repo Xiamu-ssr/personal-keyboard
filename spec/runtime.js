@@ -440,7 +440,7 @@
         (p.prompt
           ? section(
               "提示词正文",
-              `<p class="prompt-text">${esc(prompts.get(p.prompt).system)}</p>`,
+              `<p class="prompt-text">${esc(prompts.get(p.prompt).system + (prompts.get(p.prompt).requestTemplate ? '\n\n请求末尾\n' + Object.entries(prompts.get(p.prompt).requestTemplate).map(([part, text]) => `${part}: ${text}`).join('\n') : ''))}</p>`,
             )
           : ""),
       "数据卡片 / #" + p.sequence,

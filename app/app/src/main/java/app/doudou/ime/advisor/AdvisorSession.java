@@ -16,7 +16,7 @@ public final class AdvisorSession {
     CANCELLED
   }
 
-  public static final int MAX_PAGES = 3;
+  public static final int MAX_PAGES = 2;
   public Stage stage = Stage.IDLE;
   public boolean retryCapture;
   public long generation;
@@ -32,7 +32,7 @@ public final class AdvisorSession {
     historyId = "";
     images.clear();
     error = "";
-    retryCapture=false;
+    retryCapture = false;
     stage = Stage.RESIZING;
     return ++revision;
   }
@@ -53,7 +53,7 @@ public final class AdvisorSession {
   }
 
   public void image(String jpeg, boolean earlier) {
-    if (images.size() >= MAX_PAGES) throw new IllegalArgumentException("最多补充三屏");
+    if (images.size() >= MAX_PAGES) throw new IllegalArgumentException("最多两屏");
     images.add(earlier ? 0 : images.size(), jpeg);
     error = "";
     stage = Stage.READY;
@@ -80,7 +80,7 @@ public final class AdvisorSession {
   }
 
   public void fail(String why) {
-    retryCapture=stage==Stage.RESIZING || stage==Stage.CAPTURING || stage==Stage.READING;
+    retryCapture = stage == Stage.RESIZING || stage == Stage.CAPTURING || stage == Stage.READING;
     error = why;
     stage = Stage.ERROR;
   }

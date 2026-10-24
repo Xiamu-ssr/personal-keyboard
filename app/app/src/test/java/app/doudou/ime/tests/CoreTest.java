@@ -228,16 +228,29 @@ public class CoreTest {
   @Test
   public void backRestoresExactReplyStyleWithoutMutation() {
     ReplyHistory h = new ReplyHistory();
-    h.accept(Arrays.asList("a", "b", "c"), "", false, "first-evidence");
-    h.accept(Arrays.asList("d", "e", "f"), "温和", true, "next-evidence");
-    h.accept(Arrays.asList("g", "h", "i"), "温和", true, "next-evidence");
+    List<ReplyHistory.Choice> first = new ArrayList<>();
+    for (int i = 1; i <= 6; i++) first.add(new ReplyHistory.Choice("slot" + i, "表达" + i, "a" + i));
+    h.accept(first, "first-evidence");
+    h.accept(
+        Arrays.asList(
+            new ReplyHistory.Choice("slot2", "体贴", "d"),
+            new ReplyHistory.Choice("slot2", "体贴", "e"),
+            new ReplyHistory.Choice("slot2", "体贴", "f")),
+        "next-evidence");
     h.back();
-    assertEquals("d", h.replies().get(0));
-    assertEquals("温和", h.style());
-    h.back();
-    assertEquals("a", h.replies().get(0));
+    assertEquals("a1", h.choices().get(0).text);
+    assertEquals(6, h.choices().size());
     assertEquals("first-evidence", h.messages());
-    assertEquals("", h.style());
+    assertTrue(h.canForward());
+    h.forward();
+    assertEquals("d", h.choices().get(0).text);
+    assertEquals("体贴", h.choices().get(0).name);
+    h.back();
+    h.accept(first, "third-page");
+    h.back();
+    assertEquals("d", h.choices().get(0).text);
+    h.back();
+    assertEquals("a1", h.choices().get(0).text);
     assertFalse(h.canBack());
   }
 
@@ -245,15 +258,14 @@ public class CoreTest {
   public void screenshotLimitDoesNotDiscardEarlierScreens() {
     AdvisorSession a = new AdvisorSession();
     a.begin(1, "chat");
-    a.image("one", false);
-    a.image("two", false);
-    a.image("three", false);
+    a.image("later", false);
+    a.image("earlier", true);
     try {
-      a.image("four", false);
+      a.image("third", true);
       fail();
     } catch (IllegalArgumentException expected) {
     }
-    assertEquals(Arrays.asList("one", "two", "three"), a.images());
+    assertEquals(Arrays.asList("earlier", "later"), a.images());
   }
 
   @Test

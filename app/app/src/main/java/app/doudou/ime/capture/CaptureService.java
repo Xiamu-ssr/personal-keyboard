@@ -16,31 +16,88 @@ public final class CaptureService extends AccessibilityService {
     void complete(Bitmap image, String error);
   }
 
-  public interface Scrolled { void complete(boolean success); }
+  public interface Scrolled {
+    void complete(boolean success);
+  }
 
   /** A downward finger stroke reveals earlier chat, wholly above the shrunken IME. */
   public static void earlier(int keyboardTop, Scrolled callback) {
-    CaptureService service=current;
-    if(service==null){callback.complete(false);return;}
-    float width=service.getResources().getDisplayMetrics().widthPixels;
-    Path path=new Path();path.moveTo(width*.5f,keyboardTop*.28f);path.lineTo(width*.5f,keyboardTop*.74f);
-    AtomicBoolean done=new AtomicBoolean();
-    android.os.Handler main=new android.os.Handler(android.os.Looper.getMainLooper());
-    main.postDelayed(()->{if(done.compareAndSet(false,true))callback.complete(false);},1800);
-    boolean accepted=service.dispatchGesture(new GestureDescription.Builder()
-        .addStroke(new GestureDescription.StrokeDescription(path,0,320)).build(),
-        new GestureResultCallback(){
-          @Override public void onCompleted(GestureDescription gesture){if(done.compareAndSet(false,true))callback.complete(true);}
-          @Override public void onCancelled(GestureDescription gesture){if(done.compareAndSet(false,true))callback.complete(false);}
-        },main);
-    if(!accepted && done.compareAndSet(false,true))callback.complete(false);
+    swipe(keyboardTop, false, callback);
+  }
+
+  // Return toward the latest messages, with room for touch slop and scroll clamping.
+  // A same-length reverse stroke is not the inverse of a native scroll gesture.
+  public static void later(int keyboardTop, Scrolled callback) {
+    swipe(keyboardTop, true, callback);
+  }
+
+  private static void swipe(int keyboardTop, boolean later, Scrolled callback) {
+    CaptureService service = current;
+    if (service == null) {
+      callback.complete(false);
+      return;
+    }
+    float width = service.getResources().getDisplayMetrics().widthPixels;
+    Path path = new Path();
+    path.moveTo(width * .5f, keyboardTop * (later ? .74f : .28f));
+    path.lineTo(width * .5f, keyboardTop * (later ? .08f : .74f));
+    AtomicBoolean done = new AtomicBoolean();
+    android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+    main.postDelayed(
+        () -> {
+          if (done.compareAndSet(false, true)) callback.complete(false);
+        },
+        1800);
+    // End the drag with a stationary hold. Releasing a fast swipe creates a fling,
+    // whose momentum can continue after the IME resizes and move the chat again.
+    float endX = width * .5f, endY = keyboardTop * (later ? .08f : .74f);
+    GestureDescription.StrokeDescription drag =
+        new GestureDescription.StrokeDescription(path, 0, 420, true);
+    GestureResultCallback released =
+        new GestureResultCallback() {
+          @Override
+          public void onCompleted(GestureDescription gesture) {
+            if (done.compareAndSet(false, true)) callback.complete(true);
+          }
+
+          @Override
+          public void onCancelled(GestureDescription gesture) {
+            if (done.compareAndSet(false, true)) callback.complete(false);
+          }
+        };
+    boolean accepted =
+        service.dispatchGesture(
+            new GestureDescription.Builder().addStroke(drag).build(),
+            new GestureResultCallback() {
+              @Override
+              public void onCompleted(GestureDescription gesture) {
+                Path hold = new Path();
+                hold.moveTo(endX, endY);
+                GestureDescription.StrokeDescription release =
+                    drag.continueStroke(hold, 0, 200, false);
+                if (!service.dispatchGesture(
+                        new GestureDescription.Builder().addStroke(release).build(), released, main)
+                    && done.compareAndSet(false, true)) callback.complete(false);
+              }
+
+              @Override
+              public void onCancelled(GestureDescription gesture) {
+                if (done.compareAndSet(false, true)) callback.complete(false);
+              }
+            },
+            main);
+
+    if (!accepted && done.compareAndSet(false, true)) callback.complete(false);
   }
 
   public static int[] signature(Bitmap bitmap) {
-    int[] pixels=new int[96*128];
-    for(int y=0;y<128;y++)for(int x=0;x<96;x++)
-      pixels[y*96+x]=bitmap.getPixel(Math.min(bitmap.getWidth()-1,(2*x+1)*bitmap.getWidth()/192),
-          Math.min(bitmap.getHeight()-1,(2*y+1)*bitmap.getHeight()/256));
+    int[] pixels = new int[96 * 128];
+    for (int y = 0; y < 128; y++)
+      for (int x = 0; x < 96; x++)
+        pixels[y * 96 + x] =
+            bitmap.getPixel(
+                Math.min(bitmap.getWidth() - 1, (2 * x + 1) * bitmap.getWidth() / 192),
+                Math.min(bitmap.getHeight() - 1, (2 * y + 1) * bitmap.getHeight() / 256));
     return pixels;
   }
 

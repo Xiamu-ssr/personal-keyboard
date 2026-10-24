@@ -2,62 +2,75 @@ package app.doudou.ime.advisor;
 
 import java.util.*;
 
-/** Editor-local reply pages. Returning to a previous page never spends another model call. */
+/** Every generated page remains navigable in both directions during this editor session. */
 public final class ReplyHistory {
-  public static final class Page {
-    public final List<String> replies;
-    public final String style;
-    public final String messages;
-    private int imageOffset;
+  public static final class Choice {
+    public final String slotId, name, text;
 
-    Page(List<String> values, String name, String evidence) {
-      replies = Collections.unmodifiableList(new ArrayList<>(values));
-      style = name;
-      messages = evidence;
+    public Choice(String slotId, String name, String text) {
+      this.slotId = slotId;
+      this.name = name;
+      this.text = text;
     }
   }
 
-  private Page current;
-  private final Deque<Page> older = new ArrayDeque<>();
+  public static final class Page {
+    public final List<Choice> choices;
+    public final String messages;
 
-  public List<String> replies() {
-    return current == null ? Collections.emptyList() : current.replies;
+    Page(List<Choice> choices, String messages) {
+      this.choices = Collections.unmodifiableList(new ArrayList<>(choices));
+      this.messages = messages;
+    }
   }
 
-  public String style() {
-    return current == null ? "" : current.style;
+  private final List<Page> pages = new ArrayList<>();
+  private int cursor = -1;
+
+  public List<Choice> choices() {
+    return cursor < 0 ? Collections.emptyList() : pages.get(cursor).choices;
   }
 
-  public void accept(List<String> values, String style, boolean retainPrevious, String messages) {
-    if (values.size() != 3) throw new IllegalArgumentException("Three replies required");
-    if (retainPrevious && current != null) {
-      older.push(current);
-      while (older.size() > 8) older.removeLast();
-    } else older.clear();
-    current = new Page(values, style, messages);
+  public void accept(List<Choice> values, String messages) {
+    if (values.size() != 3 && values.size() != 6)
+      throw new IllegalArgumentException("Three variants or six expressions required");
+    pages.add(new Page(values, messages));
+    cursor = pages.size() - 1;
   }
 
   public String messages() {
-    return current == null ? "[]" : current.messages;
+    return cursor < 0 ? "[]" : pages.get(cursor).messages;
   }
-
-  /** Older screenshots are prepended; existing reply evidence still points at the same image. */
-  public void prependImage() {
-    if(current!=null)current.imageOffset++;
-    for(Page page:older)page.imageOffset++;
-  }
-  public int imageOffset() { return current==null ? 0 : current.imageOffset; }
 
   public boolean canBack() {
-    return !older.isEmpty();
+    return cursor > 0;
+  }
+
+  public boolean canForward() {
+    return cursor >= 0 && cursor < pages.size() - 1;
   }
 
   public void back() {
-    if (canBack()) current = older.pop();
+    if (canBack()) cursor--;
+  }
+
+  public void forward() {
+    if (canForward()) cursor++;
+  }
+
+  public String position() {
+    return (cursor + 1) + " / " + pages.size();
+  }
+
+  public List<String> recentTexts() {
+    List<String> out = new ArrayList<>();
+    for (int i = pages.size() - 1; i >= 0 && out.size() < 24; i--)
+      for (Choice c : pages.get(i).choices) if (out.size() < 24) out.add(c.text);
+    return out;
   }
 
   public void clear() {
-    current = null;
-    older.clear();
+    pages.clear();
+    cursor = -1;
   }
 }

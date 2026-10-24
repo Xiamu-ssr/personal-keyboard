@@ -14,6 +14,10 @@ public final class Ui {
       INK = 0xfff4f4f4,
       SUB = 0xffaaaaaa,
       ACCENT = 0xfff1f0ee,
+      APP_ACCENT = 0xffa9c4ff,
+      APP_TINT = 0xff30394b,
+      AUDIO_START = 0xff14beca,
+      AUDIO_END = 0xff4c80ff,
       SURFACE = 0xff333333,
       SELECTED = 0xff464646,
       KEYBOARD = 0xff222222,
@@ -336,6 +340,10 @@ public final class Ui {
       } else if (name.equals("返回")) {
         c.drawLine(16, 4, 8, 12, p);
         c.drawLine(8, 12, 16, 20, p);
+      } else if (name.equals("换一条")) {
+        c.drawArc(4, 4, 20, 20, 40, 285, false, p);
+        c.drawLine(19, 4, 19, 10, p);
+        c.drawLine(19, 10, 13, 9, p);
       } else if (name.equals("更多")) {
         p.setStyle(Paint.Style.FILL);
         for (int x = 5; x <= 19; x += 7) c.drawCircle(x, 12, 1.5f, p);

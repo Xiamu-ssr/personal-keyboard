@@ -18,8 +18,12 @@ public class DeviceTest {
   String db, historyDb;
 
   @Before
-  public void before() {
+  public void before() throws Exception {
+    Assume.assumeTrue("Owned emulator only", "ranchu".equals(android.os.Build.HARDWARE));
     c = InstrumentationRegistry.getInstrumentation().getTargetContext();
+    app.doudou.ime.app.KeyboardApp app = (app.doudou.ime.app.KeyboardApp) c.getApplicationContext();
+    if (app.cloud.loggedIn()) app.cloud.logout();
+    app.personalization.activate();
     db = "test-" + System.nanoTime() + ".db";
     historyDb = db + "-history";
     s = new MemoryStore(c, db);
@@ -99,15 +103,19 @@ public class DeviceTest {
 
   @Test
   public void keyboardHistoryFiltersUnadoptedRowsBeforeItsLimit() {
-    String used=h.create("voice","原文");h.inserted(used,"更早的有效结果","");
-    for(int i=0;i<60;i++) {
-      String id=h.create("voice","未采用 "+i);
-      if(i%2==0){h.inserted(id,"撤回 "+i,"");h.withdraw(id);}
+    String used = h.create("voice", "原文");
+    h.inserted(used, "更早的有效结果", "");
+    for (int i = 0; i < 60; i++) {
+      String id = h.create("voice", "未采用 " + i);
+      if (i % 2 == 0) {
+        h.inserted(id, "撤回 " + i, "");
+        h.withdraw(id);
+      }
     }
-    assertEquals(50,h.list(50).size());
-    assertEquals(1,h.reusable(50).size());
-    assertEquals(used,h.reusable(50).get(0).id);
-    assertEquals("更早的有效结果",h.reusable(50).get(0).resultText);
+    assertEquals(50, h.list(50).size());
+    assertEquals(1, h.reusable(50).size());
+    assertEquals(used, h.reusable(50).get(0).id);
+    assertEquals("更早的有效结果", h.reusable(50).get(0).resultText);
   }
 
   @Test
@@ -151,6 +159,57 @@ public class DeviceTest {
       other.close();
       c.deleteDatabase(otherDb);
     }
+  }
+
+  private String jpeg() throws Exception {
+    Bitmap bitmap = Bitmap.createBitmap(20, 20, Bitmap.Config.ARGB_8888);
+    java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+    try {
+      bitmap.compress(Bitmap.CompressFormat.JPEG, 80, out);
+    } finally {
+      bitmap.recycle();
+    }
+    return "data:image/jpeg;base64,"
+        + android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP);
+  }
+
+  @Test
+  public void advisorSaveFailureLeavesNeitherEmptyHistoryNorPartialScreenshots() throws Exception {
+    java.io.File folder = new java.io.File(c.getFilesDir(), "history-screenshots");
+    Set<String> before =
+        new HashSet<>(Arrays.asList(folder.list() == null ? new String[0] : folder.list()));
+    try {
+      h.saveAdvisor(
+          "", new JSONObject().put("replies", new JSONArray()), Arrays.asList(jpeg()), "account-a");
+      fail("Missing messages must fail before publishing a history");
+    } catch (JSONException expected) {
+    }
+    assertTrue(h.list(50).isEmpty());
+    assertEquals(
+        before,
+        new HashSet<>(Arrays.asList(folder.list() == null ? new String[0] : folder.list())));
+  }
+
+  @Test
+  public void advisorSaveKeepsOriginalScreenshotsAndEveryAnswerGroup() throws Exception {
+    JSONObject output =
+        new JSONObject()
+            .put("messages", new JSONArray())
+            .put("replies", new JSONArray().put(new JSONObject().put("text", "周末见")));
+    String id = h.saveAdvisor("", output, Arrays.asList(jpeg(), jpeg()), "account-a");
+    assertNotNull(h.get(id));
+    JSONArray refs = h.get(id).screenshots;
+    assertEquals(2, refs.length());
+    assertTrue(h.imageFile(refs.getString(0)).isFile());
+    assertEquals(id, h.saveAdvisor(id, output, Arrays.asList(jpeg()), "account-a"));
+    assertEquals(refs.toString(), h.get(id).screenshots.toString());
+    assertEquals(2, h.get(id).replyGroups.length());
+    try {
+      h.saveAdvisor(id, output, Collections.emptyList(), "account-b");
+      fail();
+    } catch (java.io.IOException expected) {
+    }
+    assertEquals(2, h.get(id).replyGroups.length());
   }
 
   @Test
@@ -217,7 +276,8 @@ public class DeviceTest {
   public void invitedAccountUsesRealCloudAndDoesNotStoreRecoveryCode() throws Exception {
     java.io.File input = new java.io.File(c.getCacheDir(), "device-account-test.json");
     Assume.assumeTrue("Explicit disposable test invitation required", input.isFile());
-    assertTrue(android.os.Build.HARDWARE.equals("ranchu") || android.os.Build.HARDWARE.equals("goldfish"));
+    assertTrue(
+        android.os.Build.HARDWARE.equals("ranchu") || android.os.Build.HARDWARE.equals("goldfish"));
     JSONObject data;
     try (java.io.FileInputStream stream = new java.io.FileInputStream(input)) {
       byte[] bytes = new byte[(int) input.length()];
@@ -233,11 +293,19 @@ public class DeviceTest {
       String id = client.userId();
       assertTrue(recovery.startsWith("DDR-"));
       assertFalse(client.secrets().get("session").contains(recovery));
-      assertEquals(10000, client.account().getJSONObject("entitlements").getJSONObject("asr").getLong("available"));
+      assertEquals(
+          10000,
+          client.account().getJSONObject("entitlements").getJSONObject("asr").getLong("available"));
       client.logout();
       client.login(name, password);
       assertEquals(id, client.userId());
-      assertEquals(20, client.account().getJSONObject("entitlements").getJSONObject("advisor").getInt("available"));
+      assertEquals(
+          20,
+          client
+              .account()
+              .getJSONObject("entitlements")
+              .getJSONObject("advisor")
+              .getInt("available"));
       client.changePassword(password, password + "-changed");
       client.logout();
       String rotated = client.recover(name, password, recovery);
@@ -246,7 +314,9 @@ public class DeviceTest {
       assertFalse(client.secrets().get("session").contains(rotated));
       client.reauthenticate(password);
     } finally {
-      if (client.loggedIn()) client.request(client.userId(), "/v1/account/delete", "POST", new JSONObject().put("confirm", true));
+      if (client.loggedIn())
+        client.request(
+            client.userId(), "/v1/account/delete", "POST", new JSONObject().put("confirm", true));
       client.clearSession();
     }
   }

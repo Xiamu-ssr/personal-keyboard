@@ -1,6 +1,6 @@
 import { emptyMemory, changeMemory, resolveCandidate, memoryDelta, retractRevision } from './domain.mjs';
 import { historyEvent } from './history.mjs';
-import { historyRequest } from './model.mjs';
+import { historyBatch } from './model.mjs';
 import { canonical, digest, seal, unseal, uuid } from '../security.mjs';
 import { isUuid } from '../billing/ledger.mjs';
 import { requireValue } from '../http/errors.mjs';
@@ -20,7 +20,7 @@ export class PersonalMemory {
       await this.db.accountLock(c, user.id);
       const current = await this.snapshot(user.id, c);
       requireValue(after <= current.version, 'MEMORY_CONFLICT', '记忆缓存版本超前，请重新同步', 409);
-      const status = (await c.query('SELECT state,error_code FROM memory_work WHERE user_id=$1', [user.id])).rows[0] || { state: 'idle', error_code: null };
+      const status = (await c.query("SELECT CASE WHEN state<>'paused' AND NOT EXISTS(SELECT 1 FROM memory_history h WHERE h.user_id=$1 AND h.state='queued') THEN 'idle' ELSE state END state,error_code FROM memory_work WHERE user_id=$1", [user.id])).rows[0] || { state: 'idle', error_code: null };
       if (!after) return { ...current, reset: true, status };
       const rows = (await c.query('SELECT body_cipher FROM memory_changes WHERE user_id=$1 AND version>$2 ORDER BY version LIMIT 201', [user.id, after])).rows;
       if (rows.length > 200) return { ...current, reset: true, status };
@@ -60,7 +60,7 @@ export class PersonalMemory {
       requireValue(latest.version === before.version, 'MEMORY_CONFLICT', '个人记忆已变化，请同步后重试', 409);
       const result = await this.commit(c, user.id, before, changed.memory);
       await c.query('INSERT INTO memory_receipts(user_id,request_id,payload_hash) VALUES($1,$2,$3)', [user.id, body.requestId, hash]);
-      await c.query("UPDATE memory_work SET state='queued',attempts=0,retry_at=now(),error_code=NULL WHERE user_id=$1 AND (lease_until IS NULL OR lease_until<now())", [user.id]);
+      await c.query("UPDATE memory_work SET state=CASE WHEN EXISTS(SELECT 1 FROM memory_history h WHERE h.user_id=$1 AND h.state='queued') THEN 'queued' ELSE 'idle' END,attempts=0,retry_at=now(),error_code=NULL WHERE user_id=$1 AND (lease_until IS NULL OR lease_until<now())", [user.id]);
       return { ...result, idMap: changed.idMap };
     });
   }
@@ -81,7 +81,8 @@ export class PersonalMemory {
         }
         await c.query("UPDATE memory_history SET state='superseded',body_cipher=NULL WHERE user_id=$1 AND history_id=$2 AND state='queued'", [user.id, event.id]);
         await c.query('INSERT INTO memory_history(user_id,history_id,revision,payload_hash,body_cipher,state) VALUES($1,$2,$3,$4,$5,$6)', [user.id, event.id, event.revision, hash, event.deleted ? null : this.encode(user.id, event), event.deleted ? 'done' : 'queued']);
-        updated = retractRevision(updated, event.id, event.revision);
+        if(!event.deleted)updated = retractRevision(updated, event.id, event.revision);
+        else updated.candidates=updated.candidates.filter(c=>c.origin.historyId!==event.id); // Local history retention is not a request to forget canonical knowledge.
       }
       if (canonical(updated) !== canonical(before.memory)) await this.commit(c, user.id, before, updated);
       await c.query("INSERT INTO memory_work(user_id) VALUES($1) ON CONFLICT(user_id) DO UPDATE SET retry_at=now(),attempts=0,state=CASE WHEN memory_work.lease_until>now() THEN memory_work.state ELSE 'queued' END", [user.id]);
@@ -96,17 +97,21 @@ export class PersonalMemory {
       row = (await this.db.query("UPDATE memory_work SET lease_token=$1,lease_until=now()+interval '10 minutes',state='running',attempts=attempts+1 WHERE user_id=(SELECT w.user_id FROM memory_work w JOIN users u ON u.id=w.user_id WHERE u.status='active' AND w.retry_at<=now() AND (w.lease_until IS NULL OR w.lease_until<now()) AND EXISTS(SELECT 1 FROM memory_history h WHERE h.user_id=w.user_id AND h.state='queued') ORDER BY w.retry_at FOR UPDATE OF w SKIP LOCKED LIMIT 1) RETURNING user_id", [token])).rows[0];
       if (row) await this.process(row.user_id, token);
     } catch (error) {
+      if(row && error.code==='MEMORY_CONFLICT'){
+        await this.db.query("UPDATE memory_work SET lease_until=NULL,attempts=0,state='queued',error_code=NULL,retry_at=now()+interval '1 second' WHERE user_id=$1 AND lease_token=$2",[row.user_id,token]);
+        return;
+      }
       if (row) await this.db.query("UPDATE memory_work SET lease_until=NULL,state=CASE WHEN $4 OR attempts>=3 THEN 'paused' ELSE 'waiting' END,error_code=$3,retry_at=CASE WHEN $4 OR attempts>=3 THEN 'infinity'::timestamptz ELSE now()+interval '5 minutes' END WHERE user_id=$1 AND lease_token=$2", [row.user_id, token, String(error.code || 'MEMORY_UNAVAILABLE').slice(0, 60), ['MEMORY_CAPACITY', 'TOKEN_COUNTER_MISMATCH'].includes(error.code)]).catch(() => {});
     } finally { this.running = false; }
   }
   async process(user, token) {
-    const row = (await this.db.query("SELECT * FROM memory_history WHERE user_id=$1 AND state='queued' ORDER BY created_at,history_id LIMIT 1", [user])).rows[0];
-    if (!row) return this.release(user, token);
-    const history = this.decode(user, row.body_cipher), before = await this.snapshot(user);
-    const part = await historyRequest(this.model, before, history, row.next_offset);
-    const result = await this.model.generate(part.request);
+    const rows = (await this.db.query("SELECT * FROM memory_history WHERE user_id=$1 AND state='queued' ORDER BY created_at,history_id LIMIT 24", [user])).rows;
+    if (!rows.length) return this.release(user, token);
+    const before = await this.snapshot(user);
+    const batch = await historyBatch(this.model, before, rows.map(row => ({ ...row, history: this.decode(user, row.body_cipher) })));
+    const result = await this.model.generate(batch.request);
     requireValue(result.baseVersion === before.version, 'MEMORY_CONFLICT', '模型返回版本不符', 409);
-    const changed = changeMemory(before.memory, result.operations, { history, origin: { historyId: history.id, revision: history.revision } }).memory;
+    const changed = changeMemory(before.memory, result.operations, { histories: batch.accepted.map(p => p.history) }).memory;
     await this.ensureCapacity(changed, before.version + 1);
     await this.db.transaction(async c => {
       const account = await this.db.accountLock(c, user);
@@ -115,10 +120,13 @@ export class PersonalMemory {
       requireValue(lease?.lease_token === token && new Date(lease.lease_until) > new Date(), 'MEMORY_CONFLICT', '记忆任务租约已变化', 409);
       const current = await this.snapshot(user, c, true);
       requireValue(current.version === before.version, 'MEMORY_CONFLICT', '主本已变化，本批将基于新主本重算', 409);
-      const event = (await c.query('SELECT state,next_offset FROM memory_history WHERE user_id=$1 AND history_id=$2 AND revision=$3 FOR UPDATE', [user, history.id, history.revision])).rows[0];
-      if (event?.state !== 'queued' || event.next_offset !== row.next_offset) return;
+      for (const part of batch.accepted) {
+        const h = part.history;
+        const event = (await c.query('SELECT state,next_offset FROM memory_history WHERE user_id=$1 AND history_id=$2 AND revision=$3 FOR UPDATE', [user, h.id, h.revision])).rows[0];
+        requireValue(event?.state === 'queued' && event.next_offset === part.offset, 'MEMORY_CONFLICT', '历史已变化，重新整理', 409);
+      }
       if (canonical(current.memory) !== canonical(changed)) await this.commit(c, user, current, changed);
-      await c.query("UPDATE memory_history SET next_offset=$4,state=CASE WHEN $5 THEN 'done' ELSE 'queued' END,body_cipher=CASE WHEN $5 THEN NULL ELSE body_cipher END WHERE user_id=$1 AND history_id=$2 AND revision=$3", [user, history.id, history.revision, part.end, part.end === part.total]);
+      for (const part of batch.accepted) await c.query("UPDATE memory_history SET next_offset=$4,state=CASE WHEN $5 THEN 'done' ELSE 'queued' END,body_cipher=CASE WHEN $5 THEN NULL ELSE body_cipher END WHERE user_id=$1 AND history_id=$2 AND revision=$3", [user, part.history.id, part.history.revision, part.end, part.end === part.total]);
     });
     await this.release(user, token);
   }
@@ -128,14 +136,12 @@ export class PersonalMemory {
   async forTask(user, kind, input) {
     const { memory } = await this.snapshot(user);
     if (kind === 'rewrite') return { ...input, words: memory.hotwords.map(w => w.text), styles: memory.styles };
-    const selected = memory.people.find(p => p.id === input.personId);
-    const ids = new Set(selected ? [selected.id, ...selected.relations.map(r => r.targetId)] : []);
-    const people = memory.people.filter(p => ids.has(p.id));
-    return { ...input, people, styles: memory.styles }; // Advisor never receives the separate hotword list.
+    return { ...input, people: memory.people, styles: memory.styles }; // One visual request identifies the subject against the complete identity set; no hotwords.
+
   }
   async remove(user, transaction) {
     // Account deletion holds the user lock and erases memory in the same transaction.
-    for (const table of ['memory_receipts', 'memory_history', 'memory_changes', 'memory_work', 'personal_memory']) await transaction.query('DELETE FROM ' + table + ' WHERE user_id=$1', [user.id]);
+    for (const table of ['memory_receipts', 'memory_history', 'memory_changes', 'memory_work', 'personal_memory', 'palette_receipts', 'advisor_palettes']) await transaction.query('DELETE FROM ' + table + ' WHERE user_id=$1', [user.id]);
   }
   async stop() { this.stopped = true; while (this.running) await new Promise(r => setTimeout(r, 50)); }
 }

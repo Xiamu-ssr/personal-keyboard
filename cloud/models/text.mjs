@@ -1,3 +1,4 @@
+import { memoryCounter } from '../memory/counter.mjs';
 import fs from 'node:fs/promises';
 import { requireValue, ServiceError } from '../http/errors.mjs';
 import { digest } from '../security.mjs';
@@ -13,14 +14,14 @@ const strings = (values, max = 20, length = 200) => {
 };
 export function modelInput(kind, raw) {
   requireValue(raw && typeof raw === 'object' && !Array.isArray(raw), 'INVALID_INPUT', '缺少任务内容');
-  const allowed = kind === 'rewrite' ? ['transcript', 'recentContext', 'conversationRef'] : ['images', 'personId', 'conversationRef', 'recentContext', 'intent', 'style'];
+  const allowed = kind === 'rewrite' ? ['transcript', 'recentContext', 'conversationRef'] : ['images', 'conversationRef', 'recentContext', 'intent', 'slotId', 'previousReplies', 'platform'];
   requireValue(Object.keys(raw).every(key => allowed.includes(key)), 'INVALID_INPUT', '个人记忆由云端读取，请勿重复上传');
   const input = { recentContext: bounded(raw.recentContext || '', 12000), conversationRef: bounded(raw.conversationRef || '', 250) };
   if (kind === 'rewrite') return { ...input, transcript: bounded(raw.transcript, 4000) };
   requireValue(kind === 'advisor', 'INVALID_KIND', '未知文字任务');
-  requireValue(!raw.personId || isUuid(raw.personId), 'INVALID_INPUT', '人物标识无效');
-  Object.assign(input, { intent: bounded(raw.intent || '', 1000), style: bounded(raw.style || '', 40), personId: raw.personId || '', imageDigests: [] });
-  requireValue(Array.isArray(raw.images) && raw.images.length > 0 && raw.images.length <= 3, 'INVALID_IMAGE', '军师需要一至三张本次截图');
+  requireValue(!raw.slotId || /^slot[1-6]$/.test(raw.slotId), 'INVALID_INPUT', '表达槽位无效');
+  Object.assign(input, { intent: bounded(raw.intent || '', 1000), platform: bounded(raw.platform || '', 120), slotId: raw.slotId || '', previousReplies: strings(raw.previousReplies || [], 24, 1000), imageDigests: [] });
+  requireValue(Array.isArray(raw.images) && raw.images.length > 0 && raw.images.length <= 2, 'INVALID_IMAGE', '军师需要一至两张本次截图');
   let size = 0;
   for (const image of raw.images) {
     requireValue(typeof image === 'string' && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(image), 'INVALID_IMAGE', '仅支持本次 JPEG 截图');
@@ -39,15 +40,38 @@ export function validateModelResult(kind, text, input) {
     requireValue(typeof value.text === 'string' && value.text.trim() && value.text.length <= 6000, 'MODEL_FORMAT', '整理结果无效', 502);
     return { text: value.text.trim(), changed: value.text !== input.transcript, uncertainSpans: strings(value.uncertainSpans || []) };
   }
-  requireValue(kind === 'advisor' && Array.isArray(value.replies) && value.replies.length === 3, 'MODEL_FORMAT', '模型未返回三条回复', 502);
-  const replies = value.replies.map((r, i) => ({ style: ['温和', '直接', '轻松'][i], text: bounded(typeof r === 'string' ? r : r.text, 1000) }));
+  const slots = input.slots || [];
+  requireValue(kind === 'advisor' && Array.isArray(value.replies) && value.replies.length === slots.length && [3, 6].includes(slots.length), 'MODEL_FORMAT', '模型没有完整返回本次表达', 502);
+  const replies = value.replies.map((r, i) => ({ slotId: slots[i].id, style: slots[i].name, expression: slots[i].expression, text: bounded(typeof r === 'string' ? r : r.text, 1000) }));
   requireValue(replies.every(r => r.text.trim()), 'MODEL_FORMAT', '回复不能为空', 502);
+  const previous = new Set((input.previousReplies || []).map(text => text.trim()));
+  requireValue(new Set(replies.map(r => r.text.trim())).size === replies.length && replies.every(r => !previous.has(r.text.trim())), 'MODEL_FORMAT', '这次换法有重复，请重试，预留已释放', 502);
   requireValue(Array.isArray(value.messages) && value.messages.length <= 300, 'MODEL_FORMAT', '缺少截图文字依据', 502);
   const messages = value.messages.map(m => {
     requireValue(['self', 'other', 'unknown'].includes(m.speaker) && Number.isInteger(m.image) && m.image >= 1 && m.image <= input.imageDigests.length, 'MODEL_FORMAT', '截图消息归属无效', 502);
     return { speaker: m.speaker, text: bounded(m.text, 5000), image: m.image };
   });
-  return { replies, messages, uncertainty: strings(value.uncertainty || []) };
+  const identity = value.identity || {};
+  const personId = isUuid(identity.personId) && (input.people || []).some(p => p.id === identity.personId) ? identity.personId : '';
+  return { replies, messages, identity: { personId, platform: bounded(identity.platform || input.platform || '', 120), nickname: bounded(identity.nickname || '', 100), handle: bounded(identity.handle || '', 150), confidence: Number.isFinite(identity.confidence) ? Math.max(0, Math.min(1, identity.confidence)) : 0 }, uncertainty: strings(value.uncertainty || []) };
+}
+
+export function advisorResponseFormat(input) {
+  const string = maxLength => ({ type: 'string', maxLength });
+  const object = properties => ({ type: 'object', properties, required: Object.keys(properties), additionalProperties: false });
+  const schema = object({
+    messages: { type: 'array', maxItems: 300, items: object({ speaker: { type: 'string', enum: ['self', 'other', 'unknown'] }, text: string(5000), image: { type: 'integer', minimum: 1, maximum: input.imageDigests.length } }) },
+    identity: object({ personId: string(36), platform: string(120), nickname: string(100), handle: string(150), confidence: { type: 'number', minimum: 0, maximum: 1 } }),
+    replies: { type: 'array', minItems: input.slots.length, maxItems: input.slots.length, items: object({ slotId: { type: 'string', enum: [...new Set(input.slots.map(s => s.id))] }, variant: { type: 'integer', minimum: 0, maximum: 3 }, text: { ...string(1000), minLength: 1 } }) },
+    uncertainty: { type: 'array', maxItems: 20, items: string(200) },
+  });
+  return { type: 'json_schema', json_schema: { name: 'advisor_reply', strict: true, schema } };
+}
+
+export function advisorDirective(input, template) {
+  return template.prefix.replaceAll('{{replyCount}}', String(input.slots.length))
+    + (input.intent.trim() ? template.explicit.replaceAll('{{intent}}', () => input.intent) : template.unspecified)
+    + template.suffix;
 }
 
 export class TextModels {
@@ -55,7 +79,8 @@ export class TextModels {
   async init() {
     for (const [kind, file] of Object.entries({ advisor: 'reply', rewrite: 'rewrite' })) {
       const text = await fs.readFile(new URL('../prompts/' + file + '.md', import.meta.url), 'utf8');
-      this.prompts.set(kind, { text, revision: digest(text).slice(0, 12) });
+      const request = kind === 'advisor' ? JSON.parse(await fs.readFile(new URL('../prompts/reply-request.json', import.meta.url), 'utf8')) : null;
+      this.prompts.set(kind, { text, request, revision: digest(text + (request ? JSON.stringify(request) : '')).slice(0, 12) });
     }
   }
   async run(kind, input, images, signal) {
@@ -63,14 +88,25 @@ export class TextModels {
     const visual = kind === 'advisor';
     requireValue(!visual || (images?.length && this.cfg.visionReady), 'VISION_NOT_READY', '军师图文模型尚未配置', 503);
     const prompt = this.prompts.get(kind), model = visual ? this.cfg.visionModel : this.cfg.textModel;
-    const user = visual ? [{ type: 'text', text: JSON.stringify(input) }, ...images.map(url => ({ type: 'image_url', image_url: { url } }))] : JSON.stringify(input);
+    const directive = visual ? advisorDirective(input, prompt.request) : '';
+    const user = visual ? [{ type: 'text', text: JSON.stringify(input) }, ...images.map(url => ({ type: 'image_url', image_url: { url } })), { type: 'text', text: directive }] : JSON.stringify(input);
+    const systemText = prompt.text + '\n请严格只输出 JSON 对象。';
+    const responseFormat = visual ? advisorResponseFormat(input) : { type: 'json_object' };
+    // The verified text counter receives a conservative representation including the
+    // schema; image and generation/reasoning allowances are reserved separately.
+    const textRequest = { model: this.cfg.textModel, enable_thinking: false, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: systemText }, { role: 'user', content: JSON.stringify(visual ? { input, response_format: responseFormat, directive } : input) }] };
+    const tokens = (await memoryCounter.count(textRequest)).tokens;
+    // Visual reasoning, its schema/protocol and output share a conservative 16K
+    // allowance. This does not change the exact memory-learning input protocol.
+    requireValue(tokens + (visual ? images.length * 4096 : 0) + (visual ? 16384 : 8192) <= this.cfg.memoryContextTokens && tokens <= this.cfg.memoryMaxInputTokens, 'MEMORY_CAPACITY', '个人资料已超出模型容量，请精简后重试', 409);
     let response;
     try {
       response = await this.fetcher(this.cfg.textBase.replace(/\/$/, '') + '/chat/completions', {
         method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(65000)]),
         headers: { Authorization: 'Bearer ' + this.cfg.modelKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages: [{ role: 'system', content: prompt.text + '\n请严格只输出 JSON 对象。' }, { role: 'user', content: user }],
-          max_tokens: visual ? 6000 : 1600, temperature: visual ? 0.6 : 0.2, response_format: { type: 'json_object' }, enable_thinking: false }),
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemText }, { role: 'user', content: user }],
+          max_tokens: visual ? 12288 : 1600, temperature: visual ? 0.3 : 0.2, response_format: responseFormat, enable_thinking: visual,
+          ...(visual ? { thinking_budget: 1024 } : {}) }),
       });
     } catch {
       if (signal.aborted) throw new ServiceError('CANCELLED', '任务已取消', 409);

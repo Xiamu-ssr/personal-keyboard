@@ -35,7 +35,7 @@ public final class PeopleScreen extends Screen {
           new RelationshipGraph(activity, all, id -> nav.open("person", id)),
           new LinearLayout.LayoutParams(-1, Ui.dp(activity, 220)));
       add(card);
-    } else if (all.isEmpty()) Ui.empty(activity, body, "记住重要的人", "添加称呼和关系，军师就更懂该怎么回。");
+    } else if (all.isEmpty()) Ui.empty(activity, body, "还没有人物", "");
     add(Ui.primary(activity, "＋ 添加人物", () -> editor.edit(null, "person", 0)));
     if (!all.isEmpty()) {
       LinearLayout list = Ui.card(activity);
@@ -47,14 +47,13 @@ public final class PeopleScreen extends Screen {
                 activity,
                 "人物",
                 item.title,
-                item.body.isEmpty() ? "还没有备注" : item.body,
+                item.body.isEmpty() ? "" : item.body,
                 "",
                 () -> nav.open("person", item.id)));
         if (n < all.size() - 1) list.addView(Ui.divider(activity));
       }
       add(list);
     }
-    if (!all.isEmpty()) caption("新发现的资料先由你核对，随时可以修改。");
   }
 
   private void detail() {
@@ -67,7 +66,18 @@ public final class PeopleScreen extends Screen {
     TextView name = Ui.text(activity, item.title, 25, Ui.INK);
     name.setTypeface(null, android.graphics.Typeface.BOLD);
     profile.addView(name);
-    captionIn(profile, item.body.isEmpty() ? "慢慢了解，也允许随时修正。" : item.body);
+    if (!item.body.isEmpty()) captionIn(profile, item.body);
+    try {
+      org.json.JSONArray identities = new org.json.JSONObject(item.aux).optJSONArray("identities");
+      if (identities != null)
+        for (int i = 0; i < identities.length(); i++) {
+          org.json.JSONObject identity = identities.getJSONObject(i);
+          captionIn(
+              profile, identity.optString("platform") + " · " + identity.optString("nickname"));
+        }
+    } catch (Exception ignored) {
+    }
+    new MemoryConflicts(activity, app, nav).draw(profile, item);
     action(profile, "编辑人物资料", () -> editor.edit(item, "person", 0));
     add(profile);
     add(Ui.primary(activity, "＋ 补充记忆", () -> editor.edit(null, "memory", person)));
@@ -85,7 +95,7 @@ public final class PeopleScreen extends Screen {
       action(card, "删除", () -> editor.remove(memory));
       add(card);
     }
-    if (memories.isEmpty()) caption("还没有记忆。事实、事件、偏好和推断会分别标注。");
+
     TextView delete =
         Ui.button(
             activity,

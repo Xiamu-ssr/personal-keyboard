@@ -1,0 +1,6 @@
+万象词库 · amzxyz 与 rime-wanxiang-data contributors
+https://github.com/amzxyz/rime-wanxiang-data
+Creative Commons Attribution 4.0 International (CC-BY-4.0)
+https://creativecommons.org/licenses/by/4.0/
+豆豆将基础词库转换为去声调的全拼/简拼 SQLite 索引，并按词频保留 400,000 个读音，字长2至8。
+数据来源、版本、转换脚本和完整许可证随仓库提供。

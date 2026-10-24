@@ -36,10 +36,11 @@ public final class TextModelClient {
   }
 
   public void reply(
-      String person,
       String conversation,
+      String platform,
       String intent,
-      String style,
+      String slotId,
+      List<String> previous,
       List<String> images,
       Result result) {
     final int token = ++epoch;
@@ -50,11 +51,12 @@ public final class TextModelClient {
           try {
             JSONObject input =
                 new JSONObject()
-                    .put("personId", person)
+                    .put("platform", platform)
                     .put("conversationRef", conversation)
-                    .put("recentContext", app.histories.recent(conversation, 12000))
+                    .put("recentContext", app.histories.advisorContext(platform, 12000))
                     .put("intent", intent)
-                    .put("style", style)
+                    .put("slotId", slotId)
+                    .put("previousReplies", new JSONArray(previous))
                     .put("images", new JSONArray(images));
             JSONObject output = current.run("advisor", input, null);
             main.post(

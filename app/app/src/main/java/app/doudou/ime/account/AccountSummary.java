@@ -30,7 +30,7 @@ public final class AccountSummary {
     name.setEllipsize(android.text.TextUtils.TruncateAt.END);
     labels.addView(name);
     Ui.gap(c, labels, 6);
-    labels.addView(Ui.text(c, app.cloud.loggedIn() ? "你的表达，越用越顺手" : "开启语音、军师和个人记忆", 13, Ui.SUB));
+    if (!app.cloud.loggedIn()) labels.addView(Ui.text(c, "语音与帮我回", 13, Ui.SUB));
     identity.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
     if (open != null) {
       TextView arrow = Ui.text(c, "›", 26, Ui.SUB);
@@ -55,9 +55,15 @@ public final class AccountSummary {
 
   private static void metric(Context c, LinearLayout row, JSONObject item, String label) {
     LinearLayout column = Ui.col(c);
-    String number = item == null ? "—" : String.format(java.util.Locale.CHINA, "%,d", item.optLong("available"));
+    String number =
+        item == null
+            ? "—"
+            : String.format(java.util.Locale.CHINA, "%,d", item.optLong("available"));
     TextView value = Ui.text(c, number, 26, Ui.INK);
     value.setTypeface(null, Typeface.BOLD);
+    value.setSingleLine(true);
+    value.setAutoSizeTextTypeUniformWithConfiguration(
+        18, 26, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
     column.addView(value);
     Ui.gap(c, column, 7);
     column.addView(Ui.text(c, label, 12, Ui.SUB));

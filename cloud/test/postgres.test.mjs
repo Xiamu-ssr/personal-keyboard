@@ -39,7 +39,7 @@ test(
       async fits(request) { return !this.tooLarge; },
       async generate(request) {
         modelCalls.push(structuredClone(request));
-        const h = JSON.parse(request.history.text);
+        const h = Array.isArray(request.history) ? request.history[0] : JSON.parse(request.history.text);
         return { baseVersion: request.version, operations: h.resultText === '豆豆' && h.insertedText === '豆包' ? [{ kind: 'hotword', action: 'upsert', id: 'new:word', value: { text: '豆豆', variants: ['豆包'] }, sourceId: h.id, sourceRevision: h.revision, category: 'correction', confidence: 1 }] : [] };
       },
     };
@@ -55,11 +55,7 @@ test(
             kind === "advisor"
               ? {
                   messages: [{ speaker: "other", text: "fixture visible chat", image: 1 }],
-                  replies: [
-                    { style: "温和", text: "fixture-a" },
-                    { style: "直接", text: "fixture-b" },
-                    { style: "轻松", text: "fixture-c" },
-                  ],
+                  replies: input.slots.map((slot,i)=>({slotId:slot.id,style:slot.name,text:'fixture-'+i})),
                 }
               : { text: "fixture-polish" },
           provider: { model: "fixture-text", usage: { input_tokens: 10 } },
@@ -162,6 +158,16 @@ test(
         initial = (await request("/v1/account", null, token)).value;
       assert.equal(initial.entitlements.asr.available, 10000);
       assert.equal(initial.entitlements.advisor.available, 20);
+      const palette=(await request('/v1/advisor/palette',null,token)).value;
+      assert.equal(palette.slots.length,6);assert.equal(palette.version,0);
+      const paletteWrite={requestId:uuid(),baseVersion:0,slots:palette.slots.map((s,i)=>({...s,name:i===0?'我的自然':s.name}))};
+      assert.equal((await request('/v1/advisor/palette',paletteWrite,token)).value.version,1);
+      assert.equal((await request('/v1/advisor/palette',paletteWrite,token)).value.version,1,'retry is idempotent');
+      assert.equal((await request('/v1/advisor/palette',{...paletteWrite,requestId:uuid()},token)).status,409,'stale editor cannot overwrite the palette');
+      assert.equal((await request('/v1/advisor/palette',{...paletteWrite,requestId:uuid(),baseVersion:1,slots:palette.slots.slice(1)},token)).status,400);
+      const paletteCipher=(await app.db.query('SELECT body_cipher FROM advisor_palettes WHERE user_id=$1',[uid])).rows[0].body_cipher;
+      assert(!paletteCipher.includes('我的自然'));
+
       app.jobs.stopped = true;
       cfg.maxTextQueue = 1;
       try {
@@ -228,7 +234,7 @@ test(
       const req = {
         requestId: uuid(),
         kind: "advisor",
-        input: { images: [jpeg], personId, recentContext: "result-only context", intent: "reply" },
+        input: { images: [jpeg], platform: "fixture", recentContext: "result-only context", intent: "reply" },
       };
       let pending = (await request("/v1/jobs", req, token)).value;
       assert(pending.id);
@@ -239,7 +245,7 @@ test(
         await new Promise((r) => setTimeout(r, 50));
       }
       assert.equal(done.status, "succeeded");
-      assert.equal(done.result.replies.length, 3);
+      assert.equal(done.result.replies.length, 6);
       assert.equal(done.result.messages[0].speaker, 'other');
       assert.equal(models.lastInput.people[0].id, personId); assert.equal(models.lastInput.styles[0].scene, '工作');
       assert.equal(models.lastInput.words, undefined); assert.equal(models.lastInput.recentContext, 'result-only context');
@@ -268,6 +274,7 @@ test(
       memoryModel.tooLarge = false;
       assert.equal((await request("/v1/jobs", req, token)).value.id, done.id);
       assert.equal((await app.ledger.balance(uid)).advisor.used, 1);
+      const asrRequestId=uuid();
       const ws = new WebSocket(base.replace("http:", "ws:") + "/v1/asr", {
         headers: { Authorization: "Bearer " + token },
       });
@@ -276,7 +283,7 @@ test(
           ws.send(
             JSON.stringify({
               type: "configure",
-              requestId: uuid(),
+              requestId: asrRequestId,
               context: "",
               polish: true,
             }),

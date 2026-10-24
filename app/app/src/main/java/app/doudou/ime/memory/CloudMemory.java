@@ -7,6 +7,19 @@ import org.json.*;
 /** Canonical edits are acknowledged by Cloud before the local cache is replaced. */
 public final class CloudMemory {
   private final KeyboardApp app;
+  public final java.util.concurrent.CopyOnWriteArraySet<Runnable> observers =
+      new java.util.concurrent.CopyOnWriteArraySet<>();
+
+  public boolean pending() {
+    try {
+      String state =
+          new JSONObject(app.store.meta("memory.status:" + app.cloud.userId(), "{}"))
+              .optString("state");
+      return java.util.Arrays.asList("queued", "running", "waiting").contains(state);
+    } catch (Exception e) {
+      return false;
+    }
+  }
 
   public CloudMemory(KeyboardApp app) {
     this.app = app;
@@ -56,7 +69,11 @@ public final class CloudMemory {
       memory.put("candidates", response.getJSONArray("candidates"));
     }
     sameAccount(account);
+    long oldVersion = app.store.cacheVersion(account);
     app.store.cache(account, response.getLong("version"), memory);
+    if (oldVersion != response.getLong("version"))
+      for (Runnable observer : observers)
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(observer);
     JSONObject status = response.optJSONObject("status");
     if (status != null) app.store.setMeta("memory.status:" + account, status.toString());
   }
@@ -124,12 +141,18 @@ public final class CloudMemory {
       JSONArray rows =
           doc.getJSONArray(
               type.equals("hotword") ? "hotwords" : type.equals("style") ? "styles" : "people");
-      if (type.equals("hotword") || type.equals("style"))
+      if (type.equals("hotword") || type.equals("style") || type.equals("person"))
         for (int i = 0; i < rows.length(); i++)
           if (rows.getJSONObject(i).getString("id").equals(item.globalId)) {
             JSONObject original = rows.getJSONObject(i);
             if (type.equals("hotword")) value.put("variants", original.getJSONArray("variants"));
-            else value.put("examples", original.getJSONArray("examples"));
+            else if (type.equals("style")) value.put("examples", original.getJSONArray("examples"));
+            else
+              value.put(
+                  "identities",
+                  original.optJSONArray("identities") == null
+                      ? new JSONArray()
+                      : original.getJSONArray("identities"));
           }
     }
     return op;

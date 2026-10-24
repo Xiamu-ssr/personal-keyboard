@@ -28,6 +28,23 @@ public final class MemoryEditor {
       nav.open("account", 0);
       return;
     }
+    app.network.execute(
+        () -> {
+          try {
+            app.personalization.sync();
+            MemoryStore.Item fresh = item == null ? null : app.store.get(item.id);
+            if (item != null && (fresh == null || !fresh.globalId.equals(item.globalId)))
+              throw new IllegalStateException("这项资料已变化，请刷新");
+            activity.runOnUiThread(() -> showEdit(fresh, kind, owner, initial, initialBody));
+          } catch (Exception e) {
+            activity.runOnUiThread(() -> Ui.toast(activity, "请联网同步后再修改"));
+          }
+        });
+  }
+
+  private void showEdit(
+      MemoryStore.Item item, String kind, long owner, String initial, String initialBody) {
+    if (activity.isFinishing()) return;
     final long version = app.store.cacheVersion(app.cloud.userId());
     LinearLayout fields = Ui.col(activity);
     Ui.pad(activity, fields, 20, 14);
