@@ -92,14 +92,12 @@ p {
   letter-spacing: 0.03em;
 }
 .brand-mark {
-  display: grid;
-  place-items: center;
+  display: block;
   width: 29px;
   height: 29px;
   border-radius: 9px;
-  color: #fff;
-  background: #54877e;
-  font-size: 15px;
+  background: #222222;
+  object-fit: cover;
 }
 .section-tabs,
 .workflow-tabs {

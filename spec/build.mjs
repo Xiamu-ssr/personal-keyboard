@@ -7,6 +7,9 @@ import { validateWorld } from "./world.mjs";
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const spec = YAML.parse(await fs.readFile(path.join(dir, "spec.yaml"), "utf8"));
 const counts = validateWorld(spec);
+const brandLogo = "data:image/png;base64," + (await fs.readFile(
+  path.resolve(dir, "../app/app/src/main/res/drawable-nodpi/brand_logo.png"),
+)).toString("base64");
 for (const domain of spec.domains)
   for (const node of domain.nodes || [])
     if (node.format)
@@ -25,6 +28,7 @@ const json = JSON.stringify({
   .replace(/\u2028/g, "\\u2028")
   .replace(/\u2029/g, "\\u2029");
 const output = template
+  .replaceAll("{{BRAND_LOGO}}", brandLogo)
   .replace(/(src|poster|href)="\.\/demo\/([^"?]+\.(?:png|mp4|apk))"/g,
     (_, attr, name) => `${attr}="./demo/${name}?v=${encodeURIComponent(spec.meta.version)}"`)
   .replace("<!-- SPEC_STYLE -->", "<style>" + css + "</style>")

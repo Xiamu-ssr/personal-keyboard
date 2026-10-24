@@ -2,9 +2,9 @@ schemaVersion: 6
 meta:
   title: 豆豆输入法
   subtitle: 域与实体固定，数据在其间流动
-  version: 0.7.3-alpha.1
+  version: 0.7.4-alpha.1
   reviewedAt: 2026-10-24
-  status: App 0.7.3 / Cloud 0.7 · 按住说话 · 帮我回
+  status: App 0.7.4 / Cloud 0.7 · 按住说话 · 帮我回
 domains:
   - id: phone
     name: 用户手机

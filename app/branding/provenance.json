@@ -1,0 +1,10 @@
+{
+  "name": "双豆声纹",
+  "created": "2026-10-24",
+  "method": "Built-in OpenAI image generation",
+  "concept": "两颗豆子围出声纹；炭黑与暖白。",
+  "prompt": "Original flat app icon. Charcoal square, two complementary warm-ivory bean/comma shapes separated by a smooth S-shaped negative-space channel. Centered within the adaptive icon safe zone. No text, ornament or enclosing rounded tile.",
+  "source": "logo.png",
+  "androidAsset": "../app/src/main/res/drawable-nodpi/brand_logo.png",
+  "androidExport": "512px PNG resized from the original generated square; Android applies the adaptive launcher mask."
+}

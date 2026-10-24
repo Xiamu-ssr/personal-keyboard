@@ -1,15 +1,17 @@
 # 豆豆输入法
 
+<img src="app/branding/logo.png" alt="豆豆输入法：双豆声纹" width="96" />
+
 Android 输入法：离线拼音、个性语音、原地军师，以及热词、文风和人物记忆。键盘和管理页是同一个App，与豆豆Agent独立安装。
 
-当前 **0.7.3-alpha.1 · 开发预览版**。App / PostgreSQL Cloud / 后台已有实现；邀请注册、账号密码与恢复码；企业百炼模型已接入，付费购买未开放。不会用演示回复冒充在线能力。
+当前 **0.7.4-alpha.1 · 开发预览版**。App / PostgreSQL Cloud / 后台已有实现；邀请注册、账号密码与恢复码；企业百炼模型已接入，付费购买未开放。不会用演示回复冒充在线能力。
 
 - [产品 SPEC](https://xiamu-ssr.github.io/personal-keyboard/) · [ECS镜像](https://106.14.73.99/keyboard-spec/)：基础域卡片和语音 / 军师 / 记忆更新三张域图。
 - [下载 APK](https://xiamu-ssr.github.io/personal-keyboard/demo/doudou-keyboard.apk)：Android11+，arm64 / x86_64，debug签名；无供应商密钥。
 - [Cloud后台](https://106.14.88.147/keyboard-api/admin/)：独立认证，用户 / 邀请码 / 权益 / 套餐 / 任务 / 审计。
 - [规格源](spec/spec.yaml) · [原生验证摘要](spec/verification.json)。
 
-0.7.3 补齐弧线语音手势、分层的「帮我回」面板、一键补看较早聊天、首次使用引导，以及键盘内的剪贴板与输入历史。工具区保留剪贴板、输入历史、免按说话和键盘设置，隐私输入单独开关。产品审查采用 Product Design，并交由独立内测复审。真人跨 App 使用质量仍需要试用反馈。
+0.7.4 换上原创双豆声纹标志，统一桌面、账户与 SPEC 图标；保留 0.7.3 的弧线语音手势、分层「帮我回」、补看较早聊天、首次引导、剪贴板与输入历史。产品审查采用 Product Design，并交由独立内测复审。真人跨 App 使用质量仍需要试用反馈。
 
 ## 三个目录
 
