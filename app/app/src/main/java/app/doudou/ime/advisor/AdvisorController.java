@@ -45,7 +45,7 @@ public final class AdvisorController extends PanelController {
       return;
     }
     if (CaptureService.current == null) {
-      message("允许主动截屏", "点军师时截取当前屏幕，用于生成回复。", "允许截屏", () -> settings("permissions"));
+      message("允许主动截屏", "点「帮我回」时截取当前屏幕，用于生成回复。", "允许截屏", () -> settings("permissions"));
       return;
     }
     if (supplement && advisor.pages() >= AdvisorSession.MAX_PAGES) {

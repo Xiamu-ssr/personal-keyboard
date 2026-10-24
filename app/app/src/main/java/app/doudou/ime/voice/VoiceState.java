@@ -1,4 +1,4 @@
 package app.doudou.ime.voice;
 
-/** The dictation states shown on the space key; they never replace the keyboard. */
+/** Capture and completion states shown by the dedicated dictation surface. */
 public enum VoiceState { IDLE, CONNECTING, RECORDING, FINISHING, REWRITING }

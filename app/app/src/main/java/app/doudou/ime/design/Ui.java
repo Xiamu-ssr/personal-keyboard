@@ -10,14 +10,14 @@ import android.widget.*;
 public final class Ui {
   public static final int BG = 0xff222222,
       PANEL = 0xff2c2c2c,
-      KEY = 0xff525252,
+      KEY = 0xff606060,
       INK = 0xfff4f4f4,
       SUB = 0xffaaaaaa,
       ACCENT = 0xfff1f0ee,
       SURFACE = 0xff333333,
       SELECTED = 0xff464646,
-      KEYBOARD = 0xff303030,
-      SPECIAL_KEY = 0xff414141,
+      KEYBOARD = 0xff222222,
+      SPECIAL_KEY = 0xff333333,
       HERO = 0xff383838,
       LINE = 0xff3a3a3a,
       RED = 0xffffb4ab;

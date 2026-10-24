@@ -53,6 +53,6 @@ public final class HomeScreen extends Screen {
     quick.addView(Ui.divider(activity));
     quick.addView(Ui.cell(activity, "词典", "我的表达习惯", "热词、文风，让豆豆更懂你", "", () -> nav.open("memory", 0)));
     add(quick);
-    caption("点军师，看看怎么回。选好后填入，发送由你决定。");
+    caption("点「帮我回」，看看怎么回。选好后填入，发送由你决定。");
   }
 }

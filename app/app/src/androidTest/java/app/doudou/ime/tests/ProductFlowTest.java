@@ -11,6 +11,7 @@ import android.widget.*;
 import android.view.inputmethod.InputMethodManager;
 import androidx.test.platform.app.InstrumentationRegistry;
 import app.doudou.ime.app.*;
+import app.doudou.ime.BuildConfig;
 import app.doudou.ime.capture.CaptureService;
 import org.json.*;
 import org.junit.*;
@@ -139,7 +140,7 @@ public final class ProductFlowTest {
     Rect key = new Rect(); await("空格",8000).getBoundsInScreen(key);
     long down = SystemClock.uptimeMillis();
     event(MotionEvent.ACTION_DOWN,key.centerX(),key.centerY(),down);
-    await("松手填入",8000);
+    await("松手结束",8000);
     new File(app.getCacheDir(),"product-voice-ready").createNewFile();
     long until = SystemClock.uptimeMillis()+10000;
     while (value().equals("保留前文：") && SystemClock.uptimeMillis()<until) SystemClock.sleep(100);
@@ -160,28 +161,92 @@ public final class ProductFlowTest {
     assertEquals("保留前文：",value());
   }
 
-  @Test public void holdSpaceSlideUpLocksAndLeftSlideCancels() throws Exception {
+  @Test public void heldSurfaceWithdrawsOrFinishesWithNewlineThenReturnsToEditing() throws Exception {
     ins.runOnMainSync(() -> { editor.setText("原草稿"); editor.setSelection(editor.length()); });
     ins.waitForIdleSync(); SystemClock.sleep(350);
     Rect key = new Rect(); await("空格",8000).getBoundsInScreen(key);
+    Rect surface = new Rect();
+    for (AccessibilityWindowInfo window : ui.getWindows())
+      if (window.getType() == AccessibilityWindowInfo.TYPE_INPUT_METHOD) window.getBoundsInScreen(surface);
+    assertFalse(surface.isEmpty());
+    float left = surface.left + surface.width() * .2f, right = surface.left + surface.width() * .8f;
+    float actionY = surface.top + surface.height() * .45f;
     long down = SystemClock.uptimeMillis();
     event(MotionEvent.ACTION_DOWN,key.centerX(),key.centerY(),down);
-    await("松手填入 · 上滑免按 · 左滑取消",4000);
-    event(MotionEvent.ACTION_MOVE,key.centerX()-240,key.centerY(),down);
-    await("松手取消",2000); shot("voice-cancel");
-    event(MotionEvent.ACTION_UP,key.centerX()-240,key.centerY(),down);
+    await("松手结束",4000); assertNull("Held capture removes letter keys",node("q")); shot("voice");
+    event(MotionEvent.ACTION_MOVE,left,actionY,down);
+    await("松手撤回",2000); shot("voice-cancel");
+    event(MotionEvent.ACTION_MOVE,key.centerX(),key.centerY(),down);
+    await("松手结束",2000);
+    event(MotionEvent.ACTION_MOVE,left,actionY,down);
+    await("松手撤回",2000);
+    event(MotionEvent.ACTION_UP,left,actionY,down);
     await("更多",4000); assertEquals("原草稿",value());
     await("空格",4000).getBoundsInScreen(key); down=SystemClock.uptimeMillis();
     event(MotionEvent.ACTION_DOWN,key.centerX(),key.centerY(),down);
-    await("松手填入 · 上滑免按 · 左滑取消",4000);
-    event(MotionEvent.ACTION_MOVE,key.centerX(),key.centerY()-240,down);
-    await("松手后免按说话",2000);
-    event(MotionEvent.ACTION_UP,key.centerX(),key.centerY()-240,down);
-    await("免按说话 · 点空格完成",3000); shot("voice");
+    await("松手结束",4000);
+    event(MotionEvent.ACTION_MOVE,right,actionY,down);
+    await("松手换行",2000); shot("voice-newline");
+    event(MotionEvent.ACTION_UP,right,actionY,down);
+    await("q",1000); shot("voice-waiting-keyboard");
+    await("更多",30000);
+    assertEquals("No speech still honors the explicit newline action", "原草稿\n",value());
+    click("更多"); click("免按说话");
+    await("完成",4000); assertNull(node("q")); shot("voice-handsfree");
+    click("撤回本次语音"); await("更多",4000);
+    assertEquals("Hands-free cancel preserves the draft", "原草稿\n",value());
+    click("更多");click("免按说话");await("完成",4000);
+    click("完成");await("q",1000);shot("voice-handsfree-finishing");
+    await("关闭提示",25000);click("关闭提示");await("更多",4000);
+    assertEquals("Finishing a silent hands-free session preserves the existing draft", "原草稿\n",value());
+    await("空格",4000).getBoundsInScreen(key); down=SystemClock.uptimeMillis();
+    event(MotionEvent.ACTION_DOWN,key.centerX(),key.centerY(),down);
+    await("松手结束",4000);
     ins.runOnMainSync(() -> ((InputMethodManager)app.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(editor.getWindowToken(),0));
     SystemClock.sleep(250);
     ins.runOnMainSync(() -> { editor.requestFocus(); ((InputMethodManager)app.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).showSoftInput(editor,InputMethodManager.SHOW_IMPLICIT); });
-    await("更多",8000); assertTrue(await("q",4000).isEnabled()); assertEquals("原草稿",value());
+    event(MotionEvent.ACTION_UP,key.centerX(),key.centerY(),down);
+    await("更多",8000); assertTrue(await("q",4000).isEnabled()); assertEquals("原草稿\n",value());
     shot("voice-restored");
+  }
+
+  @Test public void editingDuringFinalizationKeepsTheUserDraft() throws Exception {
+    java.util.Set<String> previous = new java.util.HashSet<>();
+    org.json.JSONArray oldJobs = ownJobs();
+    for (int i=0;i<oldJobs.length();i++) previous.add(oldJobs.getJSONObject(i).getString("id"));
+    ins.runOnMainSync(() -> { editor.setText("前文："); editor.setSelection(editor.length()); });
+    ins.waitForIdleSync(); SystemClock.sleep(350);
+    Rect key=new Rect();await("空格",8000).getBoundsInScreen(key);
+    long down=SystemClock.uptimeMillis();
+    event(MotionEvent.ACTION_DOWN,key.centerX(),key.centerY(),down);
+    await("松手结束",4000);
+    event(MotionEvent.ACTION_UP,key.centerX(),key.centerY(),down);
+    await("q",1000);
+    click("，");assertEquals("前文：，",value());
+    boolean terminal=false;
+    long until=SystemClock.uptimeMillis()+20000;
+    while(!terminal && SystemClock.uptimeMillis()<until) {
+      SystemClock.sleep(500);
+      org.json.JSONArray jobs=ownJobs();
+      for(int i=0;i<jobs.length();i++) {
+        JSONObject job=jobs.getJSONObject(i);
+        if (!previous.contains(job.getString("id")) && job.getString("kind").equals("asr")
+            && java.util.Arrays.asList("succeeded","failed","cancelled").contains(job.getString("status"))) terminal=true;
+      }
+    }
+    assertTrue("The real ASR task reached a terminal state before checking the draft",terminal);
+    ins.waitForIdleSync();SystemClock.sleep(250);
+    assertEquals("A late silent-ASR failure never erases typing", "前文：，",value());
+    await("q",2000);shot("voice-edited-while-waiting");
+  }
+
+  private org.json.JSONArray ownJobs() throws Exception {
+    okhttp3.Request request=new okhttp3.Request.Builder()
+        .url(BuildConfig.API_BASE_URL+"/v1/jobs")
+        .header("Authorization","Bearer "+app.cloud.accessToken(app.cloud.userId())).build();
+    try(okhttp3.Response response=app.cloud.http.newCall(request).execute()) {
+      assertTrue(response.isSuccessful());
+      return new org.json.JSONArray(response.body().string());
+    }
   }
 }

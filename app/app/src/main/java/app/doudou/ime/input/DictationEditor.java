@@ -11,6 +11,15 @@ public final class DictationEditor {
 
   public boolean active() { return active; }
 
+  /** Hand the visible words to the user before editing; late ASR no longer owns them. */
+  public String release() {
+    if (!active) return null;
+    active = false;
+    connection.finishComposingText();
+    connection = null;
+    return changed ? preview : null;
+  }
+
   public boolean begin(InputConnection ic, String text, int a, int b) {
     if (ic == null || text == null || a < 0 || b < 0 || Math.max(a, b) > text.length()) return false;
     connection = ic; before = text; start = Math.min(a, b); end = Math.max(a, b);

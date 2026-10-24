@@ -61,4 +61,24 @@ public final class DictationEditorTest {
       });
     } finally { ins.runOnMainSync(activity::finish); }
   }
+
+  @Test public void releasingPreviewLetsTypingOwnTheDraftAndRejectsLateReplacement() {
+    Instrumentation ins = InstrumentationRegistry.getInstrumentation();
+    Activity activity = ins.startActivitySync(new Intent(ins.getTargetContext(), PracticeActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    try {
+      ins.runOnMainSync(() -> {
+        EditText edit = field(activity.getWindow().getDecorView());
+        edit.setText("前文："); edit.requestFocus(); edit.setSelection(edit.length());
+        InputConnection ic = edit.onCreateInputConnection(new EditorInfo());
+        DictationEditor span = new DictationEditor();
+        assertTrue(span.begin(ic, "前文：", 3, 3));
+        assertTrue(span.update("今晚见。"));
+        assertEquals("今晚见。", span.release());
+        ic.deleteSurroundingText(1, 0); ic.commitText("，七点。", 1);
+        assertFalse(span.update("晚到的整理结果"));
+        assertTrue(span.restore());
+        assertEquals("前文：今晚见，七点。", edit.getText().toString());
+      });
+    } finally { ins.runOnMainSync(activity::finish); }
+  }
 }

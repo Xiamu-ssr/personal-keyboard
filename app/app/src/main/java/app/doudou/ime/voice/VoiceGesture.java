@@ -1,11 +1,13 @@
 package app.doudou.ime.voice;
 
-/** Pure gesture decision; crossing a target previews it, release is the commitment. */
+/** Targets belong to the visible dictation surface, independently of the space key's width. */
 public final class VoiceGesture {
-  public enum Target { FINISH, CANCEL, LOCK }
-  public static Target target(float dx, float dy, float distance) {
-    if (dx < -distance && -dx > -dy) return Target.CANCEL;
-    if (dy < -distance) return Target.LOCK;
-    return Target.FINISH;
+  private VoiceGesture() {}
+
+  public enum Target { FINISH, CANCEL, NEWLINE }
+
+  public static Target target(float x, float y, float width, float height) {
+    if (width <= 0 || height <= 0 || y >= height * .68f) return Target.FINISH;
+    return x <= width / 2 ? Target.CANCEL : Target.NEWLINE;
   }
 }

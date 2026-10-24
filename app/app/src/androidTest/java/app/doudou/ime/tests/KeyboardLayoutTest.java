@@ -35,12 +35,12 @@ public final class KeyboardLayoutTest {
         public void symbols() { }
         public void language() { }
         public void cursor(int d) { }
-        public void more(View a) { }
+        public void more() { }
         public void undo() { }
         public void voice() { starts++; }
-        public void holdVoice(float x, float y) { }
+        public void holdVoice() { }
         public void advisor() { }
-        public void finishVoice() { finishes++; }
+        public void finishVoice(boolean newline) { finishes++; }
         public void cancelVoice() { }
         public void recoverVoice() { }
         public void selectAll() { }
@@ -59,7 +59,7 @@ public final class KeyboardLayoutTest {
   @After public void close() { if (activity != null) ins.runOnMainSync(activity::finish); }
 
   private View find(View v, String name) {
-    if (name.contentEquals(v.getContentDescription() == null ? "" : v.getContentDescription())) return v;
+    if (v.isShown() && name.contentEquals(v.getContentDescription() == null ? "" : v.getContentDescription())) return v;
     if (v instanceof ViewGroup) for (int i=0;i<((ViewGroup)v).getChildCount();i++) {
       View found=find(((ViewGroup)v).getChildAt(i),name); if(found!=null)return found;
     }
@@ -75,29 +75,40 @@ public final class KeyboardLayoutTest {
     });
   }
 
-  @Test public void recordingKeepsKeyPositionsAndSpaceFinishesHandsFree() {
+  @Test public void heldSpeechReplacesTheKeysAndReturnsToTheSameEditorGeometry() {
     View q=find(keyboard,"q"), space=find(keyboard,"空格");
     assertNotNull(q);assertNotNull(space);
-    Rect keyBefore=bounds(q), spaceBefore=bounds(space);
+    Rect keyBefore=bounds(q), spaceBefore=bounds(space), surfaceBefore=bounds(keyboard);
+    tap(space); assertEquals(1, spaces);
     ins.runOnMainSync(() -> {
       android.view.accessibility.AccessibilityNodeInfo node=space.createAccessibilityNodeInfo();
       assertTrue(node.getActionList().stream().anyMatch(a -> "开始免按录音".contentEquals(a.getLabel()==null?"":a.getLabel())));
-      keyboard.voice(VoiceState.RECORDING,"松手后免按说话",true,VoiceGesture.Target.LOCK);
-      assertEquals("松手免按",space.getContentDescription());
+      keyboard.voice(VoiceState.RECORDING,"松手结束",true,VoiceGesture.Target.FINISH);
       space.performLongClick(); assertEquals(0, starts);
     });
+    ins.waitForIdleSync(); SystemClock.sleep(150);
+    assertFalse("Irrelevant keys leave the voice surface", q.isShown());
+    assertFalse(space.isShown());
+    assertTrue(find(keyboard,"撤回输入").isShown());
+    assertTrue(find(keyboard,"换行").isShown());
+    assertEquals(surfaceBefore, bounds(keyboard));
+    Rect withdraw=bounds(find(keyboard,"撤回输入")), newline=bounds(find(keyboard,"换行"));
+    assertEquals(VoiceGesture.Target.CANCEL, keyboard.voiceTarget(withdraw.centerX(),withdraw.centerY()));
+    assertEquals(VoiceGesture.Target.NEWLINE, keyboard.voiceTarget(newline.centerX(),newline.centerY()));
     for(VoiceState state:new VoiceState[]{VoiceState.CONNECTING,VoiceState.RECORDING,VoiceState.FINISHING,VoiceState.REWRITING}) {
-      ins.runOnMainSync(() -> keyboard.voice(state,"免按说话 · 点空格完成",false,VoiceGesture.Target.FINISH));
+      ins.runOnMainSync(() -> keyboard.voice(state,"正在完成识别…",true,VoiceGesture.Target.FINISH));
       ins.waitForIdleSync();SystemClock.sleep(60);
-      assertEquals(keyBefore,bounds(q));assertEquals(spaceBefore,bounds(space));
-      assertFalse(q.isEnabled());tap(q);assertEquals(0,letters);
-      tap(space);
-      assertEquals(state==VoiceState.CONNECTING?1:2,finishes);
+      assertEquals(surfaceBefore,bounds(keyboard));
+      if (state==VoiceState.FINISHING || state==VoiceState.REWRITING) {
+        assertTrue("Release restores editing before the final model result", q.isShown());
+        assertTrue(space.isShown());
+      } else assertFalse(q.isShown());
       ins.runOnMainSync(() -> { space.performLongClick(); assertEquals(0, starts); });
     }
     ins.runOnMainSync(() -> keyboard.voice(VoiceState.IDLE,"",false,VoiceGesture.Target.FINISH));
-    assertTrue(q.isEnabled());tap(space);assertEquals(1,spaces);
+    ins.waitForIdleSync();
+    assertTrue(q.isShown());tap(space);assertEquals(2,spaces);
     ins.runOnMainSync(() -> assertTrue(space.performLongClick()));assertEquals(1,starts);
-    assertEquals(keyBefore,bounds(q));
+    assertEquals(keyBefore,bounds(q));assertEquals(spaceBefore,bounds(space));
   }
 }

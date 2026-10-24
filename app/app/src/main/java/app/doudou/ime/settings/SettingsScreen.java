@@ -50,7 +50,7 @@ public final class SettingsScreen extends Screen {
   }
 
   private void input() {
-    LinearLayout voice = section("说话的方式", "长按空格说话，松手填入；上滑锁定，左滑取消。");
+    LinearLayout voice = section("说话的方式", "按住空格说话，松手结束；左上撤回，右上换行。");
     toggle(voice, "按我的口吻整理", "personalRewrite", false);
     captionIn(voice, "识别后再按你的文风整理，原意保持不变。");
     add(voice);
@@ -66,9 +66,9 @@ public final class SettingsScreen extends Screen {
     c.addView(Ui.divider(activity));
     c.addView(Ui.cell(activity, "语音", "麦克风", "", activity.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED ? "已允许" : "去允许", () -> activity.requestPermissions(new String[] {Manifest.permission.RECORD_AUDIO}, 20)));
     c.addView(Ui.divider(activity));
-    c.addView(Ui.cell(activity, "军师", "主动截屏", "只在你点军师时截图", CaptureService.current != null ? "已开启" : "去开启", () -> new AlertDialog.Builder(activity)
+    c.addView(Ui.cell(activity, "军师", "主动截屏", "只在你点「帮我回」时截图", CaptureService.current != null ? "已开启" : "去开启", () -> new AlertDialog.Builder(activity)
       .setTitle("允许军师看当前屏幕")
-      .setMessage("只在你点军师时截图，上传用于生成回复。开启历史后保存在手机，可随时删除。")
+      .setMessage("只在你点「帮我回」时截图，上传用于生成回复。开启历史后保存在手机，可随时删除。")
       .setPositiveButton("去开启", (d, w) -> activity.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)))
       .setNegativeButton("取消", null).show()));
     add(c);

@@ -6,13 +6,17 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.*;
 import android.widget.*;
+import app.doudou.ime.R;
+import app.doudou.ime.design.Icons;
 import app.doudou.ime.design.Ui;
+import app.doudou.ime.voice.DictationSurface;
 import app.doudou.ime.voice.VoiceSpaceKey;
 import app.doudou.ime.voice.VoiceState;
 import app.doudou.ime.voice.VoiceGesture;
 
 /** Key geometry and candidate/action row. No dictionary, editor or model work lives here. */
 public final class KeyboardView extends LinearLayout {
+  public static final int HEIGHT_DP = 264;
   public interface Actions {
     void letter(char ch);
 
@@ -30,17 +34,17 @@ public final class KeyboardView extends LinearLayout {
 
     void cursor(int delta);
 
-    void more(View anchor);
+    void more();
 
     void undo();
 
     void voice();
 
-    void holdVoice(float x, float y);
+    void holdVoice();
 
     void advisor();
 
-    void finishVoice();
+    void finishVoice(boolean newline);
 
     void cancelVoice();
 
@@ -56,14 +60,14 @@ public final class KeyboardView extends LinearLayout {
   }
 
   private final Actions actions;
-  private final LinearLayout candidateRow, idle, busy, editing;
+  private final LinearLayout candidateRow, idle, busy, editing, keys;
+  private final DictationSurface dictation;
   private final HorizontalScrollView candidateScroll;
-  private final View expand, undo, recover;
+  private final View expand, undo, recover, voiceClose;
+  private final ProgressBar pending;
   private final TextView voiceHint;
-  private final java.util.List<View> typingKeys = new java.util.ArrayList<>();
   private VoiceSpaceKey spaceKey;
   private VoiceState voiceState = VoiceState.IDLE;
-  private boolean holding;
   private final Handler repeats = new Handler(Looper.getMainLooper());
   private final boolean english;
 
@@ -80,13 +84,17 @@ public final class KeyboardView extends LinearLayout {
     this.english = english;
     actions = a;
     setOrientation(VERTICAL);
+    FrameLayout surfaces = new FrameLayout(c);
+    keys = Ui.col(c);
+    keys.setPadding(Ui.dp(c, 3), 0, Ui.dp(c, 3), 0);
+    surfaces.addView(keys, new FrameLayout.LayoutParams(-1, -1));
+    addView(surfaces, new LayoutParams(-1, 0, 1));
     LinearLayout bar = Ui.row(c);
     bar.setPadding(Ui.dp(c, 4), 0, Ui.dp(c, 4), 0);
     idle = Ui.row(c);
     if (!nested) {
-      View more = Ui.icon(c, "更多", () -> {});
-      more.setOnClickListener(v -> a.more(v));
-      more.setTooltipText("粘贴、编辑文字、隐私输入与键盘设置");
+      View more = Icons.button(c, R.drawable.ic_grid_view, "更多", a::more);
+      more.setTooltipText("粘贴、免按说话、隐私输入与键盘设置");
       idle.addView(more, new LayoutParams(Ui.dp(c, 44), Ui.dp(c, 44)));
     }
     undo = Ui.button(c, "撤销", a::undo);
@@ -122,11 +130,15 @@ public final class KeyboardView extends LinearLayout {
     bar.addView(expand, new LayoutParams(Ui.dp(c, 36), -1));
     busy = Ui.row(c);
     busy.setVisibility(GONE);
-    TextView cancel = Ui.button(c, "取消", a::cancelVoice);
-    cancel.setBackground(Ui.pressable(c, Color.TRANSPARENT, 12));
-    cancel.setMinWidth(Ui.dp(c, 58));
-    busy.addView(cancel, new LayoutParams(-2, -1));
-    voiceHint = Ui.text(c, "", 12, Ui.INK);
+    voiceClose = Icons.button(c, R.drawable.ic_close, "关闭提示", a::cancelVoice);
+    busy.addView(voiceClose, new LayoutParams(Ui.dp(c, 44), -1));
+    pending = new ProgressBar(c);
+    pending.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Ui.SUB));
+    pending.setVisibility(GONE);
+    LayoutParams progressSize = new LayoutParams(Ui.dp(c, 18), Ui.dp(c, 18));
+    progressSize.setMargins(Ui.dp(c, 12), 0, 0, 0);
+    busy.addView(pending, progressSize);
+    voiceHint = Ui.text(c, "", 13, Ui.INK);
     voiceHint.setGravity(Gravity.CENTER);
     voiceHint.setMaxLines(2);
     voiceHint.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
@@ -143,7 +155,7 @@ public final class KeyboardView extends LinearLayout {
     editButton(editing, "右移", () -> a.cursor(1), true);
     editButton(editing, "完成", a::finishEditing, false);
     bar.addView(editing, new LayoutParams(-1, -1));
-    addView(bar, new LayoutParams(-1, Ui.dp(c, 44)));
+    keys.addView(bar, new LayoutParams(-1, Ui.dp(c, 44)));
     if (symbols) {
       for (String chars : new String[] {"1234567890", "@#¥%&*+-=_", ".,/?!:;()'"}) {
         LinearLayout row = row();
@@ -178,11 +190,17 @@ public final class KeyboardView extends LinearLayout {
       key(row, english ? "EN" : "中", .85f, a::language, true);
       icon(row, "换行", 1.6f, a::enter, true);
     }
+    dictation = new DictationSurface(c, new DictationSurface.Actions() {
+      public void cancel() { a.cancelVoice(); }
+      public void finish(boolean newline) { a.finishVoice(newline); }
+    });
+    dictation.setVisibility(GONE);
+    surfaces.addView(dictation, new FrameLayout.LayoutParams(-1, -1));
   }
 
   private LinearLayout row() {
     LinearLayout r = Ui.row(getContext());
-    addView(r, new LayoutParams(-1, 0, 1));
+    keys.addView(r, new LayoutParams(-1, 0, 1));
     return r;
   }
 
@@ -211,7 +229,6 @@ public final class KeyboardView extends LinearLayout {
           click.run();
         });
     row.addView(key, geometry(weight));
-    typingKeys.add(key);
     if (label.equals("，") || label.equals(",")) {
       key.setTooltipText("长按选择标点");
       key.setOnLongClickListener(v -> {
@@ -227,8 +244,7 @@ public final class KeyboardView extends LinearLayout {
   private void space(LinearLayout row, float weight, boolean speech) {
     Context c = getContext();
     spaceKey = new VoiceSpaceKey(c, speech, () -> {
-      if (voiceState == VoiceState.IDLE) { actions.haptic(this); actions.space(); }
-      else if (!holding && (voiceState == VoiceState.RECORDING || voiceState == VoiceState.CONNECTING)) actions.finishVoice();
+      if (voiceState != VoiceState.RECORDING && voiceState != VoiceState.CONNECTING) { actions.haptic(this); actions.space(); }
     });
     row.addView(spaceKey, geometry(weight));
     if (speech) {
@@ -248,7 +264,7 @@ public final class KeyboardView extends LinearLayout {
       held[0] = true;
       spaceKey.setPressed(false);
       actions.haptic(spaceKey);
-      actions.holdVoice(down[0], down[1]);
+      actions.holdVoice();
     };
     spaceKey.setOnTouchListener(
           (v, e) -> {
@@ -293,7 +309,6 @@ public final class KeyboardView extends LinearLayout {
     key.setBackground(Ui.pressable(c, primary ? Ui.ACCENT : Ui.SPECIAL_KEY, 7));
     key.setElevation(Ui.dp(c, .8f));
     row.addView(key, geometry(weight));
-    typingKeys.add(key);
     if (name.equals("退格")) {
       Runnable repeat =
           new Runnable() {
@@ -324,22 +339,34 @@ public final class KeyboardView extends LinearLayout {
   public void undoAvailable(boolean available) { undo.setVisibility(available ? VISIBLE : GONE); }
 
   public void voice(VoiceState state, String hint, boolean held, VoiceGesture.Target target) {
-    boolean cancelling = target == VoiceGesture.Target.CANCEL;
-    voiceState = state; holding = held;
-    idle.setVisibility(state == VoiceState.IDLE ? VISIBLE : GONE);
-    busy.setVisibility(state == VoiceState.IDLE ? GONE : VISIBLE);
-    candidateScroll.setVisibility(GONE); expand.setVisibility(GONE); recover.setVisibility(GONE);
-    editing.setVisibility(GONE);
-    voiceHint.setText(hint); voiceHint.setTextColor(cancelling ? Ui.RED : Ui.INK);
-    for (View key : typingKeys) { key.setEnabled(state == VoiceState.IDLE); key.setAlpha(state == VoiceState.IDLE ? 1 : .55f); }
-    spaceKey.present(state, held, target);
+    boolean beginning = voiceState == VoiceState.IDLE && state != VoiceState.IDLE;
+    voiceState = state;
+    boolean recording = state == VoiceState.CONNECTING || state == VoiceState.RECORDING;
+    keys.setVisibility(recording ? GONE : VISIBLE);
+    dictation.setVisibility(recording ? VISIBLE : GONE);
+    dictation.present(state, hint, held, target);
+    if (!recording) {
+      boolean waiting = state == VoiceState.FINISHING || state == VoiceState.REWRITING;
+      idle.setVisibility(waiting ? GONE : VISIBLE);
+      busy.setVisibility(waiting ? VISIBLE : GONE);
+      candidateScroll.setVisibility(GONE); expand.setVisibility(GONE);
+      pending.setVisibility(waiting ? VISIBLE : GONE);
+      voiceClose.setVisibility(waiting ? GONE : VISIBLE);
+      recover.setVisibility(GONE); voiceHint.setText(hint);
+    }
+    if (beginning && android.animation.ValueAnimator.areAnimatorsEnabled()) {
+      dictation.setAlpha(0); dictation.animate().alpha(1).setDuration(110).start();
+    }
   }
 
-  public void voiceLevel(float rmsDb) { spaceKey.level(rmsDb); }
+  public VoiceGesture.Target voiceTarget(float x, float y) { return dictation.target(x, y); }
+
+  public void voiceLevel(float rmsDb) { dictation.level(rmsDb); }
 
   public void recovery(String hint, boolean hasText) {
     voice(VoiceState.IDLE, "", false, VoiceGesture.Target.FINISH);
     idle.setVisibility(GONE); busy.setVisibility(VISIBLE);
+    voiceClose.setVisibility(VISIBLE); pending.setVisibility(GONE);
     voiceHint.setText(hint);
     recover.setVisibility(hasText ? VISIBLE : GONE);
   }

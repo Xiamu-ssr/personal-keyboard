@@ -264,20 +264,27 @@ public class NativeFlowTest {
   }
 
   @Test
-  public void smallMenuKeepsEditingAndPrivacyWithoutDuplicateModes() {
+  public void toolCardsStayInsideTheKeyboardAndExposeHandsFreeAndPrivacy() {
+    int height = keyboardHeight();
     click("更多");
-    for (String title : new String[] {"粘贴文字", "编辑文字", "隐私输入", "键盘设置"})
+    await("常用工具"); assertNull(node("q"));
+    assertEquals("Opening tools does not resize the host editor", height, keyboardHeight());
+    for (String title : new String[] {"粘贴文字", "免按说话", "隐私输入", "键盘设置"})
       await(title);
     assertNull(node("语音输入")); assertNull(node("原地军师")); assertNull(node("热词短语"));
     screenshot("tools");
-    click("编辑文字");
-    await("左移"); await("右移"); await("全选"); await("q");
-    click("完成"); click("更多");
+    click("返回键盘"); await("q");
+    click("更多");
+    click("免按说话"); await("登录后使用语音"); await("去登录");
+    click("返回键盘"); click("更多");
     click("隐私输入");
     await("隐私输入已开启");
     assertNull(node("帮我回"));
     screenshot("privacy-changed");
-    click("更多"); click("隐私输入");
+    click("更多");
+    assertFalse("Private input does not advertise an available microphone", await("免按说话").isEnabled());
+    assertFalse("Private input does not read the clipboard", await("粘贴文字").isEnabled());
+    click("隐私输入");
     assertNotNull(await("帮我回"));
     assertTrue(await("空格").performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK));
     await("登录后使用语音");

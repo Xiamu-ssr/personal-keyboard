@@ -1,0 +1,5 @@
+Material Symbols Rounded by Google
+https://github.com/google/material-design-icons
+Commit: 10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7
+Icons: content_paste, edit_note, visibility_off, settings, grid_view, arrow_back, close, graphic_eq
+Android vector paths unchanged; tint attribute uses the Android platform namespace, Apache-2.0.

@@ -37,6 +37,10 @@ public interface EditorHost {
 
   boolean finishVoice(String text);
 
+  String retainVoice();
+
+  void showVoice();
+
   void restoreVoice();
 
   void editLocal(String title, String value, Consumer<String> done);
@@ -52,6 +56,8 @@ public interface EditorHost {
   void voiceFeedback(app.doudou.ime.voice.VoiceState state, String hint, boolean held, app.doudou.ime.voice.VoiceGesture.Target target);
 
   void voiceLevel(float rmsDb);
+
+  app.doudou.ime.voice.VoiceGesture.Target voiceTarget(float rawX, float rawY);
 
   void voiceRecovery(String hint, boolean hasText);
 

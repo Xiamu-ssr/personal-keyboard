@@ -22,7 +22,7 @@ public final class VoiceInput {
 
     void status(String value);
 
-    void error(String value);
+    void error(String code, String value);
 
     void level(float rmsDb);
 
@@ -71,18 +71,18 @@ public final class VoiceInput {
     }
     if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO)
         != PackageManager.PERMISSION_GRANTED) {
-      next.error("请先到豆豆设置允许麦克风");
+      next.error("MICROPHONE_PERMISSION", "请先到豆豆设置允许麦克风");
       return;
     }
     KeyboardApp app = KeyboardApp.instance;
     if (!app.cloud.loggedIn()) {
-      next.error("请先到设置登录豆豆账户");
+      next.error("LOGIN_REQUIRED", "请先到设置登录豆豆账户");
       return;
     }
     final String account = app.cloud.userId();
     next.status("正在连接豆豆语音…");
     capture(token);
-    main.postDelayed(() -> { if (token == epoch && !finished && !transportReady) fail(token, "连接较慢，请稍后重试"); }, 8000);
+    main.postDelayed(() -> { if (token == epoch && !finished && !transportReady) fail(token, "CONNECTION_TIMEOUT", "连接较慢，请稍后重试"); }, 8000);
     app.network.execute(
         () -> {
           try {
@@ -133,7 +133,7 @@ public final class VoiceInput {
                           }
                           if (type.equals("error")) {
                             JSONObject e = m.optJSONObject("error");
-                            fail(token, e == null ? "语音连接失败" : e.optString("message"));
+                            fail(token, e == null ? "ASR_FAILED" : e.optString("code", "ASR_FAILED"), e == null ? "语音连接失败" : e.optString("message"));
                           }
                           if (type.equals("job")) {
                             finished = true;
@@ -146,28 +146,28 @@ public final class VoiceInput {
                               ws.close(1000, "Completed");
                             } else {
                               JSONObject e = m.optJSONObject("error");
-                              fail(token, e == null ? "任务已结束，请重试" : e.optString("message"));
+                              fail(token, e == null ? "ASR_FAILED" : e.optString("code", "ASR_FAILED"), e == null ? "任务已结束，请重试" : e.optString("message"));
                             }
                           }
                         } catch (Exception e) {
-                          fail(token, "语音返回格式不正确");
+                          fail(token, "MODEL_FORMAT", "语音返回格式不正确");
                         }
                       }
 
                       @Override
                       public void onFailure(WebSocket ws, Throwable error, Response response) {
-                        if (!finished) fail(token, "语音连接失败，请检查网络后重试");
+                        if (!finished) fail(token, "ASR_NETWORK", "语音连接失败，请检查网络后重试");
                       }
 
                       @Override
                       public void onClosed(WebSocket ws, int code, String why) {
-                        if (!finished) fail(token, "语音连接已结束，可重试");
+                        if (!finished) fail(token, "ASR_CLOSED", "语音连接已结束，可重试");
                       }
                     });
             if (token != epoch) created.cancel();
             else socket = created;
           } catch (Exception e) {
-            fail(token, e.getMessage() == null ? "连接失败" : e.getMessage());
+            fail(token, "CONNECTION_FAILED", e.getMessage() == null ? "连接失败" : e.getMessage());
           }
         });
   }
@@ -236,7 +236,7 @@ public final class VoiceInput {
                 }
               } catch (Exception e) {
                 if (token == epoch && !finished) {
-                  fail(token, e.getMessage() == null ? "录音失败，请检查麦克风" : e.getMessage());
+                  fail(token, "CAPTURE_FAILED", e.getMessage() == null ? "录音失败，请检查麦克风" : e.getMessage());
                 }
               } finally {
                 if (token == epoch) {
@@ -263,14 +263,14 @@ public final class VoiceInput {
     }
   }
 
-  private void fail(int token, String value) {
+  private void fail(int token, String code, String value) {
     if (token != epoch) return;
     finished = true;
     releaseRecorder();
     synchronized (audioLock) { prebuffer.clear(); bufferedBytes = 0; }
     WebSocket current = socket;
     if (current != null) { current.send("{\"type\":\"cancel\"}"); current.close(1000, "Stopped"); }
-    post(token, () -> listener.error(value));
+    post(token, () -> listener.error(code, value));
   }
 
   private void releaseRecorder() {

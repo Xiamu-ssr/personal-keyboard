@@ -37,7 +37,7 @@ public final class PracticeActivity extends Activity {
     example.setLineSpacing(Ui.dp(this, 5), 1); note.addView(example);
     root.addView(note);
     Ui.gap(this, root, 20);
-    TextView help = Ui.text(this, "长按空格说句话，或点军师试着回复。", 14, Ui.SUB);
+    TextView help = Ui.text(this, "按住空格说话，或点「帮我回」试着回复。", 14, Ui.SUB);
     Ui.pad(this, help, 8, 4); root.addView(help);
     root.addView(new Space(this), new LinearLayout.LayoutParams(1, 0, 1));
     LinearLayout composer = Ui.row(this);

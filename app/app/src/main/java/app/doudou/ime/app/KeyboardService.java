@@ -12,6 +12,8 @@ import app.doudou.ime.design.Ui;
 import app.doudou.ime.input.engine.PinyinEngine;
 import app.doudou.ime.input.learning.EditTracker;
 import app.doudou.ime.memory.MemoryStore;
+import app.doudou.ime.voice.VoiceGesture;
+import app.doudou.ime.input.KeyboardView;
 import java.util.*;
 
 public final class KeyboardService extends InputMethodService
@@ -32,7 +34,7 @@ public final class KeyboardService extends InputMethodService
   private int candidateSerial;
   private boolean english, shift, caps, symbols, incognito, sensitive;
   private int compositionChange;
-  private int bottomInset, contentHeight = 284;
+  private int bottomInset, contentHeight = KeyboardView.HEIGHT_DP;
   private boolean forcedLatin, normalEnglish;
   private long lastShift;
   private String pkg = "", mode = "typing", initialDraft = "", lastFeedback = "";
@@ -157,6 +159,14 @@ public final class KeyboardService extends InputMethodService
     super.onFinishInputView(finishing);
   }
 
+  @Override public boolean onKeyDown(int keyCode, KeyEvent event) {
+    if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
+      if (voice != null && voice.active()) { voice.leave(); return true; }
+      if (mode.equals("tools")) { typing(); return true; }
+    }
+    return super.onKeyDown(keyCode, event);
+  }
+
   @Override
   public void onDestroy() {
     cancelJobs();
@@ -184,7 +194,8 @@ public final class KeyboardService extends InputMethodService
 
   private void sizeInputView() {
     int total = Ui.dp(this, contentHeight) + bottomInset;
-    root.setPadding(Ui.dp(this, 3), 0, Ui.dp(this, 3), Ui.dp(this, 4) + bottomInset);
+    int sides = mode.equals("typing") ? 0 : Ui.dp(this, 3);
+    root.setPadding(sides, 0, sides, Ui.dp(this, 4) + bottomInset);
     root.setLayoutParams(new android.widget.FrameLayout.LayoutParams(-1, total));
     root.setMinimumHeight(total);
     root.requestLayout();
@@ -205,7 +216,7 @@ public final class KeyboardService extends InputMethodService
 
   public void typing() {
     if (root == null) return;
-    reset("typing", localEditor == null ? 284 : 394);
+    reset("typing", KeyboardView.HEIGHT_DP + (localEditor == null ? 0 : 110));
     root.setBackgroundColor(Ui.KEYBOARD);
     if (localEditor != null) {
       panelHeading(
@@ -232,6 +243,7 @@ public final class KeyboardService extends InputMethodService
             !privateMode() && localEditor == null && edits.canUndo(full(), generation),
             new app.doudou.ime.input.KeyboardView.Actions() {
               public void letter(char ch) {
+                voice.beforeEdit();
                 if (Character.isLetter(ch)) KeyboardService.this.letter(ch);
                 else literal("" + ch);
               }
@@ -272,8 +284,8 @@ public final class KeyboardService extends InputMethodService
                 moveCursor(d);
               }
 
-              public void more(View anchor) {
-                if (localEditor == null) keyboardMenu.show(anchor);
+              public void more() {
+                if (localEditor == null) keyboardMenu.show();
               }
 
               public void undo() { undoInsertion(); }
@@ -282,15 +294,15 @@ public final class KeyboardService extends InputMethodService
                 if (localEditor == null) { if (composing.length() > 0) space(); showVoice(); }
               }
 
-              public void holdVoice(float x, float y) {
-                if (localEditor == null) { if (composing.length() > 0) space(); voice.hold(x, y); }
+              public void holdVoice() {
+                if (localEditor == null) { if (composing.length() > 0) space(); voice.hold(); }
               }
 
               public void advisor() {
                 if (localEditor == null) startAdvisor(false);
               }
 
-              public void finishVoice() { voice.finishRecording(); }
+              public void finishVoice(boolean newline) { voice.finishRecording(newline); }
 
               public void cancelVoice() { voice.leave(); }
 
@@ -310,12 +322,13 @@ public final class KeyboardService extends InputMethodService
             });
     root.addView(keyboard, new LinearLayout.LayoutParams(-1, 0, 1));
     if (composing.length() > 0) refreshCandidates();
+    if (voice.active()) voice.render();
   }
 
   private void showCandidates() {
     if (composing.length() == 0) return;
     final List<PinyinEngine.Word> options = new ArrayList<>(visibleCandidates);
-    reset("candidates", 284);
+    reset("candidates", KeyboardView.HEIGHT_DP);
     panelHeading(composing.toString(), this::typing);
     ScrollView scroll = new ScrollView(this);
     LinearLayout list = Ui.col(this);
@@ -431,6 +444,7 @@ public final class KeyboardService extends InputMethodService
   }
 
   private void space() {
+    voice.beforeEdit();
     if (composing.length() > 0) {
       final String code = composing.toString();
       if (app.pinyin != null) {
@@ -447,6 +461,7 @@ public final class KeyboardService extends InputMethodService
   }
 
   public void delete() {
+    voice.beforeEdit();
     InputConnection ic = input();
     if (ic == null) return;
     if (composing.length() > 0) {
@@ -464,6 +479,7 @@ public final class KeyboardService extends InputMethodService
   }
 
   private void enter() {
+    voice.beforeEdit();
     if (composing.length() > 0 && !english) space();
     commitComposing();
     InputConnection ic = input();
@@ -602,7 +618,7 @@ public final class KeyboardService extends InputMethodService
   }
 
   public void message(String title, String detail, String actionLabel, Runnable action) {
-    reset("error", 284);
+    reset("error", KeyboardView.HEIGHT_DP);
     TextView heading = Ui.text(this, title, 17, Ui.INK);
     Ui.pad(this, heading, 16, 14);
     root.addView(heading);
@@ -624,6 +640,7 @@ public final class KeyboardService extends InputMethodService
   }
 
   public void moveCursor(int delta) {
+    voice.beforeEdit();
     commitComposing();
     InputConnection ic = input();
     int[] s = selection();
@@ -682,6 +699,7 @@ public final class KeyboardService extends InputMethodService
     historyEdits.begin(insertionBefore, insertionStart, insertionEnd, insertionText, generation);
     app.doudou.ime.history.HistoryStore.Entry entry = app.histories.get(id);
     if (entry != null) activeConversation = entry.conversationRef;
+    observeHistory();
   }
 
   public String conversationRef() {
@@ -729,6 +747,10 @@ public final class KeyboardService extends InputMethodService
 
   public void voiceLevel(float rmsDb) { if (keyboard != null) keyboard.voiceLevel(rmsDb); }
 
+  public app.doudou.ime.voice.VoiceGesture.Target voiceTarget(float x, float y) {
+    return keyboard == null ? VoiceGesture.Target.FINISH : keyboard.voiceTarget(x, y);
+  }
+
   public void voiceRecovery(String hint, boolean hasText) {
     if (keyboard != null && mode.equals("typing")) keyboard.recovery(hint, hasText);
   }
@@ -754,11 +776,12 @@ public final class KeyboardService extends InputMethodService
     typing();
   }
 
-  private void showVoice() {
+  public void showVoice() {
     voice.show();
   }
 
   public void selectAll() {
+    voice.beforeEdit();
     commitComposing();
     InputConnection ic = input();
     if (ic != null && !ic.performContextMenuAction(android.R.id.selectAll))
@@ -780,6 +803,19 @@ public final class KeyboardService extends InputMethodService
   public boolean finishVoice(String text) {
     dictation.restore();
     return protectedInsert(text);
+  }
+
+  public String retainVoice() {
+    String value = dictation.release();
+    if (value != null) {
+      insertionBefore = initialDraft;
+      insertionStart = Math.min(initialStart, initialEnd);
+      insertionEnd = Math.max(initialStart, initialEnd);
+      insertionText = value;
+      insertionSerial++;
+      edits.begin(insertionBefore, insertionStart, insertionEnd, value, generation);
+    }
+    return value;
   }
 
   public void restoreVoice() { dictation.restore(); }
