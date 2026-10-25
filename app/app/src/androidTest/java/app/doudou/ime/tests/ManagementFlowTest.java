@@ -346,17 +346,18 @@ public final class ManagementFlowTest {
       await("我的文风");
       shot("home");
       click("编辑自然");
-      await("这格怎么表达");
-      set("自然", "随口说");
+      await("编辑表达");
+      click("参考搭配");
       click("俏皮");
+      await("编辑表达");
+      set(original.getJSONArray("slots").getJSONObject(0).getString("name"), "随口说");
       click("保存");
       await("编辑随口说");
       org.json.JSONObject changed = store.sync();
       assertEquals("随口说", changed.getJSONArray("slots").getJSONObject(0).getString("name"));
-      assertEquals(
-          "playful", changed.getJSONArray("slots").getJSONObject(0).getString("expression"));
+      assertTrue(changed.getJSONArray("slots").getJSONObject(0).getJSONObject("attributes").getJSONArray("rhetoric").toString().contains("humor"));
       shot("palette-edited");
-      store.save(changed, 0, "自然", "natural");
+      store.save(app.cloud.userId(), changed, 0, original.getJSONArray("slots").getJSONObject(0).getString("name"), original.getJSONArray("slots").getJSONObject(0).getJSONObject("attributes"));
       click("人物");
       await("沐星");
       click("沐星");

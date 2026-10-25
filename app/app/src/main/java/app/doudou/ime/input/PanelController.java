@@ -63,7 +63,7 @@ public abstract class PanelController extends ContextWrapper {
     LinearLayout h = Ui.row(this);
     h.addView(
         Ui.icon(this, "返回", back), new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
-    TextView label = Ui.text(this, title, 16, Ui.INK);
+    TextView label = Ui.text(this, title, 16, Ui.ink());
     label.setGravity(Gravity.CENTER_VERTICAL);
     label.setSingleLine(true);
     label.setEllipsize(android.text.TextUtils.TruncateAt.END);

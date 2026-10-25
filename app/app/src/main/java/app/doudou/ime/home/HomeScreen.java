@@ -8,6 +8,8 @@ import android.widget.*;
 import app.doudou.ime.advisor.PaletteStore;
 import app.doudou.ime.app.*;
 import app.doudou.ime.design.Ui;
+import app.doudou.ime.design.Icons;
+import app.doudou.ime.R;
 import app.doudou.ime.memory.MemoryStore;
 import app.doudou.ime.people.RelationshipGraph;
 import java.util.*;
@@ -21,8 +23,8 @@ public final class HomeScreen extends Screen {
   @Override
   protected void draw() {
     LinearLayout practice = Ui.card(activity);
-    practice.setBackground(Ui.bg(activity, Ui.HERO, 22));
-    TextView title = Ui.text(activity, "试试豆豆", 22, Ui.INK);
+    practice.setBackground(Ui.bg(activity, Ui.hero(), 22));
+    TextView title = Ui.text(activity, "试试豆豆", 22, Ui.ink());
     title.setTypeface(null, Typeface.BOLD);
     practice.addView(title);
     Ui.gap(activity, practice, 14);
@@ -32,7 +34,7 @@ public final class HomeScreen extends Screen {
     practice.addView(scenes);
     add(practice);
     LinearLayout palette = Ui.col(activity);
-    TextView label = Ui.text(activity, "调色盘", 21, Ui.INK);
+    TextView label = Ui.text(activity, "调色盘", 21, Ui.ink());
     label.setTypeface(null, Typeface.BOLD);
     palette.addView(label);
     Ui.gap(activity, palette, 12);
@@ -43,19 +45,22 @@ public final class HomeScreen extends Screen {
         for (int column = 0; column < 3; column++) {
           int index = row * 3 + column;
           JSONObject slot = slots.getJSONObject(index);
-          int color =
-              PaletteStore.COLORS[
-                  Arrays.asList(PaletteStore.IDS).indexOf(slot.getString("expression"))];
+          int color = PaletteStore.COLORS[index];
           LinearLayout tile = Ui.col(activity);
           Ui.pad(activity, tile, 14, 10);
           tile.setGravity(Gravity.CENTER_VERTICAL);
-          tile.setBackground(Ui.pressable(activity, Ui.PANEL, 18));
+          tile.setBackground(Ui.pressable(activity, Ui.panel(), 18));
           View dot = new View(activity);
           dot.setBackground(Ui.bg(activity, color, 8));
-          tile.addView(
-              dot, new LinearLayout.LayoutParams(Ui.dp(activity, 14), Ui.dp(activity, 14)));
+          LinearLayout identity = Ui.row(activity);
+          identity.setGravity(Gravity.CENTER_VERTICAL);
+          identity.addView(dot, new LinearLayout.LayoutParams(Ui.dp(activity, 14), Ui.dp(activity, 14)));
+          identity.addView(new Space(activity), new LinearLayout.LayoutParams(0, 1, 1));
+          identity.addView(Icons.image(activity, R.drawable.ic_edit_note, Ui.sub()),
+              new LinearLayout.LayoutParams(Ui.dp(activity, 16), Ui.dp(activity, 16)));
+          tile.addView(identity);
           Ui.gap(activity, tile, 8);
-          TextView name = Ui.text(activity, slot.getString("name"), 17, Ui.INK);
+          TextView name = Ui.text(activity, slot.getString("name"), 17, Ui.ink());
           name.setMaxLines(2);
           name.setEllipsize(android.text.TextUtils.TruncateAt.END);
           tile.addView(name);
@@ -87,17 +92,17 @@ public final class HomeScreen extends Screen {
     Ui.pad(activity, style, 12, 12);
     style.addView(Ui.cell(activity, "", "我的文风", "", "", () -> nav.open("style", 0)));
     if (styles.isEmpty()) {
-      TextView waiting = Ui.text(activity, "还在认识你的表达", 15, Ui.SUB);
+      TextView waiting = Ui.text(activity, "还在认识你的表达", 15, Ui.sub());
       Ui.pad(activity, waiting, 0, 8);
       style.addView(waiting);
     } else {
       MemoryStore.Item first = styles.get(0);
-      TextView scene = Ui.text(activity, first.title, 14, Ui.APP_ACCENT);
+      TextView scene = Ui.text(activity, first.title, 14, Ui.appAccent());
       scene.setMaxLines(2);
       scene.setEllipsize(android.text.TextUtils.TruncateAt.END);
       style.addView(scene);
       Ui.gap(activity, style, 8);
-      TextView rules = Ui.text(activity, first.body, 15, Ui.INK);
+      TextView rules = Ui.text(activity, first.body, 15, Ui.ink());
       rules.setMaxLines(3);
       rules.setEllipsize(android.text.TextUtils.TruncateAt.END);
       rules.setLineSpacing(Ui.dp(activity, 3), 1);
@@ -120,7 +125,7 @@ public final class HomeScreen extends Screen {
       preview.setContentDescription("人物星图预览");
       graph.addView(preview, new LinearLayout.LayoutParams(-1, Ui.dp(activity, 120)));
     } else {
-      TextView empty = Ui.text(activity, "还没有人物", 15, Ui.SUB);
+      TextView empty = Ui.text(activity, "还没有人物", 15, Ui.sub());
       Ui.pad(activity, empty, 0, 8);
       graph.addView(empty);
     }
@@ -137,100 +142,15 @@ public final class HomeScreen extends Screen {
                 activity.startActivity(
                     new Intent(activity, PracticeActivity.class)
                         .putExtra("scene", comments ? "comments" : "chat")));
-    button.setTextColor(Ui.APP_ACCENT);
-    button.setBackground(Ui.pressable(activity, Ui.APP_TINT, 14));
+    button.setTextColor(Ui.appAccent());
+    button.setBackground(Ui.pressable(activity, Ui.appTint(), 14));
     LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, Ui.dp(activity, 50), 1);
     size.setMargins(0, 0, comments ? 0 : Ui.dp(activity, 10), 0);
     row.addView(button, size);
   }
 
   private void editSlot(int index) {
-    if (!app.cloud.loggedIn()) {
-      nav.open("account", 0);
-      return;
-    }
-    PaletteStore store = new PaletteStore(app);
-    app.network.execute(
-        () -> {
-          try {
-            JSONObject snapshot = store.sync();
-            activity.runOnUiThread(() -> dialog(store, snapshot, index));
-          } catch (Exception e) {
-            activity.runOnUiThread(() -> Ui.toast(activity, "暂时无法加载，请联网后再试"));
-          }
-        });
-  }
-
-  private void dialog(PaletteStore store, JSONObject snapshot, int index) {
-    if (activity.isFinishing()) return;
-    try {
-      JSONObject slot = snapshot.getJSONArray("slots").getJSONObject(index);
-      LinearLayout fields = Ui.col(activity);
-      Ui.pad(activity, fields, 20, 16);
-      EditText name = Ui.edit(activity, "名称", slot.getString("name"));
-      name.setSingleLine(true);
-      name.setFilters(
-          new android.text.InputFilter[] {new android.text.InputFilter.LengthFilter(16)});
-      fields.addView(name);
-      Ui.gap(activity, fields, 12);
-      RadioGroup choices = new RadioGroup(activity);
-      int[] selected = {Arrays.asList(PaletteStore.IDS).indexOf(slot.getString("expression"))};
-      for (int i = 0; i < 6; i++) {
-        final int which = i;
-        RadioButton radio = new RadioButton(activity);
-        radio.setText(PaletteStore.NAMES[i]);
-        radio.setTextColor(Ui.INK);
-        radio.setButtonTintList(android.content.res.ColorStateList.valueOf(PaletteStore.COLORS[i]));
-        radio.setId(View.generateViewId());
-        radio.setMinHeight(Ui.dp(activity, 48));
-        choices.addView(radio);
-        radio.setChecked(i == selected[0]);
-        radio.setOnCheckedChangeListener(
-            (v, checked) -> {
-              if (checked) selected[0] = which;
-            });
-      }
-      fields.addView(choices);
-      AlertDialog dialog =
-          new AlertDialog.Builder(activity)
-              .setTitle("这格怎么表达")
-              .setView(fields)
-              .setNegativeButton("取消", null)
-              .setPositiveButton("保存", null)
-              .create();
-      dialog.setOnShowListener(
-          d ->
-              dialog
-                  .getButton(-1)
-                  .setOnClickListener(
-                      v -> {
-                        String value = name.getText().toString().trim();
-                        if (value.isEmpty()) {
-                          name.setError("取个名字");
-                          return;
-                        }
-                        dialog.getButton(-1).setEnabled(false);
-                        app.network.execute(
-                            () -> {
-                              try {
-                                store.save(snapshot, index, value, PaletteStore.IDS[selected[0]]);
-                                activity.runOnUiThread(
-                                    () -> {
-                                      dialog.dismiss();
-                                      nav.refresh();
-                                    });
-                              } catch (Exception e) {
-                                activity.runOnUiThread(
-                                    () -> {
-                                      dialog.getButton(-1).setEnabled(true);
-                                      Ui.toast(activity, e.getMessage());
-                                    });
-                              }
-                            });
-                      }));
-      dialog.show();
-    } catch (Exception e) {
-      Ui.toast(activity, "调色盘需要重新加载");
-    }
+    if (!app.cloud.loggedIn()) { nav.open("account", 0); return; }
+    activity.startActivity(new Intent(activity, app.doudou.ime.advisor.PaletteActivity.class).putExtra("slot", index));
   }
 }

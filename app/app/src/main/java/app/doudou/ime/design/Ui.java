@@ -8,23 +8,28 @@ import android.view.*;
 import android.widget.*;
 
 public final class Ui {
-  public static final int BG = 0xff222222,
-      PANEL = 0xff2c2c2c,
-      KEY = 0xff606060,
-      INK = 0xfff4f4f4,
-      SUB = 0xffaaaaaa,
-      ACCENT = 0xfff1f0ee,
-      APP_ACCENT = 0xffa9c4ff,
-      APP_TINT = 0xff30394b,
-      AUDIO_START = 0xff14beca,
-      AUDIO_END = 0xff4c80ff,
-      SURFACE = 0xff333333,
-      SELECTED = 0xff464646,
-      KEYBOARD = 0xff222222,
-      SPECIAL_KEY = 0xff333333,
-      HERO = 0xff383838,
-      LINE = 0xff3a3a3a,
-      RED = 0xffffb4ab;
+  public static int bg() { return Skin.choose(0xff222222, 0xfff6f7fb); }
+  public static int panel() { return Skin.choose(0xff2c2c2c, 0xffffffff); }
+  public static int key() { return Skin.choose(0xff606060, 0xffffffff); }
+  public static int ink() { return Skin.choose(0xfff4f4f4, 0xff22262e); }
+  public static int sub() { return Skin.choose(0xffaaaaaa, 0xff606773); }
+  public static int accent() { return Skin.choose(0xfff1f0ee, 0xff30343c); }
+  public static int appAccent() { return Skin.choose(0xffa9c4ff, 0xff355fbc); }
+  public static int appTint() { return Skin.choose(0xff30394b, 0xffe6edff); }
+  public static int audioStart() { return Skin.choose(0xff14beca, 0xff007b8b); }
+  public static int audioEnd() { return Skin.choose(0xff4c80ff, 0xff3866d6); }
+  public static int surface() { return Skin.choose(0xff333333, 0xffe9ebf1); }
+  public static int selected() { return Skin.choose(0xff464646, 0xffd8dfec); }
+  public static int keyboard() { return Skin.choose(0xff222222, 0xffe3e5eb); }
+  public static int specialKey() { return Skin.choose(0xff333333, 0xffcbd0da); }
+  public static int hero() { return Skin.choose(0xff383838, 0xffebeff8); }
+  public static int line() { return Skin.choose(0xff3a3a3a, 0xffd2d7e1); }
+  public static int red() { return Skin.choose(0xffffb4ab, 0xffb3261e); }
+  public static int voiceBackdrop() { return Skin.choose(0xff2a3843, 0xffd5e6f2); }
+  public static int outline() { return Skin.choose(0xff535353, 0xffadb4c0); }
+  public static int sheet() { return Skin.choose(0xff303030, 0xfffafbff); }
+  public static int sheetOutline() { return Skin.choose(0xff505050, 0xffc6ccd7); }
+  public static int withdrawalRed() { return Skin.choose(0xffff5a67, 0xffb32635); }
 
   public static int dp(Context c, float n) {
     return Math.round(n * c.getResources().getDisplayMetrics().density);
@@ -68,13 +73,13 @@ public final class Ui {
   }
 
   public static TextView button(Context c, String s, Runnable click) {
-    TextView t = text(c, s, 15, INK);
+    TextView t = text(c, s, 15, ink());
     t.setSingleLine(true);
     t.setEllipsize(android.text.TextUtils.TruncateAt.END);
     t.setGravity(Gravity.CENTER);
     pad(c, t, 14, 8);
     t.setMinHeight(dp(c, 44));
-    t.setBackground(pressable(c, SURFACE, 12));
+    t.setBackground(pressable(c, surface(), 12));
     t.setOnClickListener(v -> click.run());
     t.setFocusable(true);
     t.setContentDescription(s);
@@ -83,8 +88,8 @@ public final class Ui {
 
   public static TextView primary(Context c, String s, Runnable click) {
     TextView t = button(c, s, click);
-    t.setTextColor(BG);
-    t.setBackground(pressable(c, ACCENT, 14));
+    t.setTextColor(bg());
+    t.setBackground(pressable(c, accent(), 14));
     return t;
   }
 
@@ -92,12 +97,12 @@ public final class Ui {
     EditText e = new EditText(c);
     e.setHint(hint);
     e.setText(value);
-    e.setTextColor(INK);
-    e.setHintTextColor(SUB);
+    e.setTextColor(ink());
+    e.setHintTextColor(sub());
     e.setTextSize(16);
     e.setMinHeight(dp(c, 52));
     e.setPadding(dp(c, 14), dp(c, 12), dp(c, 14), dp(c, 12));
-    e.setBackground(bg(c, PANEL, 12));
+    e.setBackground(bg(c, panel(), 12));
     e.setSelectAllOnFocus(false);
     return e;
   }
@@ -105,7 +110,7 @@ public final class Ui {
   public static LinearLayout card(Context c) {
     LinearLayout l = col(c);
     pad(c, l, 16, 16);
-    l.setBackground(bg(c, PANEL, 18));
+    l.setBackground(bg(c, panel(), 18));
     return l;
   }
 
@@ -149,20 +154,20 @@ public final class Ui {
 
   public static android.graphics.drawable.Drawable pressable(Context c, int color, int radius) {
     return new android.graphics.drawable.RippleDrawable(
-        android.content.res.ColorStateList.valueOf(0x24ffffff),
+        android.content.res.ColorStateList.valueOf(Skin.choose(0x24ffffff, 0x16000000)),
         bg(c, color, radius),
         bg(c, android.graphics.Color.WHITE, radius));
   }
 
   public static View divider(Context c) {
     View v = new View(c);
-    v.setBackgroundColor(LINE);
+    v.setBackgroundColor(line());
     v.setLayoutParams(new LinearLayout.LayoutParams(-1, dp(c, .5f)));
     return v;
   }
 
   public static PopupMenu menu(Context c, View anchor) {
-    return new PopupMenu(new ContextThemeWrapper(c, android.R.style.Theme_Material), anchor);
+    return new PopupMenu(new ContextThemeWrapper(c, Skin.light() ? android.R.style.Theme_Material_Light : android.R.style.Theme_Material), anchor);
   }
 
   public static LinearLayout cell(
@@ -183,21 +188,21 @@ public final class Ui {
       row.addView(gap, new LinearLayout.LayoutParams(dp(c, 8), 1));
     }
     LinearLayout labels = col(c);
-    labels.addView(text(c, title, 15, INK));
+    labels.addView(text(c, title, 15, ink()));
     if (!detail.isEmpty()) {
       gap(c, labels, 5);
-      TextView sub = text(c, detail, 12, SUB);
+      TextView sub = text(c, detail, 12, sub());
       sub.setLineSpacing(dp(c, 3), 1);
       labels.addView(sub);
     }
     row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
     if (!value.isEmpty()) {
-      TextView trail = text(c, value, 12, SUB);
+      TextView trail = text(c, value, 12, sub());
       pad(c, trail, 6, 0);
       row.addView(trail);
     }
     if (click != null) {
-      TextView arrow = text(c, "›", 23, SUB);
+      TextView arrow = text(c, "›", 23, sub());
       arrow.setGravity(Gravity.CENTER);
       row.addView(arrow, new LinearLayout.LayoutParams(dp(c, 20), dp(c, 32)));
       row.setBackground(pressable(c, android.graphics.Color.TRANSPARENT, 10));
@@ -213,13 +218,13 @@ public final class Ui {
     item.setGravity(Gravity.CENTER);
     LinearLayout pill = row(c);
     pill.setGravity(Gravity.CENTER);
-    pill.setBackground(bg(c, selected ? SELECTED : android.graphics.Color.TRANSPARENT, 20));
+    pill.setBackground(bg(c, selected ? selected() : android.graphics.Color.TRANSPARENT, 20));
     Glyph glyph = new Glyph(c, icon);
-    glyph.color = selected ? ACCENT : SUB;
+    glyph.color = selected ? accent() : sub();
     pill.addView(glyph, new LinearLayout.LayoutParams(dp(c, 24), dp(c, 24)));
     item.addView(pill, new LinearLayout.LayoutParams(dp(c, 60), dp(c, 32)));
     gap(c, item, 5);
-    TextView caption = text(c, name, 11, selected ? INK : SUB);
+    TextView caption = text(c, name, 11, selected ? ink() : sub());
     caption.setGravity(Gravity.CENTER);
     item.addView(caption);
     item.setContentDescription(name);
@@ -233,11 +238,11 @@ public final class Ui {
     LinearLayout tile = col(c);
     tile.setGravity(Gravity.CENTER);
     pad(c, tile, 2, 10);
-    tile.setBackground(pressable(c, SURFACE, 20));
+    tile.setBackground(pressable(c, surface(), 20));
     Glyph glyph = new Glyph(c, icon);
     tile.addView(glyph, new LinearLayout.LayoutParams(dp(c, 28), dp(c, 30)));
     gap(c, tile, 9);
-    TextView label = text(c, name, 12, INK);
+    TextView label = text(c, name, 12, ink());
     label.setGravity(Gravity.CENTER);
     tile.addView(label);
     tile.setFocusable(true);
@@ -247,7 +252,7 @@ public final class Ui {
   }
 
   public static TextView eyebrow(Context c, String label) {
-    TextView t = text(c, label, 12, SUB);
+    TextView t = text(c, label, 12, sub());
     t.setLetterSpacing(.04f);
     pad(c, t, 2, 10);
     return t;
@@ -258,12 +263,12 @@ public final class Ui {
     box.setGravity(Gravity.CENTER);
     pad(c, box, 16, 36);
     Glyph mark = new Glyph(c, "闪光");
-    mark.color = ACCENT;
+    mark.color = accent();
     box.addView(mark, new LinearLayout.LayoutParams(dp(c, 34), dp(c, 34)));
     gap(c, box, 16);
-    box.addView(text(c, title, 18, INK));
+    box.addView(text(c, title, 18, ink()));
     gap(c, box, 8);
-    TextView desc = text(c, subtitle, 13, SUB);
+    TextView desc = text(c, subtitle, 13, sub());
     desc.setGravity(Gravity.CENTER);
     desc.setLineSpacing(dp(c, 4), 1);
     box.addView(desc);
@@ -273,7 +278,7 @@ public final class Ui {
   public static final class Glyph extends View {
     final String name;
     final Paint p = new Paint(3);
-    public int color = INK;
+    public int color = ink();
 
     public Glyph(Context c, String n) {
       super(c);

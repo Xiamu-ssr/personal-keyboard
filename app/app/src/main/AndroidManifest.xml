@@ -11,6 +11,7 @@
         </activity>
         <activity android:name=".app.PracticeActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".recording.RecordingActivity" android:exported="false" />
+        <activity android:name=".advisor.PaletteActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <service android:name=".recording.RecordingService" android:exported="false" android:foregroundServiceType="microphone" />
         <service android:name=".app.KeyboardService" android:permission="android.permission.BIND_INPUT_METHOD" android:exported="true">
             <intent-filter><action android:name="android.view.InputMethod" /></intent-filter>

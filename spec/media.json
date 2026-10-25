@@ -4,21 +4,6 @@
   "source": "Actual Android 15 emulator recordings of this APK using owned practice fixtures. Each clip retains a single contiguous task interval, in original order and speed, with no generated UI or replaced waiting states. Synthetic speech enters the guest microphone and goes through real Cloud/Aliyun ASR. Advisor uses the production Cloud/Aliyun with a disposable QA account. No current-version physical-device acceptance is claimed.",
   "cloudModelsConfigured": true,
   "advisorThinkingBudget": 1024,
-  "screenshotSources": {
-    "runtime": [
-      "typing.png",
-      "tools.png",
-      "voice.png",
-      "advisor.png"
-    ],
-    "localUiFixtures": [
-      "home.png",
-      "memory.png",
-      "people.png",
-      "settings.png",
-      "account.png"
-    ]
-  },
   "files": {
     "keyboard-tour.mp4": {
       "sha256": "1e9c69034243518046db7cbc4607fab0ee7e4eaf101b31a432f121fc6d348d5b",

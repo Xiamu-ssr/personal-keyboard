@@ -20,18 +20,18 @@ public final class KeyboardMenu {
     host.cancelVoice();
     host.commitComposing();
     LinearLayout root = host.openPanel("tools", KeyboardView.HEIGHT_DP);
-    root.setBackgroundColor(Ui.KEYBOARD);
+    root.setBackgroundColor(Ui.keyboard());
     LinearLayout heading = Ui.row(context);
     View back = Icons.button(context, R.drawable.ic_arrow_back, "返回键盘", host::typing);
     heading.addView(back, new LinearLayout.LayoutParams(Ui.dp(context, 48), Ui.dp(context, 48)));
-    TextView title = Ui.text(context, "常用工具", 15, Ui.SUB);
+    TextView title = Ui.text(context, "常用工具", 15, Ui.sub());
     heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
     TextView privacy =
         Ui.button(context, host.privateMode() ? "隐私已开" : "隐私输入", host::togglePrivacy);
     privacy.setContentDescription("隐私输入");
     privacy.setSelected(host.privateMode());
     privacy.setTextSize(13);
-    privacy.setTextColor(host.privateMode() ? Ui.ACCENT : Ui.SUB);
+    privacy.setTextColor(host.privateMode() ? Ui.accent() : Ui.sub());
     if (host.canUndoInsertion())
       heading.addView(
           Ui.button(context, "撤销", host::undoInsertion),
@@ -69,17 +69,17 @@ public final class KeyboardMenu {
     Context context = host.context();
     LinearLayout tile = Ui.col(context);
     tile.setGravity(Gravity.CENTER);
-    tile.setBackground(Ui.pressable(context, selected ? Ui.SELECTED : Ui.HERO, 18));
+    tile.setBackground(Ui.pressable(context, selected ? Ui.selected() : Ui.hero(), 18));
     tile.setContentDescription(name);
     tile.setStateDescription(selected ? "已开启" : null);
     tile.setFocusable(true);
     tile.setSelected(selected);
     tile.setOnClickListener(v -> action.run());
     tile.addView(
-        Icons.image(context, resource, Ui.INK),
+        Icons.image(context, resource, Ui.ink()),
         new LinearLayout.LayoutParams(Ui.dp(context, 28), Ui.dp(context, 28)));
     Ui.gap(context, tile, 9);
-    TextView label = Ui.text(context, name, 14, Ui.INK);
+    TextView label = Ui.text(context, name, 14, Ui.ink());
     label.setGravity(Gravity.CENTER);
     label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
     tile.addView(label);

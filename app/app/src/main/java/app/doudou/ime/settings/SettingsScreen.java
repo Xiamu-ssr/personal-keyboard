@@ -1,5 +1,7 @@
 package app.doudou.ime.settings;
 
+import app.doudou.ime.design.Skin;
+
 import android.Manifest;
 import android.app.*;
 import android.content.*;
@@ -34,13 +36,33 @@ public final class SettingsScreen extends Screen {
       return;
     }
     add(AccountSummary.create(activity, app, () -> nav.open("account", 0)));
+    LinearLayout appearance = Ui.card(activity);
+    appearance.addView(Ui.text(activity, "皮肤", 16, Ui.ink()));
+    Ui.gap(activity, appearance, 12);
+    LinearLayout skins = Ui.row(activity);
+    for (boolean light : new boolean[] {true, false}) {
+      boolean selected = light == Skin.light();
+      TextView choice = Ui.button(activity, light ? "亮色" : "暗色", () -> {
+        if (light == Skin.light()) return;
+        Skin.select(activity, light);
+        activity.recreate();
+      });
+      choice.setSelected(selected);
+      choice.setTextColor(selected ? Ui.appAccent() : Ui.ink());
+      choice.setBackground(Ui.pressable(activity, selected ? Ui.appTint() : Ui.surface(), 14));
+      choice.setContentDescription((light ? "亮色皮肤" : "暗色皮肤") + (selected ? "，已选择" : ""));
+      LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, Ui.dp(activity, 52), 1);
+      if (!light) size.leftMargin = Ui.dp(activity, 10);
+      skins.addView(choice, size);
+    }
+    appearance.addView(skins); add(appearance);
     LinearLayout keys = Ui.card(activity);
     Switch vibration = new Switch(activity);
     vibration.setText("按键轻振");
     vibration.setTextSize(16);
-    vibration.setTextColor(Ui.INK);
+    vibration.setTextColor(Ui.ink());
     vibration.setMinHeight(Ui.dp(activity, 52));
-    vibration.setThumbTintList(android.content.res.ColorStateList.valueOf(Ui.APP_ACCENT));
+    vibration.setThumbTintList(android.content.res.ColorStateList.valueOf(Ui.appAccent()));
     vibration.setChecked(app.prefs().getBoolean("haptic", true));
     vibration.setOnCheckedChangeListener(
         (v, on) -> app.prefs().edit().putBoolean("haptic", on).apply());

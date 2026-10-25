@@ -17,11 +17,11 @@ if (
   artifact.sha256 !== manifest.files["doudou-keyboard.apk"]?.sha256
 )
   throw Error("Public build version mismatch");
-if (Object.keys(manifest.files).length !== 10)
-  throw Error("Expected APK and nine native screenshots");
+if (Object.keys(manifest.files).length !== 12)
+  throw Error("Expected APK and eleven native screenshots");
 for (const [name, expected] of Object.entries(manifest.files)) {
   if (
-    !/^(doudou-keyboard\.apk|(?:home|typing|tools|voice|memory|people|advisor|settings|account)\.png)$/.test(
+    !/^(doudou-keyboard\.apk|(?:home|typing|tools|voice|memory|people|advisor|settings|account|palette|palette-dark)\.png)$/.test(
       name,
     )
   )
@@ -32,6 +32,8 @@ for (const [name, expected] of Object.entries(manifest.files)) {
     createHash("sha256").update(bytes).digest("hex") !== expected.sha256
   )
     throw Error("Public artifact digest mismatch: " + name);
+  if (name.endsWith('.png') && (!expected.source?.version || !/^[a-f0-9]{64}$/.test(expected.source.apkSha256)))
+    throw Error('Screenshot source APK is missing: ' + name);
 }
 const media = JSON.parse(
   await fs.readFile(path.join(root, "spec/media.json"), "utf8"),
@@ -56,5 +58,5 @@ for (const [name, expected] of Object.entries(media.files)) {
     throw Error("Recording digest mismatch: " + name);
 }
 console.log(
-  "Verified APK, nine native screenshots and two APK recordings against their manifests.",
+  "Verified APK, eleven native screenshots and two APK recordings against their manifests.",
 );

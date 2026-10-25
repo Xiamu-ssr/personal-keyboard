@@ -24,7 +24,7 @@ final class RecordingWaveform extends View {
   @Override
   protected void onSizeChanged(int w, int h, int oldw, int oldh) {
     paint.setShader(
-        new LinearGradient(0, 0, w, 0, Ui.AUDIO_START, Ui.AUDIO_END, Shader.TileMode.CLAMP));
+        new LinearGradient(0, 0, w, 0, Ui.audioStart(), Ui.audioEnd(), Shader.TileMode.CLAMP));
   }
 
   @Override

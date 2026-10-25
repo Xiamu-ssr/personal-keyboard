@@ -42,13 +42,13 @@ public final class RecordingPanel {
         return;
       }
     LinearLayout root = host.openPanel("recorder", KeyboardView.HEIGHT_DP);
-    root.setBackgroundColor(Ui.KEYBOARD);
+    root.setBackgroundColor(Ui.keyboard());
     LinearLayout heading = Ui.row(c);
     heading.addView(
         Ui.icon(c, "返回", host::typing), new LinearLayout.LayoutParams(Ui.dp(c, 48), Ui.dp(c, 48)));
-    TextView title = Ui.text(c, "录音笔", 17, Ui.INK);
+    TextView title = Ui.text(c, "录音笔", 17, Ui.ink());
     heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-    TextView clock = Ui.text(c, "00:00", 14, Ui.ACCENT);
+    TextView clock = Ui.text(c, "00:00", 14, Ui.accent());
     heading.addView(clock);
     final String[] recordId = {""};
     TextView open =
@@ -70,7 +70,7 @@ public final class RecordingPanel {
     LinearLayout content = Ui.col(c);
     Ui.pad(c, content, 18, 12);
     scroll.addView(content);
-    TextView text = Ui.text(c, "", 17, Ui.INK);
+    TextView text = Ui.text(c, "", 17, Ui.ink());
     text.setLineSpacing(Ui.dp(c, 5), 1);
     content.addView(text);
     root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
@@ -78,7 +78,7 @@ public final class RecordingPanel {
     Ui.pad(c, footer, 16, 6);
     RecordingWaveform waveform = new RecordingWaveform(c);
     footer.addView(waveform, new LinearLayout.LayoutParams(Ui.dp(c, 64), Ui.dp(c, 36)));
-    TextView status = Ui.text(c, "正在开始…", 13, Ui.SUB);
+    TextView status = Ui.text(c, "正在开始…", 13, Ui.sub());
     footer.addView(status, new LinearLayout.LayoutParams(0, -2, 1));
     TextView stop =
         Ui.primary(

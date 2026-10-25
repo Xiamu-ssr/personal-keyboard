@@ -29,7 +29,7 @@ location = /keyboard-spec/demo/doudou-keyboard.apk {
 }
 
 # Named capture is constrained to the release allowlist, never an arbitrary path.
-location ~ ^/keyboard-spec/demo/(?<keyboard_spec_media>artifact\.json|(?:home|typing|tools|voice|memory|people|advisor|settings|account)\.png|(?:keyboard-tour|advisor-tour)\.mp4)$ {
+location ~ ^/keyboard-spec/demo/(?<keyboard_spec_media>artifact\.json|(?:home|typing|tools|voice|memory|people|advisor|settings|account|palette|palette-dark)\.png|(?:keyboard-tour|advisor-tour)\.mp4)$ {
     alias /var/www/personal-keyboard-spec/current/demo/$keyboard_spec_media;
     types {
         application/json json;

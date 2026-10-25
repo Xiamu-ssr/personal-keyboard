@@ -1,5 +1,7 @@
 package app.doudou.ime.app;
 
+import app.doudou.ime.design.Skin;
+
 import android.app.Application;
 import android.content.*;
 import app.doudou.ime.input.engine.InitialLexicon;
@@ -25,6 +27,8 @@ public final class KeyboardApp extends Application {
   public void onCreate() {
     super.onCreate();
     instance = this;
+    Skin.load(this);
+    setTheme(Skin.theme());
     cloud = new app.doudou.ime.cloud.CloudClient(this);
     store = new MemoryStore(this);
     histories = new app.doudou.ime.history.HistoryStore(this);

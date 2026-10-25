@@ -43,7 +43,7 @@ public final class RelationshipGraph extends View {
       double angle = -Math.PI / 2 + 2 * Math.PI * i / n;
       float x = cx + (float) Math.cos(angle) * r, y = cy + (float) Math.sin(angle) * r;
       points.add(new PointF(x, y));
-      paint.setColor(Ui.LINE);
+      paint.setColor(Ui.line());
     }
     for (int i = 0; i < n; i++) {
       try {
@@ -59,7 +59,7 @@ public final class RelationshipGraph extends View {
               if (people.get(k).globalId.equals(target)) end = points.get(k);
           if (end != null) {
             PointF start = points.get(i);
-            paint.setColor(Ui.LINE);
+            paint.setColor(Ui.line());
             c.drawLine(start.x, start.y, end.x, end.y, paint);
           }
         }
@@ -88,10 +88,10 @@ public final class RelationshipGraph extends View {
   }
 
   void node(Canvas c, float x, float y, String name, boolean me) {
-    paint.setColor(me ? Ui.APP_ACCENT : Ui.KEY);
+    paint.setColor(me ? Ui.appAccent() : Ui.key());
     c.drawCircle(x, y, radius(), paint);
     paint.setTextSize(Ui.dp(getContext(), compact() ? 12 : 13));
-    paint.setColor(me ? Ui.BG : Ui.INK);
+    paint.setColor(me ? Ui.bg() : Ui.ink());
     c.drawText(name, x, y + Ui.dp(getContext(), 5), paint);
   }
 

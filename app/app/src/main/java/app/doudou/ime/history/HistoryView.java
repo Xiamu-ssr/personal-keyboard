@@ -31,13 +31,13 @@ public final class HistoryView {
       String kind = e.type.equals("recording") ? "录音笔" : e.type.equals("advisor") ? "帮我回" : "语音";
       String preview = value.isEmpty() ? (e.type.equals("recording") ? "录音" : "回复建议") : value;
       LinearLayout card = Ui.card(activity);
-      TextView text = Ui.text(activity, preview, 17, Ui.INK);
+      TextView text = Ui.text(activity, preview, 17, Ui.ink());
       text.setMaxLines(3);
       text.setEllipsize(android.text.TextUtils.TruncateAt.END);
       text.setLineSpacing(Ui.dp(activity, 3), 1);
       card.addView(text);
       Ui.gap(activity, card, 12);
-      card.addView(Ui.text(activity, kind + " · " + Ui.when(e.created), 12, Ui.SUB));
+      card.addView(Ui.text(activity, kind + " · " + Ui.when(e.created), 12, Ui.sub()));
       card.setFocusable(true);
       card.setContentDescription(kind + "历史");
       card.setOnClickListener(v -> open(e));
@@ -57,7 +57,7 @@ public final class HistoryView {
     Ui.pad(activity, content, 18, 12);
     String value = e.resultText.isEmpty() ? e.asrText : e.resultText;
     if (!value.isEmpty()) {
-      TextView text = Ui.text(activity, value, 19, Ui.INK);
+      TextView text = Ui.text(activity, value, 19, Ui.ink());
       text.setLineSpacing(Ui.dp(activity, 6), 1);
       text.setTextIsSelectable(true);
       content.addView(text);
@@ -67,7 +67,7 @@ public final class HistoryView {
     if (!e.asrText.isEmpty() && !e.asrText.equals(value)) {
       LinearLayout original = Ui.col(activity);
       original.setVisibility(View.GONE);
-      TextView raw = Ui.text(activity, e.asrText, 16, Ui.SUB);
+      TextView raw = Ui.text(activity, e.asrText, 16, Ui.sub());
       raw.setTextIsSelectable(true);
       Ui.pad(activity, raw, 0, 12);
       original.addView(raw);
@@ -124,7 +124,7 @@ public final class HistoryView {
               .append(m.optString("text"))
               .append('\n');
       }
-      TextView lines = Ui.text(activity, text.toString().trim(), 15, Ui.SUB);
+      TextView lines = Ui.text(activity, text.toString().trim(), 15, Ui.sub());
       lines.setLineSpacing(Ui.dp(activity, 4), 1);
       Ui.pad(activity, lines, 0, 12);
       transcript.addView(lines);
@@ -173,7 +173,7 @@ public final class HistoryView {
     TextView back = Ui.button(activity, "‹", () -> showGroup(target, e, index - 1));
     back.setEnabled(index > 0);
     header.addView(back);
-    TextView count = Ui.text(activity, (index + 1) + " / " + e.replyGroups.length(), 13, Ui.SUB);
+    TextView count = Ui.text(activity, (index + 1) + " / " + e.replyGroups.length(), 13, Ui.sub());
     count.setGravity(Gravity.CENTER);
     header.addView(count, new LinearLayout.LayoutParams(0, -2, 1));
     TextView next = Ui.button(activity, "›", () -> showGroup(target, e, index + 1));
@@ -186,10 +186,10 @@ public final class HistoryView {
         JSONObject reply = replies.getJSONObject(i);
         TextView line =
             Ui.text(
-                activity, reply.getString("style") + "\n" + reply.getString("text"), 16, Ui.INK);
+                activity, reply.getString("style") + "\n" + reply.getString("text"), 16, Ui.ink());
         line.setLineSpacing(Ui.dp(activity, 4), 1);
         Ui.pad(activity, line, 10, 12);
-        line.setBackground(Ui.pressable(activity, Ui.SURFACE, 12));
+        line.setBackground(Ui.pressable(activity, Ui.surface(), 12));
         String text = reply.getString("text");
         line.setOnClickListener(
             v -> {

@@ -20,7 +20,7 @@ public final class Icons {
   }
 
   public static ImageView button(Context context, int resource, String name, Runnable action) {
-    ImageView image = image(context, resource, Ui.INK);
+    ImageView image = image(context, resource, Ui.ink());
     int padding = Ui.dp(context, 11);
     image.setPadding(padding, padding, padding, padding);
     image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);

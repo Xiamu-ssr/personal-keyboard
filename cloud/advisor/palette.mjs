@@ -1,35 +1,27 @@
 import { requireValue } from '../http/errors.mjs';
 import { canonical, digest, seal, unseal } from '../security.mjs';
 import { isUuid } from '../billing/ledger.mjs';
+import { defaultPaletteSlots, expressionAttributes, expressionInstruction, paletteSchemaVersion } from './expression.mjs';
 
-// Expression strategies, not psychological diagnoses or personality types.
-export const expressions = Object.freeze([
-  { id: 'natural', name: '自然', instruction: '像熟人聊天，简洁自然，接住对方的话，不刻意表演。', color: '#8acbb5' },
-  { id: 'caring', name: '体贴', instruction: '先体会对方处境，温暖而具体，不替用户过度承诺。', color: '#e6b5a6' },
-  { id: 'direct', name: '直说', instruction: '清楚表达立场或边界，短句直接，不攻击、不拐弯。', color: '#a7bce3' },
-  { id: 'playful', name: '俏皮', instruction: '轻松、有一点亲切的玩笑，避免油腻、嘲弄或过分亲密。', color: '#e3c77d' },
-  { id: 'considered', name: '周全', instruction: '兼顾事实与对方感受，措辞得体，必要时提出下一步。', color: '#baaada' },
-  { id: 'witty', name: '机智', instruction: '找一个聪明而贴题的角度，用短巧的表达回应，不强行玩梗。', color: '#99c5d1' },
-]);
-export const defaultPalette = () => ({ version: 0, slots: expressions.map((p, i) => ({ id: 'slot' + (i + 1), name: p.name, expression: p.id })) });
+export const defaultPalette = () => ({ schemaVersion: paletteSchemaVersion, version: 0, slots: defaultPaletteSlots() });
 export function paletteValue(raw) {
   requireValue(Array.isArray(raw) && raw.length === 6, 'PALETTE_FORMAT', '调色盘需要六种表达');
   return raw.map((v, i) => {
-    requireValue(v.id === 'slot' + (i + 1) && typeof v.name === 'string' && v.name.trim().length > 0 && v.name.trim().length <= 16 && expressions.some(p => p.id === v.expression), 'PALETTE_FORMAT', '表达名称或类型无效');
-    return { id: v.id, name: v.name.trim(), expression: v.expression };
+    requireValue(v && Object.keys(v).length === 3 && v.id === 'slot' + (i + 1) && typeof v.name === 'string' && v.name.trim().length > 0 && [...v.name.trim()].length <= 16, 'PALETTE_FORMAT', '表达名称或属性无效');
+    return { id: v.id, name: v.name.trim(), attributes: expressionAttributes(v.attributes) };
   });
 }
 export function requestedSlots(palette, slotId) {
-  if (!slotId) return palette.slots.map(s => ({ ...s, instruction: expressions.find(p => p.id === s.expression).instruction }));
+  if (!slotId) return palette.slots.map(s => ({ ...s, instruction: expressionInstruction(s.attributes) }));
   const slot = palette.slots.find(s => s.id === slotId);
   requireValue(slot, 'PALETTE_FORMAT', '表达已变化，请重新打开');
-  return [0, 1, 2].map(i => ({ ...slot, variant: i + 1, instruction: expressions.find(p => p.id === slot.expression).instruction }));
+  return [0, 1, 2].map(i => ({ ...slot, variant: i + 1, instruction: expressionInstruction(slot.attributes) }));
 }
 export class Palettes {
   constructor(db, cfg) { Object.assign(this, { db, cfg }); }
   async get(user, c = this.db) {
     const row = (await c.query('SELECT version,body_cipher FROM advisor_palettes WHERE user_id=$1', [user])).rows[0];
-    return row ? { version: Number(row.version), slots: JSON.parse(unseal(this.cfg.masterKey, row.body_cipher, 'palette:' + user)) } : defaultPalette();
+    return row ? { schemaVersion: paletteSchemaVersion, version: Number(row.version), slots: JSON.parse(unseal(this.cfg.masterKey, row.body_cipher, 'palette:' + user)) } : defaultPalette();
   }
   async set(user, raw) {
     requireValue(isUuid(raw.requestId) && Number.isSafeInteger(raw.baseVersion), 'PALETTE_FORMAT', '缺少调色盘版本');
@@ -43,7 +35,7 @@ export class Palettes {
       const version = old.version + 1;
       await c.query('INSERT INTO advisor_palettes(user_id,version,body_cipher) VALUES($1,$2,$3) ON CONFLICT(user_id) DO UPDATE SET version=excluded.version,body_cipher=excluded.body_cipher', [user.id, version, seal(this.cfg.masterKey, JSON.stringify(slots), 'palette:' + user.id)]);
       await c.query('INSERT INTO palette_receipts(user_id,request_id,payload_hash) VALUES($1,$2,$3)', [user.id, raw.requestId, hash]);
-      return { version, slots };
+      return { schemaVersion: paletteSchemaVersion, version, slots };
     });
   }
 }

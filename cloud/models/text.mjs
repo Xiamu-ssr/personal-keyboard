@@ -41,8 +41,12 @@ export function validateModelResult(kind, text, input) {
     return { text: value.text.trim(), changed: value.text !== input.transcript, uncertainSpans: strings(value.uncertainSpans || []) };
   }
   const slots = input.slots || [];
-  requireValue(kind === 'advisor' && Array.isArray(value.replies) && value.replies.length === slots.length && [3, 6].includes(slots.length), 'MODEL_FORMAT', '模型没有完整返回本次表达', 502);
-  const replies = value.replies.map((r, i) => ({ slotId: slots[i].id, style: slots[i].name, expression: slots[i].expression, text: bounded(typeof r === 'string' ? r : r.text, 1000) }));
+  const keys = slots.map((_, i) => 'r' + (i + 1));
+  requireValue(kind === 'advisor' && value.replies && !Array.isArray(value.replies) && [3, 6].includes(slots.length)
+    && Object.keys(value.replies).length === keys.length && keys.every(k => Object.hasOwn(value.replies, k)), 'MODEL_FORMAT', '模型没有完整返回本次表达', 502);
+  const replies = slots.map((slot, i) => {
+    return { slotId: slot.id, style: slot.name, text: bounded(value.replies[keys[i]], 1000) };
+  });
   requireValue(replies.every(r => r.text.trim()), 'MODEL_FORMAT', '回复不能为空', 502);
   const previous = new Set((input.previousReplies || []).map(text => text.trim()));
   requireValue(new Set(replies.map(r => r.text.trim())).size === replies.length && replies.every(r => !previous.has(r.text.trim())), 'MODEL_FORMAT', '这次换法有重复，请重试，预留已释放', 502);
@@ -62,7 +66,9 @@ export function advisorResponseFormat(input) {
   const schema = object({
     messages: { type: 'array', maxItems: 300, items: object({ speaker: { type: 'string', enum: ['self', 'other', 'unknown'] }, text: string(5000), image: { type: 'integer', minimum: 1, maximum: input.imageDigests.length } }) },
     identity: object({ personId: string(36), platform: string(120), nickname: string(100), handle: string(150), confidence: { type: 'number', minimum: 0, maximum: 1 } }),
-    replies: { type: 'array', minItems: input.slots.length, maxItems: input.slots.length, items: object({ slotId: { type: 'string', enum: [...new Set(input.slots.map(s => s.id))] }, variant: { type: 'integer', minimum: 0, maximum: 3 }, text: { ...string(1000), minLength: 1 } }) },
+    // Required named positions prevent a provider from merging equal-looking styles.
+    // The public result remains the ordered reply array consumed by Android.
+    replies: object(Object.fromEntries(input.slots.map((_, i) => ['r' + (i + 1), { ...string(1000), minLength: 1 }]))),
     uncertainty: { type: 'array', maxItems: 20, items: string(200) },
   });
   return { type: 'json_schema', json_schema: { name: 'advisor_reply', strict: true, schema } };
@@ -105,8 +111,8 @@ export class TextModels {
         method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(65000)]),
         headers: { Authorization: 'Bearer ' + this.cfg.modelKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: systemText }, { role: 'user', content: user }],
-          max_tokens: visual ? 12288 : 1600, temperature: visual ? 0.3 : 0.2, response_format: responseFormat, enable_thinking: visual,
-          ...(visual ? { thinking_budget: 1024 } : {}) }),
+          max_completion_tokens: visual ? 16384 : 1600, temperature: visual ? 0.3 : 0.2, response_format: responseFormat, enable_thinking: visual,
+          ...(visual ? { thinking_budget: 4096 } : {}) }),
       });
     } catch {
       if (signal.aborted) throw new ServiceError('CANCELLED', '任务已取消', 409);

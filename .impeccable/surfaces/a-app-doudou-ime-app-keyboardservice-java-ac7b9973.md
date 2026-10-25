@@ -6,6 +6,7 @@ related_targets: ["app/app/src/main/java/app/doudou/ime/home/HomeScreen.java","a
 ---
 
 Scope: native Android keyboard, Home and My. Operate mode; known Doubao benchmark, no new visual-direction round needed.
+2026-10-25 approved scope: two-level expression palette and light/dark skins. Keep keyboard geometry, voice gestures, restrained blue accents and slot identity colors; appearance is device-local. The native editor uses one shared nine-attribute contract, per-field inheritance and presets including flirt, coquettish and Mean. A label is not a model instruction.
 ## Direction contract
 THESIS: A familiar keyboard with two precise voice actions and an immediately useful reply palette. Remove instruction walls and technical intermediate states.
 OWN-WORLD: Charcoal ground, stepped graphite surfaces, warm white text, previous-version grayscale keyboard controls; cyan-to-blue audio meter with the unchanged prior-version blue-gray voice backdrop; restrained cornflower accents only inside the App. System sans, consistent 48dp actions, rounded sheets separated by an 8dp gutter.

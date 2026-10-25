@@ -12,7 +12,7 @@ import app.doudou.ime.history.HistoryStore;
 import java.io.*;
 import org.json.*;
 
-public final class RecordingActivity extends Activity {
+public final class RecordingActivity extends app.doudou.ime.design.ThemedActivity {
   private final Handler main = new Handler(Looper.getMainLooper());
   private volatile boolean playing;
   private String id = "";
@@ -20,22 +20,27 @@ public final class RecordingActivity extends Activity {
   @Override
   public void onCreate(Bundle b) {
     super.onCreate(b);
-    id = getIntent().getStringExtra("id");
+    id = b == null ? getIntent().getStringExtra("id") : b.getString("recordingId", "");
     if (id == null) id = "";
     render();
+  }
+
+  @Override protected void onSaveInstanceState(Bundle state) {
+    state.putString("recordingId", id);
+    super.onSaveInstanceState(state);
   }
 
   private void render() {
     main.removeCallbacksAndMessages(null);
     KeyboardApp app = (KeyboardApp) getApplication();
     LinearLayout root = Ui.col(this);
-    root.setBackgroundColor(Ui.BG);
+    root.setBackgroundColor(Ui.bg());
     Ui.pad(this, root, 20, 12);
     LinearLayout heading = Ui.row(this);
     heading.addView(
         Ui.icon(this, "返回", this::finish),
         new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-    heading.addView(Ui.text(this, "录音笔", 24, Ui.INK), new LinearLayout.LayoutParams(0, -2, 1));
+    heading.addView(Ui.text(this, "录音笔", 24, Ui.ink()), new LinearLayout.LayoutParams(0, -2, 1));
     if (!id.isEmpty()) {
       View options = Ui.icon(this, "更多", () -> {});
       options.setOnClickListener(v -> options(v));
@@ -88,13 +93,13 @@ public final class RecordingActivity extends Activity {
     }
     ScrollView scroll = new ScrollView(this);
     TextView transcript =
-        Ui.text(this, entry.resultText.isEmpty() ? entry.asrText : entry.resultText, 18, Ui.INK);
+        Ui.text(this, entry.resultText.isEmpty() ? entry.asrText : entry.resultText, 18, Ui.ink());
     transcript.setTextIsSelectable(true);
     transcript.setLineSpacing(Ui.dp(this, 6), 1);
     Ui.pad(this, transcript, 0, 20);
     scroll.addView(transcript);
     root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-    TextView state = Ui.text(this, "", 14, Ui.SUB);
+    TextView state = Ui.text(this, "", 14, Ui.sub());
     root.addView(state);
     Ui.gap(this, root, 16);
     LinearLayout controls = Ui.row(this);

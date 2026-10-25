@@ -17,7 +17,7 @@ test("three business views share entities, never duplicate processing steps as n
   assert.deepEqual(validateWorld(source), {
     domains: 5,
     businesses: 3,
-    nodes: 11,
+    nodes: 12,
     channels: 3,
     lanes: 6,
     prompts: 3,
@@ -28,7 +28,7 @@ test("three business views share entities, never duplicate processing steps as n
   );
   assert.deepEqual(
     source.domains.find((d) => d.id === "cloud").nodes.map((n) => n.title),
-    ["代理", "账户与权益", "热词", "文风", "人物"],
+    ["代理", "账户与权益", "调色盘", "热词", "文风", "人物"],
   );
   for (const view of source.businesses) {
     assert.equal(view.groups, undefined);
@@ -145,6 +145,7 @@ test("compiled Spec uses YAML details and prompts without a Markdown document la
   for (const p of source.prompts) {
     assert.equal(compiled.prompts.find((c) => c.id === p.id).system, p.system);
     assert.equal(p.document, undefined);
+    assert.equal(await fs.readFile(new URL('../cloud/prompts/' + p.id + '.md', import.meta.url), 'utf8'), p.system.trimEnd() + '\n');
   }
   assert.deepEqual(source.prompts.find(p => p.id === 'reply').requestTemplate,
     JSON.parse(await fs.readFile(new URL('../cloud/prompts/reply-request.json', import.meta.url), 'utf8')));

@@ -26,7 +26,7 @@ public final class VoiceButton extends View {
   public VoiceButton(Context context, Runnable action) {
     super(context);
     setFocusable(true);
-    setBackground(Ui.pressable(context, Ui.ACCENT, 40));
+    setBackground(Ui.pressable(context, Ui.accent(), 40));
     setOnClickListener(v -> action.run());
     setState(State.IDLE);
   }
@@ -84,7 +84,7 @@ public final class VoiceButton extends View {
     canvas.translate(getWidth() / 2f, getHeight() / 2f);
     float d = getResources().getDisplayMetrics().density;
     canvas.scale(d, d);
-    paint.setColor(Ui.BG);
+    paint.setColor(Ui.bg());
     paint.setStrokeCap(Paint.Cap.ROUND);
     paint.setStrokeWidth(2.4f);
     if (state == State.REWRITING) {

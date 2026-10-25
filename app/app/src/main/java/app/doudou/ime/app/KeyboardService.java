@@ -1,5 +1,7 @@
 package app.doudou.ime.app;
 
+import app.doudou.ime.design.Skin;
+
 import android.content.*;
 import android.content.ClipboardManager;
 import android.graphics.*;
@@ -65,6 +67,8 @@ public final class KeyboardService extends InputMethodService
 
   @Override
   public void onCreate() {
+    Skin.load(this);
+    setTheme(Skin.theme());
     super.onCreate();
     app = (KeyboardApp) getApplication();
     voice = new app.doudou.ime.voice.VoiceController(this);
@@ -95,13 +99,9 @@ public final class KeyboardService extends InputMethodService
     Window window = getWindow().getWindow();
     window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
     window.setDecorFitsSystemWindows(false);
-    window.setNavigationBarColor(Ui.KEYBOARD);
-    window.setNavigationBarContrastEnforced(false);
-    WindowInsetsController bars = window.getInsetsController();
-    if (bars != null)
-      bars.setSystemBarsAppearance(0, WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+    skinWindow();
     root = new InputSurface();
-    root.setBackgroundColor(Ui.PANEL);
+    root.setBackgroundColor(Ui.panel());
     root.setPadding(Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4));
     root.setOnApplyWindowInsetsListener(
         (view, insets) -> {
@@ -180,10 +180,23 @@ public final class KeyboardService extends InputMethodService
   @Override
   public void onStartInputView(EditorInfo info, boolean restarting) {
     super.onStartInputView(info, restarting);
+    Skin.load(this);
+    getTheme().applyStyle(Skin.theme(), true);
+    skinWindow();
     MemoryRefresh.start(app);
     // Hiding cancels dictation. Reopening the same editor must not retain a disabled key surface.
     if (root != null && !advisorController.retainsInputView()) typing();
     rememberClipboard(false);
+  }
+
+  private void skinWindow() {
+    Window window = getWindow().getWindow();
+    window.setNavigationBarColor(Ui.keyboard());
+    window.setNavigationBarContrastEnforced(false);
+    WindowInsetsController bars = window.getInsetsController();
+    if (bars != null) bars.setSystemBarsAppearance(
+        Skin.light() ? WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS : 0,
+        WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
   }
 
   @Override
@@ -292,7 +305,7 @@ public final class KeyboardService extends InputMethodService
       app.prefs().edit().remove("preferredEnglish").apply();
     }
     reset("typing", KeyboardView.HEIGHT_DP + (localEditor == null ? 0 : 110));
-    root.setBackgroundColor(Ui.KEYBOARD);
+    root.setBackgroundColor(Ui.keyboard());
     if (localEditor != null) {
       panelHeading(
           "修改后返回",
@@ -740,10 +753,10 @@ public final class KeyboardService extends InputMethodService
 
   public void message(String title, String detail, String actionLabel, Runnable action) {
     reset("error", KeyboardView.HEIGHT_DP);
-    TextView heading = Ui.text(this, title, 17, Ui.INK);
+    TextView heading = Ui.text(this, title, 17, Ui.ink());
     Ui.pad(this, heading, 16, 14);
     root.addView(heading);
-    TextView t = Ui.text(this, detail, 15, Ui.SUB);
+    TextView t = Ui.text(this, detail, 15, Ui.sub());
     Ui.pad(this, t, 16, 16);
     root.addView(t, new LinearLayout.LayoutParams(-1, 0, 1));
     if (action != null) root.addView(Ui.primary(this, actionLabel, action));
@@ -754,7 +767,7 @@ public final class KeyboardService extends InputMethodService
     LinearLayout h = Ui.row(this);
     h.addView(
         Ui.icon(this, "返回", back), new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
-    TextView label = Ui.text(this, title, 17, Ui.INK);
+    TextView label = Ui.text(this, title, 17, Ui.ink());
     h.addView(label, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1));
     label.setGravity(Gravity.CENTER_VERTICAL);
     root.addView(h);

@@ -15,7 +15,7 @@ import app.doudou.ime.design.Ui;
 public final class SetupScreen extends Screen {
   public SetupScreen(Activity activity,KeyboardApp app,Navigator nav){super(activity,app,nav);}
   @Override protected void draw(){
-    TextView lead=Ui.text(activity,"让豆豆准备好。",30,Ui.INK);
+    TextView lead=Ui.text(activity,"让豆豆准备好。",30,Ui.ink());
     lead.setTypeface(null,android.graphics.Typeface.BOLD);add(lead);
     caption("打字随时可用。说话、帮你回，按需开启。设置后回来，这里会自动更新。");
     String selected=Settings.Secure.getString(activity.getContentResolver(),Settings.Secure.DEFAULT_INPUT_METHOD);

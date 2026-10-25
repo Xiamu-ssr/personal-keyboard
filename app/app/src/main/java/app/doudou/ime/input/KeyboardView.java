@@ -102,7 +102,7 @@ public final class KeyboardView extends LinearLayout {
       idle.addView(more, new LayoutParams(Ui.dp(c, 48), Ui.dp(c, 48)));
     }
     if (privacy) {
-      TextView privateLabel = Ui.text(c, "隐私输入", 13, Ui.SUB);
+      TextView privateLabel = Ui.text(c, "隐私输入", 13, Ui.sub());
       privateLabel.setContentDescription("隐私输入已开启");
       idle.addView(privateLabel);
     }
@@ -112,10 +112,10 @@ public final class KeyboardView extends LinearLayout {
               c,
               app.doudou.ime.recording.RecordingService.current == null ? "点击录音" : "● 录音中",
               a::recorder);
-      record.setTextColor(Ui.SUB);
-      record.setBackground(Ui.pressable(c, Ui.SURFACE, 24));
+      record.setTextColor(Ui.sub());
+      record.setBackground(Ui.pressable(c, Ui.surface(), 24));
       android.graphics.drawable.Drawable mic = c.getDrawable(R.drawable.ic_mic);
-      mic.setTint(Ui.SUB);
+      mic.setTint(Ui.sub());
       mic.setBounds(0, 0, Ui.dp(c, 20), Ui.dp(c, 20));
       record.setCompoundDrawables(mic, null, null, null);
       record.setCompoundDrawablePadding(Ui.dp(c, 6));
@@ -128,11 +128,11 @@ public final class KeyboardView extends LinearLayout {
       advisor.setFocusable(true);
       advisor.setOnClickListener(v -> a.advisor());
       advisor.setTooltipText("看聊天，帮你回");
-      TextView pill = Ui.text(c, "帮我回", 14, Ui.INK);
+      TextView pill = Ui.text(c, "帮我回", 14, Ui.ink());
       pill.setGravity(Gravity.CENTER);
       pill.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-      android.graphics.drawable.GradientDrawable surface = Ui.bg(c, Ui.SPECIAL_KEY, 17);
-      surface.setStroke(Ui.dp(c, 1), 0xff535353);
+      android.graphics.drawable.GradientDrawable surface = Ui.bg(c, Ui.specialKey(), 17);
+      surface.setStroke(Ui.dp(c, 1), Ui.outline());
       pill.setBackground(surface);
       advisor.addView(pill, new FrameLayout.LayoutParams(-1, Ui.dp(c, 34), Gravity.CENTER));
       LayoutParams advisorSize = new LayoutParams(Ui.dp(c, 72), Ui.dp(c, 48));
@@ -159,12 +159,12 @@ public final class KeyboardView extends LinearLayout {
     voiceClose = Icons.button(c, R.drawable.ic_close, "关闭提示", a::cancelVoice);
     busy.addView(voiceClose, new LayoutParams(Ui.dp(c, 44), -1));
     pending = new ProgressBar(c);
-    pending.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Ui.SUB));
+    pending.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Ui.sub()));
     pending.setVisibility(GONE);
     LayoutParams progressSize = new LayoutParams(Ui.dp(c, 18), Ui.dp(c, 18));
     progressSize.setMargins(Ui.dp(c, 12), 0, 0, 0);
     busy.addView(pending, progressSize);
-    voiceHint = Ui.text(c, "", 13, Ui.INK);
+    voiceHint = Ui.text(c, "", 13, Ui.ink());
     voiceHint.setGravity(Gravity.CENTER);
     voiceHint.setMaxLines(2);
     voiceHint.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
@@ -250,10 +250,10 @@ public final class KeyboardView extends LinearLayout {
 
   private void key(LinearLayout row, String label, float weight, Runnable click, boolean special) {
     Context c = getContext();
-    TextView key = Ui.text(c, label, special ? 16 : label.length() > 1 ? 14 : 22, Ui.INK);
+    TextView key = Ui.text(c, label, special ? 16 : label.length() > 1 ? 14 : 22, Ui.ink());
     key.setGravity(Gravity.CENTER);
     key.setFontFeatureSettings("kern");
-    key.setBackground(Ui.pressable(c, special ? Ui.SPECIAL_KEY : Ui.KEY, 7));
+    key.setBackground(Ui.pressable(c, special ? Ui.specialKey() : Ui.key(), 7));
     key.setElevation(Ui.dp(c, .8f));
     key.setContentDescription(label);
     key.setFocusable(true);
@@ -363,8 +363,8 @@ public final class KeyboardView extends LinearLayout {
               actions.haptic(this);
               click.run();
             });
-    ((Ui.Glyph) key).color = primary ? Ui.BG : Ui.INK;
-    key.setBackground(Ui.pressable(c, primary ? Ui.INK : Ui.SPECIAL_KEY, 7));
+    ((Ui.Glyph) key).color = primary ? Ui.bg() : Ui.ink();
+    key.setBackground(Ui.pressable(c, primary ? Ui.ink() : Ui.specialKey(), 7));
     key.setElevation(Ui.dp(c, .8f));
     row.addView(key, geometry(weight));
     if (name.equals("退格")) {
@@ -474,7 +474,7 @@ public final class KeyboardView extends LinearLayout {
 
   public void addCandidate(String text, Runnable click) {
     TextView t =
-        Ui.text(getContext(), text, 18, candidateRow.getChildCount() == 0 ? Ui.ACCENT : Ui.INK);
+        Ui.text(getContext(), text, 18, candidateRow.getChildCount() == 0 ? Ui.accent() : Ui.ink());
     t.setGravity(Gravity.CENTER);
     Ui.pad(getContext(), t, 14, 0);
     t.setMinWidth(Ui.dp(getContext(), 48));

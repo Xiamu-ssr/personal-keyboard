@@ -32,7 +32,7 @@ public final class MemoryConflicts {
       }
     if (changes.isEmpty()) return;
     TextView review = Ui.button(activity, "核对变化 · " + changes.size(), () -> show(item, changes, 0));
-    review.setTextColor(Ui.APP_ACCENT);
+    review.setTextColor(Ui.appAccent());
     parent.addView(review);
   }
 

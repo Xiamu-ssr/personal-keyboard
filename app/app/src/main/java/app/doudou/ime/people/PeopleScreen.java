@@ -63,7 +63,7 @@ public final class PeopleScreen extends Screen {
       return;
     }
     LinearLayout profile = Ui.card(activity);
-    TextView name = Ui.text(activity, item.title, 25, Ui.INK);
+    TextView name = Ui.text(activity, item.title, 25, Ui.ink());
     name.setTypeface(null, android.graphics.Typeface.BOLD);
     profile.addView(name);
     if (!item.body.isEmpty()) captionIn(profile, item.body);
@@ -112,7 +112,7 @@ public final class PeopleScreen extends Screen {
                         })
                     .setNegativeButton("取消", null)
                     .show());
-    delete.setTextColor(Ui.RED);
+    delete.setTextColor(Ui.red());
     add(delete);
   }
 

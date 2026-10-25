@@ -36,19 +36,19 @@ public final class DictationSurface extends FrameLayout {
     withdraw = new ArcAction(context, "撤回输入", false, actions::cancel);
     newline = new ArcAction(context, "换行", true, () -> actions.finish(true));
     addView(withdraw); addView(newline);
-    leftHint = label("松手撤回", 13, 0xffff5a67); leftHint.setRotation(-12);
-    rightHint = label("松手换行", 13, Ui.SUB); rightHint.setRotation(12);
-    release = label("松手结束", 13, Ui.SUB);
+    leftHint = label("松手撤回", 13, Ui.withdrawalRed()); leftHint.setRotation(-12);
+    rightHint = label("松手换行", 13, Ui.sub()); rightHint.setRotation(12);
+    release = label("松手结束", 13, Ui.sub());
     release.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
-    status = label("", 15, Ui.INK);
+    status = label("", 15, Ui.ink());
     status.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
     finish = action("完成", () -> actions.finish(false));
-    finish.setTextColor(Ui.BG);
-    finish.setBackground(Ui.pressable(context, Ui.ACCENT, 32));
+    finish.setTextColor(Ui.bg());
+    finish.setBackground(Ui.pressable(context, Ui.accent(), 32));
     close = Icons.button(context, R.drawable.ic_close, "撤回本次语音", actions::cancel);
     addView(close);
     progress = new ProgressBar(context);
-    progress.setIndeterminateTintList(ColorStateList.valueOf(Ui.SUB));
+    progress.setIndeterminateTintList(ColorStateList.valueOf(Ui.sub()));
     progress.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
     addView(progress);
   }
@@ -61,7 +61,7 @@ public final class DictationSurface extends FrameLayout {
   }
 
   private TextView action(String title, Runnable action) {
-    TextView view = label(title, 17, Ui.INK);
+    TextView view = label(title, 17, Ui.ink());
     view.setContentDescription(title);
     view.setFocusable(true);
     view.setOnClickListener(v -> action.run());
@@ -131,7 +131,7 @@ public final class DictationSurface extends FrameLayout {
     @Override protected void onBoundsChange(Rect bounds) {
       int w = bounds.width(), h = bounds.height();
       glow = new RadialGradient(w * .5f, h * .6f, Math.max(w, h) * .65f,
-          new int[] { 0xff2a3843, Ui.KEYBOARD }, null, Shader.TileMode.CLAMP);
+          new int[] { Ui.voiceBackdrop(), Ui.keyboard() }, null, Shader.TileMode.CLAMP);
     }
     @Override public void draw(Canvas canvas) {
       float w = getBounds().width(), h = getBounds().height();
@@ -140,7 +140,9 @@ public final class DictationSurface extends FrameLayout {
       canvas.drawRect(0, 0, w, h, paint);
       paint.setShader(null);
       if (held && state != VoiceState.FINISHING && state != VoiceState.REWRITING) {
-        paint.setColor(target == VoiceGesture.Target.FINISH ? 0x04ffffff : 0x10ffffff);
+        paint.setColor(target == VoiceGesture.Target.FINISH
+            ? app.doudou.ime.design.Skin.choose(0x04ffffff, 0x04000000)
+            : app.doudou.ime.design.Skin.choose(0x10ffffff, 0x10000000));
         canvas.drawOval(-w * .22f, h * .70f, w * 1.22f, h * 1.85f, paint);
       }
     }

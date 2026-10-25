@@ -157,12 +157,12 @@ public final class AdvisorController extends PanelController {
     reset("capturing", 56);
     root.setPadding(
         Ui.dp(this, 8), Ui.dp(this, 4), Ui.dp(this, 8), host.bottomInset() + Ui.dp(this, 4));
-    root.setBackgroundColor(Ui.KEYBOARD);
+    root.setBackgroundColor(Ui.keyboard());
     LinearLayout bar = Ui.row(this);
     ProgressBar spinner = new ProgressBar(this);
-    spinner.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Ui.ACCENT));
+    spinner.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Ui.accent()));
     bar.addView(spinner, new LinearLayout.LayoutParams(Ui.dp(this, 18), Ui.dp(this, 18)));
-    TextView label = Ui.text(this, "正在看聊天", 14, Ui.SUB);
+    TextView label = Ui.text(this, "正在看聊天", 14, Ui.sub());
     Ui.pad(this, label, 12, 0);
     label.setGravity(Gravity.CENTER_VERTICAL);
     bar.addView(label, new LinearLayout.LayoutParams(0, -1, 1));
@@ -316,7 +316,7 @@ public final class AdvisorController extends PanelController {
             ? Icons.button(this, R.drawable.ic_close, "取消生成并返回键盘", this::leave)
             : Ui.icon(this, "返回", this::leave);
     heading.addView(leave, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-    TextView title = Ui.text(this, "帮我回", 18, Ui.INK);
+    TextView title = Ui.text(this, "帮我回", 18, Ui.ink());
     title.setTypeface(null, android.graphics.Typeface.BOLD);
     LinearLayout names = Ui.row(this);
     names.addView(title);
@@ -327,7 +327,7 @@ public final class AdvisorController extends PanelController {
               this,
               replies.choices().size() == 6 ? "六种表达" : replies.choices().get(0).name + " · 3 条",
               13,
-              Ui.SUB);
+              Ui.sub());
       Ui.pad(this, collection, 12, 0);
       collection.setSingleLine(true);
       collection.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -346,7 +346,7 @@ public final class AdvisorController extends PanelController {
       progress.addView(animation, new LinearLayout.LayoutParams(Ui.dp(this, 88), Ui.dp(this, 48)));
       animation.setState(VoiceButton.State.REWRITING);
       Ui.gap(this, progress, 16);
-      TextView loading = Ui.text(this, "想想怎么回…", 16, Ui.SUB);
+      TextView loading = Ui.text(this, "想想怎么回…", 16, Ui.sub());
       loading.setGravity(Gravity.CENTER);
       progress.addView(loading, new LinearLayout.LayoutParams(-1, -2));
       root.addView(progress, new LinearLayout.LayoutParams(-1, 0, 1));
@@ -355,7 +355,7 @@ public final class AdvisorController extends PanelController {
     if (advisor.stage == AdvisorSession.Stage.ERROR) {
       LinearLayout error = Ui.col(this);
       Ui.pad(this, error, 20, 20);
-      error.addView(Ui.text(this, advisor.error, 15, Ui.SUB));
+      error.addView(Ui.text(this, advisor.error, 15, Ui.sub()));
       Ui.gap(this, error, 16);
       error.addView(
           Ui.primary(
@@ -386,14 +386,14 @@ public final class AdvisorController extends PanelController {
     for (ReplyHistory.Choice choice : replies.choices()) {
       LinearLayout row = Ui.row(this);
       row.setGravity(Gravity.TOP);
-      row.setBackground(Ui.bg(this, Ui.SURFACE, 14));
+      row.setBackground(Ui.bg(this, Ui.surface(), 14));
       LinearLayout answer = Ui.col(this);
       Ui.pad(this, answer, 12, 12);
       String name = choice.name + (replies.choices().size() == 3 ? " · " + (++choiceNumber) : "");
-      TextView label = Ui.text(this, name, 12, Ui.ACCENT);
+      TextView label = Ui.text(this, name, 12, Ui.accent());
       answer.addView(label);
       Ui.gap(this, answer, 7);
-      TextView text = Ui.text(this, choice.text, 17, Ui.INK);
+      TextView text = Ui.text(this, choice.text, 17, Ui.ink());
       text.setLineSpacing(Ui.dp(this, 3), 1);
       answer.addView(text);
       answer.setOnClickListener(v -> applyReply(choice.text));
@@ -425,7 +425,7 @@ public final class AdvisorController extends PanelController {
     back.setEnabled(replies.canBack());
     back.setAlpha(replies.canBack() ? 1 : .3f);
     footer.addView(back, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-    TextView position = Ui.text(this, replies.position(), 13, Ui.SUB);
+    TextView position = Ui.text(this, replies.position(), 13, Ui.sub());
     position.setGravity(Gravity.CENTER);
     footer.addView(position, new LinearLayout.LayoutParams(Ui.dp(this, 52), -2));
     View forward =
@@ -443,7 +443,7 @@ public final class AdvisorController extends PanelController {
     footer.addView(forward, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
     footer.addView(new Space(this), new LinearLayout.LayoutParams(0, 1, 1));
     TextView more = Ui.button(this, "换一批", () -> generate(""));
-    more.setTextColor(Ui.ACCENT);
+    more.setTextColor(Ui.accent());
     footer.addView(more, new LinearLayout.LayoutParams(Ui.dp(this, 100), Ui.dp(this, 48)));
     root.addView(footer);
   }
@@ -479,14 +479,14 @@ public final class AdvisorController extends PanelController {
   private void sheet() {
     root.setPadding(
         Ui.dp(this, 4), Ui.dp(this, 8), Ui.dp(this, 4), host.bottomInset() + Ui.dp(this, 4));
-    android.graphics.drawable.GradientDrawable shape = Ui.bg(this, 0xff303030, 18);
+    android.graphics.drawable.GradientDrawable shape = Ui.bg(this, Ui.sheet(), 18);
     float r = Ui.dp(this, 18);
     shape.setCornerRadii(new float[] {r, r, r, r, 0, 0, 0, 0});
-    shape.setStroke(Ui.dp(this, 1), 0xff505050);
+    shape.setStroke(Ui.dp(this, 1), Ui.sheetOutline());
     android.graphics.drawable.LayerDrawable gutter =
         new android.graphics.drawable.LayerDrawable(
             new android.graphics.drawable.Drawable[] {
-              new android.graphics.drawable.ColorDrawable(Ui.KEYBOARD), shape
+              new android.graphics.drawable.ColorDrawable(Ui.keyboard()), shape
             });
     gutter.setLayerInset(1, 0, Ui.dp(this, 6), 0, host.bottomInset());
     root.setBackground(gutter);

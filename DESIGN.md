@@ -28,6 +28,28 @@ colors:
   hero: "#383838"
   line: "#3a3a3a"
   ripple-white: "#ffffff24"
+skins:
+  default: dark
+  selection: device-local
+  light:
+    bg: "#f6f7fb"
+    panel: "#ffffff"
+    key: "#ffffff"
+    ink: "#22262e"
+    sub: "#606773"
+    accent: "#30343c"
+    app-accent: "#355fbc"
+    app-tint: "#e6edff"
+    audio-start: "#007b8b"
+    audio-end: "#3866d6"
+    surface: "#e9ebf1"
+    selected: "#d8dfec"
+    keyboard: "#e3e5eb"
+    special-key: "#cbd0da"
+    hero: "#ebeff8"
+    line: "#d2d7e1"
+    red: "#b3261e"
+    withdrawal-red: "#b32635"
 typography:
   headline:
     fontFamily: "sans"
@@ -186,6 +208,8 @@ components:
 
 这是从代码提取的记录，不是新方向或功能验收。范围为原生 Android Views 的键盘、Home、My 及其共用组件；无已选 mockcomp，方向 seed 为 `98724ec0eaa78a89`，模式仍归表面契约所有。记录依据为 [PRODUCT.md](PRODUCT.md)、[方向契约](.impeccable/surfaces/a-app-doudou-ime-app-keyboardservice-java-ac7b9973.md)、[reviewer verdict](.runtime/v08/finish-verdict.md) 与真实源码。
 
+0.9 增量已另行经过原生验收：标准字号与 360dp / fontScale 1.3 的调色盘保存、重开、名称保护；明暗切换、练习草稿保留；亮色键盘与语音画面。当前原图与 APK 摘要见 `spec/release.json`，验收范围见 `spec/verification.json`；独立复核见 `.runtime/v09/final-review.md`。旧 OPPO 已升级，但本轮保持锁屏，不声称完成其交互验收。下文旧版提取记录保留其时间范围，不替代本次证据。
+
 0.8.0 视觉参考 APK 的 SHA-256：`1314622f519c34f0c0c03f5465a05b1399c63ce5e6b2b27c305f1204fe61872e`。0.8.1 仅修复输入视图生命周期；当前 APK 摘要见 [artifact.json](spec/demo/artifact.json)。[capture manifest](.impeccable/review/capture-manifest.json) 记录标准约 411dp / fontScale 1.0 和 360dp / fontScale 1.3；本次只读核看其中 Home、typing、voice、My 与大字 Home。管理页样本含临时本地 UI fixture，不能证明真实学习数据；不重做设备验收。verdict 中唯一未关闭的 F1 属模型语义，不纳入视觉 token。
 
 frontmatter 是实际 primitive 与组件引用的规范层；名称主要沿用 `Ui` 常量的小写形式，源码尚未命名的圆角、间距与字号用描述性键归档，并未回写成代码 token。尺寸保留 Android 的 dp/sp；百分数只在相应原生父容器内成立。sidecar 使用 schemaVersion 2，提供实际 elevation、motion、颜色元数据及十个独立组件样本，不另建重复的 primitive 数组。样本 CSS 的 px 仅按 density 1 / fontScale 1 表达 dp/sp；系统字形、原生涟漪和阴影仍以 Android 实现为准。无彩色八阶色板的源码证据，因此不合成新色阶；sidecar 的灰阶 strip 只引用现有颜色。
@@ -193,6 +217,8 @@ frontmatter 是实际 primitive 与组件引用的规范层；名称主要沿用
 ## Colors
 
 灰阶承担结构与交互，App 浅蓝承担小面积强调，声纹和表达槽位保留各自的局部颜色。
+
+0.9 起用 `Skin` 选择亮色或暗色，`Ui` 的颜色角色按当前皮肤取值。默认暗色维持原有配色；亮色值见 frontmatter `skins.light`。原生 Activity、输入法窗口、弹窗与系统栏使用同一选择。皮肤在「我的」直接切换，不跟账户或 Cloud 同步。换肤重建 Activity 时保留练习草稿、光标选择与本轮本机消息；录音服务独立存活。
 
 ### Primary
 
@@ -206,7 +232,7 @@ frontmatter 是实际 primitive 与组件引用的规范层；名称主要沿用
 
 ### Tertiary
 
-- **六格身份色**：natural 复用 App 浅蓝；caring、direct、playful、considered、witty 分别引用同名 `slot-*` token。顺序来自 `PaletteStore.IDS`，Home 用圆点表达身份；军师答案列表仍采用灰阶与暖白标签，不把这组色铺满键盘。
+- **六格身份色**：按槽位顺序取 `PaletteStore.COLORS`，Home 用圆点表达身份。名称和表达属性可变，颜色不代表情绪强弱；不把这组色铺满键盘。
 - **品牌图形底蓝**（`colors.brand-background`）：只记录账户头像已有品牌资源的底色，不升级为通用交互色。
 - **温和风险色 / 撤回红**（`colors.red` / `colors.withdrawal-red`）：前者来自共用删除等风险文字，后者仅用于语音撤回提示与选中撤回文字；不是另一套品牌强调色。
 
@@ -280,6 +306,8 @@ sidecar 的 `extensions.shadows` 记录该原生 elevation，`extensions.motion`
 ### Chips
 
 `chip-palette` 是已实现的可编辑表达槽位，不是新增通用筛选标签。点色块为 14×14dp、圆角 8dp，点到文字间隔 8dp，默认背景为 panel，名称使用 `body-reply`。槽位顺序与颜色映射来自 `PaletteStore`，不是情绪强弱或心理诊断。
+
+每格以编辑图标表明可修改，打开独立「编辑表达」页：有标签的名称字段、参考搭配和九项属性的当前值。按项展开，只有「表达手法 · 可组合」默认展开。可选按钮至少 48dp 高，普通宽度四列，窄屏或大字体两列。「不加手法」与其他手法互斥；未指定项随本人文风，顶部「全部随本人」重置全部属性。参考搭配只改属性，保留用户名称。契约来自 `cloud/contracts/palette.json`，Android 与 Cloud 共用；名称只作标签。保存期间保留编辑内容，失败不关闭页面；未修改时保存禁用并变淡。
 
 ### Cards / Containers
 

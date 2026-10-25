@@ -32,7 +32,7 @@ public final class MemoryScreen extends Screen {
   @Override
   protected void draw() {
     LinearLayout tabs = Ui.row(activity);
-    tabs.setBackground(Ui.bg(activity, Ui.PANEL, 22));
+    tabs.setBackground(Ui.bg(activity, Ui.panel(), 22));
     Ui.pad(activity, tabs, 4, 4);
     String[] keys = {"history", "word", "style"}, labels = {"历史", "热词", "文风"};
     for (int i = 0; i < keys.length; i++) {
@@ -51,8 +51,8 @@ public final class MemoryScreen extends Screen {
       pill.setPadding(0, 0, 0, 0);
       pill.setBackground(
           Ui.pressable(
-              activity, tab.equals(key) ? Ui.SELECTED : android.graphics.Color.TRANSPARENT, 18));
-      pill.setTextColor(tab.equals(key) ? Ui.INK : Ui.SUB);
+              activity, tab.equals(key) ? Ui.selected() : android.graphics.Color.TRANSPARENT, 18));
+      pill.setTextColor(tab.equals(key) ? Ui.ink() : Ui.sub());
       tabs.addView(pill, new LinearLayout.LayoutParams(0, Ui.dp(activity, 36), 1));
     }
     add(tabs);

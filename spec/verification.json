@@ -1,97 +1,102 @@
 {
-  "reviewedAt": "2026-10-25T02:45:59.640030+00:00",
-  "version": "0.8.1-alpha.1",
+  "reviewedAt": "2026-10-25T06:15:45.525615+00:00",
+  "version": "0.9.0-alpha.1",
   "artifact": {
     "package": "app.doudou.ime",
-    "version": "0.8.1-alpha.1",
-    "sha256": "5e3899d88fd3affc0fdc8b27af32a2fdf57ce3de4e95677000152b81eb17435c",
-    "bytes": 25192750,
+    "version": "0.9.0-alpha.1",
+    "sha256": "dcc5bd92b138a95975d610261dbad9ace61285b8cee80816e29d5549e60a47b6",
+    "bytes": 25420118,
     "buildType": "debug",
     "production": false,
     "modelsBundled": false
   },
-  "status": "Invited development preview; fixes host-triggered IME hiding during automatic advisor scroll. Physical QQ and focused emulator checks passed; WeChat deliberately skipped at user request.",
-  "baselineReproduction": {
-    "status": "failed as expected",
-    "behavior": "Host hides IME on chat drag; old build cancels advisor and never returns"
-  },
+  "status": "Invited development preview: composable expression slots and light/dark skins. Final bounded native and provider protocol acceptance passed; no all-combination or all-host accuracy claim.",
   "checks": [
     {
-      "name": "first scroll hides IME",
+      "name": "Node / graph / contract tests",
+      "passed": 26,
+      "skipped": 2,
+      "source": "npm test"
+    },
+    {
+      "name": "PostgreSQL API, encryption, CAS and legacy palette migration",
+      "passed": 1,
+      "source": "isolated PostgreSQL integration"
+    },
+    {
+      "name": "Android JVM and lint",
       "status": "passed",
+      "source": "Gradle"
+    },
+    {
+      "name": "Native guest palette migration, theme switching, practice draft retention",
+      "passed": 3,
+      "skipped": 1,
       "source": "Android 15 isolated emulator"
     },
     {
-      "name": "both scrolls hide IME",
+      "name": "Named multi-attribute preset plus manual Emoji choice, Cloud save, reopen, preserve custom name",
       "status": "passed",
-      "source": "Android 15 isolated emulator"
+      "source": "Android 15 emulator standard and 360dp/fontScale1.3"
     },
     {
-      "name": "leave host during scroll",
-      "status": "passed",
-      "source": "Android 15 isolated emulator"
+      "name": "Final provider reply protocol, six replies and three same-slot variants",
+      "passed": 10,
+      "failed": 0,
+      "source": "real Aliyun Qwen3.8-Flash with owned text-image fixtures"
     },
     {
-      "name": "change editor during scroll",
-      "status": "passed",
-      "source": "Android 15 isolated emulator"
+      "name": "Old OPPO APK upgrade",
+      "status": "installed",
+      "source": "ADB package manager; matching signing certificate; device remained locked, no UI acceptance claimed"
     },
     {
-      "name": "cancel after scroll",
+      "name": "Deployed HTTPS API: six replies, three same-slot variants and idempotent retries",
       "status": "passed",
-      "source": "Android 15 isolated emulator"
-    },
-    {
-      "name": "background recording and durable rotation",
-      "status": "passed",
-      "source": "Android 15 isolated emulator"
-    },
-    {
-      "name": "JVM and native decoder",
-      "status": "passed",
-      "tests": 32,
-      "failures": 0
-    },
-    {
-      "name": "Android lint",
-      "status": "passed",
-      "errors": 0,
-      "warnings": 40
-    },
-    {
-      "name": "Node and YAML graph",
-      "status": "passed",
-      "tests": 22,
-      "defaultPostgresSkips": 2
-    },
-    {
-      "name": "OPPO PHW110 Android 15 / QQ 9.3.75 My Computer",
-      "status": "passed",
-      "selfSampleOnly": true,
-      "capturedPages": 2,
-      "generatedReplies": 6,
-      "replyAppliedAndEditable": true,
-      "finalApkDraftAndCancelSmoke": true
-    },
-    {
-      "name": "Independent bounded code review",
-      "status": "no confirmed new P0/P1/P2",
-      "scope": "Capture controller and IME lifecycle; no broad all-host claim"
+      "successfulGenerations": 2,
+      "advisorDebits": 2,
+      "additionalRetryDebits": 0
     }
   ],
-  "demonstrationSource": {
-    "version": "0.8.0-alpha.1",
-    "sha256": "1314622f519c34f0c0c03f5465a05b1399c63ce5e6b2b27c305f1204fe61872e",
-    "note": "Unchanged screenshots and recordings retain their original provenance. They are not evidence that this patch was captured in all pictured flows."
-  },
   "cloud": {
-    "deployedVersion": "0.8.0-alpha.1",
-    "changedInThisPatch": false,
-    "databaseMigration": false
+    "deployedVersion": "0.9.0-alpha.1",
+    "databaseMigration": "Encrypted legacy palette documents migrated to schemaVersion 2; user names and IDs preserved; no parallel expression format."
+  },
+  "providerExperiments": {
+    "scenes": [
+      "flirt",
+      "pink-bubbles",
+      "partner-request",
+      "ironic-critique",
+      "comfort",
+      "progress",
+      "decline",
+      "technical-explanation"
+    ],
+    "preFinalWireBatch": {
+      "requests": 18,
+      "decoded": 17,
+      "note": "One long explanation was incomplete and blocked. Final wire format eliminates redundant generated IDs; final 10-request batch passed."
+    },
+    "finalWireBatch": {
+      "requests": 10,
+      "decoded": 10,
+      "tokenUsage": {
+        "prompt_tokens": 41258,
+        "completion_tokens": 9880,
+        "total_tokens": 51138
+      }
+    },
+    "scope": "Own controlled fixtures, not private user chats. Style and factual fidelity remain model-dependent."
   },
   "limits": [
-    "QQ self-chat and isolated Android 15 host behaviors only; no general claim for all chat editors.",
-    "Physical final APK confirmed restored advisor and retained draft; successful two-page six-reply flow also verified on the same fix before version bump.",
-    "No fresh ASR accuracy or all-host keyboard acceptance in this patch."
-  ]
+    "Physical old OPPO remained locked; this version is not claimed as physically accepted.",
+    "No fresh ASR accuracy or all-host keyboard acceptance in this iteration.",
+    "Preserved videos are from 0.8.0; each screenshot has its own APK provenance in release.json."
+  ],
+  "independentReview": {
+    "nativeVisual": "No new visual P1/P2 in the reviewed current screens.",
+    "groundingRegression": "Latest 24 replies did not reproduce the two reviewed P1 categories; bounded sample, not an all-input guarantee.",
+    "remaining": "One P2 metaphor can make refusal less direct; generative wording remains variable."
+  }
 }

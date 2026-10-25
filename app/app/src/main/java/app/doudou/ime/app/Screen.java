@@ -33,14 +33,14 @@ public abstract class Screen {
   }
 
   protected void caption(String value) {
-    TextView t = Ui.text(activity, value, 12, Ui.SUB);
+    TextView t = Ui.text(activity, value, 12, Ui.sub());
     t.setLineSpacing(Ui.dp(activity, 4), 1);
     add(t);
   }
 
   protected LinearLayout section(String title, String detail) {
     LinearLayout c = Ui.card(activity);
-    TextView h = Ui.text(activity, title, 15, Ui.INK);
+    TextView h = Ui.text(activity, title, 15, Ui.ink());
     h.setTypeface(null, android.graphics.Typeface.BOLD);
     c.addView(h);
     if (!detail.isEmpty()) captionIn(c, detail);
@@ -49,7 +49,7 @@ public abstract class Screen {
 
   protected void captionIn(LinearLayout card, String value) {
     Ui.gap(activity, card, 8);
-    TextView t = Ui.text(activity, value, 12, Ui.SUB);
+    TextView t = Ui.text(activity, value, 12, Ui.sub());
     t.setLineSpacing(Ui.dp(activity, 4), 1);
     card.addView(t);
   }

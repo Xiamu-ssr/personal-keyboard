@@ -1,4 +1,5 @@
 import { Palettes } from './advisor/palette.mjs';
+import { migratePalettes } from './advisor/migrate.mjs';
 import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -36,6 +37,7 @@ export async function createCloudServer({
   memoryModel = new MemoryModel(cfg),
 } = {}) {
   await db.migrate(cfg.plans);
+  await migratePalettes(db, cfg);
   await models.init();
   await memoryModel.init();
   const ledger = new Ledger(db, cfg),
@@ -69,7 +71,7 @@ export async function createCloudServer({
         await db.query("SELECT 1");
         return json(res, {
           status: "ok",
-          version: "0.8.0-alpha.1",
+          version: "0.9.0-alpha.1",
           readiness: {
             account: true,
             asr: cfg.asrReady,

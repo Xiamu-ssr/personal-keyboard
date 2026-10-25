@@ -8,6 +8,8 @@ import { configuration } from "../config.mjs";
 import { createCloudServer } from "../server.mjs";
 import { uuid, passwordHash } from "../security.mjs";
 import { WebSocket, WebSocketServer } from "ws";
+import { seal } from '../security.mjs';
+import { migratePalettes } from '../advisor/migrate.mjs';
 const enabled = process.env.KEYBOARD_DATABASE_TEST === "1";
 test(
   "PostgreSQL identity, concurrent settlement, model jobs and encrypted sync",
@@ -167,6 +169,16 @@ test(
       assert.equal((await request('/v1/advisor/palette',{...paletteWrite,requestId:uuid(),baseVersion:1,slots:palette.slots.slice(1)},token)).status,400);
       const paletteCipher=(await app.db.query('SELECT body_cipher FROM advisor_palettes WHERE user_id=$1',[uid])).rows[0].body_cipher;
       assert(!paletteCipher.includes('我的自然'));
+      const oldTypes=['natural','caring','direct','playful','considered','witty'];
+      const oldSlots=oldTypes.map((expression,i)=>({id:'slot'+(i+1),name:i===0?'保留的名字':'旧格'+i,expression}));
+      await app.db.query('UPDATE advisor_palettes SET version=7,body_cipher=$2 WHERE user_id=$1',[uid,seal(cfg.masterKey,JSON.stringify(oldSlots),'palette:'+uid)]);
+      await migratePalettes(app.db,cfg);
+      const migrated=(await request('/v1/advisor/palette',null,token)).value;
+      assert.equal(migrated.version,8);assert.equal(migrated.schemaVersion,2);
+      assert.equal(migrated.slots[0].name,'保留的名字');assert.equal(migrated.slots[0].id,'slot1');
+      assert.equal(Object.keys(migrated.slots[0].attributes).length,9);assert(!('expression' in migrated.slots[0]));
+      await migratePalettes(app.db,cfg);
+      assert.equal((await request('/v1/advisor/palette',null,token)).value.version,8,'migration is idempotent');
 
       app.jobs.stopped = true;
       cfg.maxTextQueue = 1;

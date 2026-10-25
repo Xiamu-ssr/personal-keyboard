@@ -14,7 +14,7 @@ import app.doudou.ime.people.PeopleScreen;
 import app.doudou.ime.settings.SettingsScreen;
 
 /** Android lifecycle and navigation only. Each page is owned by its business domain. */
-public final class MainActivity extends Activity implements Navigator {
+public final class MainActivity extends app.doudou.ime.design.ThemedActivity implements Navigator {
   private KeyboardApp app;
   private String page = "home";
   private long person;
@@ -102,8 +102,8 @@ public final class MainActivity extends Activity implements Navigator {
     notice.removeAllViews();
     LinearLayout row = Ui.row(this);
     Ui.pad(this, row, 18, 4);
-    row.setBackground(Ui.bg(this, Ui.SURFACE, 14));
-    row.addView(Ui.text(this, text, 13, Ui.INK), new LinearLayout.LayoutParams(0, -2, 1));
+    row.setBackground(Ui.bg(this, Ui.surface(), 14));
+    row.addView(Ui.text(this, text, 13, Ui.ink()), new LinearLayout.LayoutParams(0, -2, 1));
     row.addView(Ui.button(this, "撤销", undo));
     notice.addView(row);
   }
@@ -126,7 +126,7 @@ public final class MainActivity extends Activity implements Navigator {
 
   private void render() {
     LinearLayout root = Ui.col(this);
-    root.setBackgroundColor(Ui.BG);
+    root.setBackgroundColor(Ui.bg());
     LinearLayout heading = Ui.row(this);
     Ui.pad(this, heading, 20, 10);
     if (page.equals("person") || page.equals("account") || settingsDetail())
@@ -155,14 +155,14 @@ public final class MainActivity extends Activity implements Navigator {
                             : page.equals("account")
                                 ? "账户与权益"
                                 : page.equals("about") ? "关于豆豆" : "我的";
-    TextView label = Ui.text(this, title, 28, Ui.INK);
+    TextView label = Ui.text(this, title, 28, Ui.ink());
     label.setTypeface(null, android.graphics.Typeface.BOLD);
     heading.addView(label, new LinearLayout.LayoutParams(0, Ui.dp(this, 54), 1));
     label.setGravity(Gravity.CENTER_VERTICAL);
     if (page.equals("home")) {
-      TextView mark = Ui.text(this, BuildConfig.VERSION_NAME.split("-", 2)[0], 11, Ui.APP_ACCENT);
+      TextView mark = Ui.text(this, BuildConfig.VERSION_NAME.split("-", 2)[0], 11, Ui.appAccent());
       Ui.pad(this, mark, 10, 6);
-      mark.setBackground(Ui.bg(this, Ui.SELECTED, 20));
+      mark.setBackground(Ui.bg(this, Ui.selected(), 20));
       mark.setOnClickListener(v -> open("about", 0));
       mark.setContentDescription("关于豆豆与版本更新");
       heading.addView(mark);
@@ -196,7 +196,7 @@ public final class MainActivity extends Activity implements Navigator {
     }
     root.addView(Ui.divider(this));
     LinearLayout nav = Ui.row(this);
-    nav.setBackgroundColor(Ui.PANEL);
+    nav.setBackgroundColor(Ui.panel());
     Ui.pad(this, nav, 12, 8);
     String[] labels = {"输入", "记忆", "人物", "我的"},
         icons = {"首页", "词典", "人物", "设置"},

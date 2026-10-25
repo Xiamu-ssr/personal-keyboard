@@ -49,6 +49,12 @@ const output = template
       "</script>",
   );
 await fs.writeFile(path.join(dir, "index.html"), output);
+// The reviewed YAML is the source for both the visual Spec and runtime prompts.
+for (const prompt of spec.prompts) {
+  await fs.writeFile(path.resolve(dir, "../cloud/prompts/" + prompt.id + ".md"), prompt.system.trimEnd() + "\n");
+  if (prompt.requestTemplate)
+    await fs.writeFile(path.resolve(dir, "../cloud/prompts/" + prompt.id + "-request.json"), JSON.stringify(prompt.requestTemplate, null, 2) + "\n");
+}
 console.log(
   "Built spec/index.html: " +
     spec.domains.length +

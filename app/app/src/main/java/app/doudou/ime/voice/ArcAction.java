@@ -40,9 +40,9 @@ final class ArcAction extends View {
       path.quadTo(w * .43f, h * .34f, w * .79f, h * .32f);
     }
     band.setStrokeWidth(h * .63f);
-    band.setColor(chosen ? Color.WHITE : 0x18ffffff);
+    band.setColor(chosen ? Ui.accent() : app.doudou.ime.design.Skin.choose(0x18ffffff, 0x14000000));
     canvas.drawPath(path, band);
-    text.setColor(chosen ? right ? Ui.BG : 0xffff5a67 : Ui.INK);
+    text.setColor(chosen ? right ? Ui.bg() : app.doudou.ime.design.Skin.choose(0xffa12b3d, 0xffffa1ac) : Ui.ink());
     float length = new PathMeasure(path, false).getLength();
     Paint.FontMetrics metrics = text.getFontMetrics();
     float start=length*(right ? .40f : .60f)-text.measureText(label)/2;

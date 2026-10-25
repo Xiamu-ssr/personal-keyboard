@@ -9,28 +9,40 @@ import android.widget.*;
 import app.doudou.ime.design.Ui;
 
 /** Two disposable local scenes. Sending here never contacts a real person or text model. */
-public final class PracticeActivity extends Activity {
+public final class PracticeActivity extends app.doudou.ime.design.ThemedActivity {
   private boolean comments;
   private LinearLayout messages;
   private ScrollView chat;
   private EditText editor;
+  private final java.util.ArrayList<String> sent = new java.util.ArrayList<>();
 
   @Override
   public void onCreate(Bundle state) {
     super.onCreate(state);
     comments = "comments".equals(getIntent().getStringExtra("scene"));
+    if (state != null) {
+      comments = state.getBoolean("comments", comments);
+      java.util.ArrayList<String> previous = state.getStringArrayList("sent");
+      if (previous != null) sent.addAll(previous);
+    }
     render();
+    if (state != null) {
+      editor.setText(state.getString("draft", ""));
+      int start = Math.min(editor.length(), Math.max(0, state.getInt("selectionStart")));
+      int end = Math.min(editor.length(), Math.max(start, state.getInt("selectionEnd")));
+      editor.setSelection(start, end);
+    }
   }
 
   private void render() {
     LinearLayout root = Ui.col(this);
-    root.setBackgroundColor(Ui.BG);
+    root.setBackgroundColor(Ui.bg());
     Ui.pad(this, root, 12, 8);
     LinearLayout header = Ui.row(this);
     header.addView(
         Ui.icon(this, "返回", this::finish),
         new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-    TextView title = Ui.text(this, comments ? "评论练习" : "和小林聊天", 21, Ui.INK);
+    TextView title = Ui.text(this, comments ? "评论练习" : "和小林聊天", 21, Ui.ink());
     title.setTypeface(null, Typeface.BOLD);
     header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
     TextView switchScene =
@@ -39,12 +51,13 @@ public final class PracticeActivity extends Activity {
             comments ? "聊天" : "评论",
             () -> {
               comments = !comments;
+              sent.clear();
               render();
             });
-    switchScene.setBackground(Ui.pressable(this, Ui.SURFACE, 18));
+    switchScene.setBackground(Ui.pressable(this, Ui.surface(), 18));
     header.addView(switchScene);
     root.addView(header);
-    TextView demo = Ui.text(this, "本机练习", 12, Ui.SUB);
+    TextView demo = Ui.text(this, "本机练习", 12, Ui.sub());
     demo.setGravity(Gravity.CENTER);
     Ui.pad(this, demo, 0, 8);
     root.addView(demo);
@@ -75,9 +88,9 @@ public final class PracticeActivity extends Activity {
     root.addView(chat, new LinearLayout.LayoutParams(-1, 0, 1));
     if (comments) {
       LinearLayout post = Ui.card(this);
-      post.addView(Ui.text(this, "周末小厨房", 18, Ui.APP_ACCENT));
+      post.addView(Ui.text(this, "周末小厨房", 18, Ui.appAccent()));
       Ui.gap(this, post, 12);
-      TextView story = Ui.text(this, "第一次做番茄鸡蛋面，没想到厨房比工位还忙。\n\n你们下班后最常做什么菜？", 20, Ui.INK);
+      TextView story = Ui.text(this, "第一次做番茄鸡蛋面，没想到厨房比工位还忙。\n\n你们下班后最常做什么菜？", 20, Ui.ink());
       story.setLineSpacing(Ui.dp(this, 7), 1);
       post.addView(story);
       messages.addView(post);
@@ -119,6 +132,7 @@ public final class PracticeActivity extends Activity {
         bubble(v[0], v[1], v[0].equals("我"));
       }
     }
+    for (String value : sent) bubble("我", value, true);
     LinearLayout composer = Ui.row(this);
     editor = Ui.edit(this, comments ? "说说你的看法…" : "消息", "");
     editor.setId(View.generateViewId());
@@ -133,6 +147,7 @@ public final class PracticeActivity extends Activity {
             () -> {
               String value = editor.getText().toString().trim();
               if (value.isEmpty()) return;
+              sent.add(value);
               bubble("我", value, true);
               editor.setText("");
               chat.post(() -> chat.fullScroll(View.FOCUS_DOWN));
@@ -153,6 +168,16 @@ public final class PracticeActivity extends Activity {
         250);
   }
 
+  @Override protected void onSaveInstanceState(Bundle state) {
+    state.putBoolean("comments", comments); state.putStringArrayList("sent", sent);
+    if (editor != null) {
+      state.putString("draft", editor.getText().toString());
+      state.putInt("selectionStart", editor.getSelectionStart());
+      state.putInt("selectionEnd", editor.getSelectionEnd());
+    }
+    super.onSaveInstanceState(state);
+  }
+
   private void bubble(String name, String text, boolean own) {
     LinearLayout row = Ui.row(this);
     row.setGravity(own ? Gravity.RIGHT : Gravity.LEFT);
@@ -160,14 +185,14 @@ public final class PracticeActivity extends Activity {
     LinearLayout column = Ui.col(this);
     column.setGravity(own ? Gravity.RIGHT : Gravity.LEFT);
     if (!own) {
-      TextView sender = Ui.text(this, name, 12, Ui.SUB);
+      TextView sender = Ui.text(this, name, 12, Ui.sub());
       Ui.pad(this, sender, 3, 5);
       column.addView(sender);
     }
-    TextView content = Ui.text(this, text, 17, Ui.INK);
+    TextView content = Ui.text(this, text, 17, Ui.ink());
     content.setLineSpacing(Ui.dp(this, 4), 1);
     Ui.pad(this, content, 14, 12);
-    content.setBackground(Ui.bg(this, own ? Ui.APP_TINT : Ui.PANEL, 16));
+    content.setBackground(Ui.bg(this, own ? Ui.appTint() : Ui.panel(), 16));
     column.addView(content);
     LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
     if (own) lp.leftMargin = Ui.dp(this, 48);

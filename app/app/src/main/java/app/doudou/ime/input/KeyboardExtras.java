@@ -39,7 +39,7 @@ public final class KeyboardExtras {
     host.commitComposing();
     Context c = host.context();
     LinearLayout root = host.openPanel(emoji ? "emoji" : "symbols", KeyboardView.HEIGHT_DP);
-    root.setBackgroundColor(Ui.KEYBOARD);
+    root.setBackgroundColor(Ui.keyboard());
     LinearLayout header = Ui.row(c);
     header.addView(
         Ui.button(c, "ABC", host::letters),
@@ -50,7 +50,7 @@ public final class KeyboardExtras {
       final int page = i;
       TextView tab = Ui.button(c, names[i], () -> show(emoji, page));
       tab.setTextSize(13);
-      tab.setTextColor(i == selected ? Ui.ACCENT : Ui.SUB);
+      tab.setTextColor(i == selected ? Ui.accent() : Ui.sub());
       tab.setBackground(Ui.pressable(c, android.graphics.Color.TRANSPARENT, 12));
       header.addView(tab, new LinearLayout.LayoutParams(0, Ui.dp(c, 48), 1));
     }
@@ -80,7 +80,7 @@ public final class KeyboardExtras {
                   host.services().prefs().edit().putString("recentEmoji", value).apply();
               });
       key.setTextSize(emoji ? 25 : 21);
-      key.setBackground(Ui.pressable(c, Ui.SURFACE, 8));
+      key.setBackground(Ui.pressable(c, Ui.surface(), 8));
       LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, -1, 1);
       size.setMargins(Ui.dp(c, 3), Ui.dp(c, 3), Ui.dp(c, 3), Ui.dp(c, 3));
       row.addView(key, size);
@@ -93,7 +93,7 @@ public final class KeyboardExtras {
   public void keyboards() {
     Context c = host.context();
     LinearLayout root = host.openPanel("keyboards", KeyboardView.HEIGHT_DP);
-    root.setBackgroundColor(Ui.KEYBOARD);
+    root.setBackgroundColor(Ui.keyboard());
     root.addView(Ui.button(c, "返回键盘", host::typing));
     root.addView(
         Ui.cell(

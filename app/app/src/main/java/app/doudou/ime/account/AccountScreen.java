@@ -159,7 +159,7 @@ public final class AccountScreen extends Screen {
     if (ent != null && ent.optBoolean("cloudSync")) {
       Switch enabled = new Switch(activity);
       enabled.setText("备份历史与截图");
-      enabled.setTextColor(Ui.INK);
+      enabled.setTextColor(Ui.ink());
       enabled.setChecked(app.cloud.preferences().getBoolean("syncEnabled", false));
       enabled.setOnCheckedChangeListener(
           (b, v) -> {
@@ -346,7 +346,7 @@ public final class AccountScreen extends Screen {
     pendingRecovery = "";
     LinearLayout fields = Ui.col(activity);
     Ui.pad(activity, fields, 24, 12);
-    TextView text = Ui.text(activity, value, 16, Ui.INK);
+    TextView text = Ui.text(activity, value, 16, Ui.ink());
     text.setTextIsSelectable(true);
     fields.addView(text);
     Ui.gap(activity, fields, 16);
@@ -379,7 +379,7 @@ public final class AccountScreen extends Screen {
   private void metric(LinearLayout card, String name, long value) {
     Ui.gap(activity, card, 16);
     card.addView(
-        Ui.text(activity, String.format(java.util.Locale.CHINA, "%,d", value), 30, Ui.INK));
+        Ui.text(activity, String.format(java.util.Locale.CHINA, "%,d", value), 30, Ui.ink()));
     captionIn(card, name);
   }
 
