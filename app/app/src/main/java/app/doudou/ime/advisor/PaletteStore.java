@@ -7,7 +7,7 @@ import org.json.*;
 /** User-configured expressions are distinct from automatically learned scene styles. */
 public final class PaletteStore {
   public static final int[] COLORS = {
-    0xffa9c4ff, 0xffe6b5a6, 0xffa7bce3, 0xffe3c77d, 0xffbaaada, 0xff99c5d1
+    0xffe6b5a6, 0xffa7bce3, 0xffe3c77d, 0xffbaaada, 0xffa9c4ff, 0xff99c5d1
   };
   private final KeyboardApp app;
 

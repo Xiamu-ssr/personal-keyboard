@@ -47,6 +47,8 @@ public final class HomeScreen extends Screen {
           JSONObject slot = slots.getJSONObject(index);
           int color = PaletteStore.COLORS[index];
           LinearLayout tile = Ui.col(activity);
+          tile.setMinimumHeight(Ui.dp(activity,
+              72 * Math.max(1, activity.getResources().getConfiguration().fontScale)));
           Ui.pad(activity, tile, 14, 10);
           tile.setGravity(Gravity.CENTER_VERTICAL);
           tile.setBackground(Ui.pressable(activity, Ui.panel(), 18));
@@ -71,13 +73,7 @@ public final class HomeScreen extends Screen {
           size.setMargins(0, 0, column < 2 ? Ui.dp(activity, 8) : 0, 0);
           line.addView(tile, size);
         }
-        palette.addView(
-            line,
-            new LinearLayout.LayoutParams(
-                -1,
-                Ui.dp(
-                    activity,
-                    72 * Math.max(1, activity.getResources().getConfiguration().fontScale))));
+        palette.addView(line, new LinearLayout.LayoutParams(-1, -2));
         if (row == 0) Ui.gap(activity, palette, 8);
       }
     } catch (Exception e) {

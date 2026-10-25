@@ -1,66 +1,473 @@
 {
   "schemaVersion": 2,
   "attributes": [
-    {"id":"length","name":"篇幅","kind":"choice","options":[
-      {"id":"inherit","name":"随本人","instruction":""},
-      {"id":"brief","name":"精简","instruction":"尽量一两句说清，保留关键条件，不机械凑字数。"},
-      {"id":"medium","name":"适中","instruction":"表达完整，解释到需要的程度，不铺陈。"},
-      {"id":"full","name":"充分","instruction":"必要的理由与条件说充分，不为变长添加事实。"}]},
-    {"id":"formality","name":"正式程度","kind":"choice","options":[
-      {"id":"inherit","name":"随本人","instruction":""},
-      {"id":"casual","name":"日常","instruction":"使用日常口语，不写成公文。"},
-      {"id":"neutral","name":"中性","instruction":"用平实得体的措辞，不过分口语或正式。"},
-      {"id":"formal","name":"正式","instruction":"措辞正式、准确，减少口头语，不堆官话。"}]},
-    {"id":"directness","name":"直接程度","kind":"choice","options":[
-      {"id":"inherit","name":"随本人","instruction":""},
-      {"id":"soft","name":"委婉","instruction":"委婉表达同一立场，不能把拒绝改成答应。"},
-      {"id":"balanced","name":"适度","instruction":"清楚表达，也给对方自然接话的空间。"},
-      {"id":"direct","name":"直接","instruction":"直接说重点，少铺垫；直接不等于辱骂。"}]},
-    {"id":"warmth","name":"亲近程度","kind":"choice","options":[
-      {"id":"inherit","name":"随本人","instruction":""},
-      {"id":"reserved","name":"克制","instruction":"保留距离感，少热络与亲昵称呼。"},
-      {"id":"friendly","name":"友好","instruction":"友好自然，关照对方的处境。"},
-      {"id":"intimate","name":"亲近","instruction":"表达亲近与温度；这只是说话方式，不代表已确立恋人关系，不新增亲密经历或承诺。"}]},
-    {"id":"emotion","name":"情绪力度","kind":"choice","options":[
-      {"id":"inherit","name":"随本人","instruction":""},
-      {"id":"calm","name":"平静","instruction":"表达平静，不放大情绪；仍可以温暖、幽默或反讽。"},
-      {"id":"expressive","name":"鲜明","instruction":"让已有的态度与情绪更可感，不制造本人没有表露的情绪。"},
-      {"id":"intense","name":"强烈","instruction":"鲜明有力地表达已有情绪，不改变立场，不添加指责或未经证实的事实。"}]},
-    {"id":"audience","name":"话题熟悉度","kind":"choice","options":[
-      {"id":"inherit","name":"随本人","instruction":""},
-      {"id":"general","name":"大众","instruction":"普通读者也容易理解，必要时解释术语。"},
-      {"id":"informed","name":"熟悉话题","instruction":"面向已熟悉话题的人，省去常识性解释。"},
-      {"id":"expert","name":"专业同行","instruction":"面向专业同行，准确使用已有专业信息；专业不等于新增知识或堆术语。"}]},
-    {"id":"rhetoric","name":"表达手法","kind":"multi","maxItems":3,"options":[
-      {"id":"plain","name":"不加手法","instruction":"平实直陈，不用玩笑、反讽或暗示。"},
-      {"id":"humor","name":"幽默","instruction":"用贴题的轻幽默表达，不强行玩梗。"},
-      {"id":"irony","name":"反讽","instruction":"允许冷静的反话与讽刺，锋利地指出已有矛盾；不等于提高情绪，不凭空捏造攻击依据；反话的逻辑仍须围绕当前观点，不推演没有依据的必然结局或不相干的行业事实。"},
-      {"id":"self_deprecation","name":"自嘲","instruction":"可用自嘲减轻语气，不捏造本人经历、能力或处境。"},
-      {"id":"hint","name":"含蓄暗示","instruction":"把已经表达的意图或好感含蓄地透露出来，留出接话余地，不新增事实或承诺。"},
-      {"id":"flirt","name":"暧昧试探","instruction":"用轻轻示好、期待继续互动、留一点余地的方式试探好感；可以没有幽默和 Emoji 也能让人感到暧昧。对话或本人意图不允许时不强撩；不直接表白，不把暧昧对象当已确认的恋人，不编共同经历、排他关系或承诺。用本人允许的当下愿望或请求承载好感，不编过去一直在等、原本打算、睡不着等未经提供的状态或动机。"},
-      {"id":"teasing","name":"俏皮调侃","instruction":"用轻轻的逗趣、接梗或俏皮问句互动，分寸服从对话与人物关系。"},
-      {"id":"coquettish","name":"撒娇","instruction":"用柔软俏皮的语气表达原有意思，不借此新增要求、亲密称呼或关系承诺。"}]},
-    {"id":"emoji","name":"Emoji","kind":"choice","options":[
-      {"id":"inherit","name":"随本人","instruction":""},
-      {"id":"none","name":"不用","instruction":"不使用 Emoji。"},
-      {"id":"few","name":"少量","instruction":"适合时使用零至一个贴题 Emoji。"},
-      {"id":"many","name":"丰富","instruction":"适量增加 Emoji，不能影响阅读或改变意思。"}]},
-    {"id":"structure","name":"结构","kind":"choice","options":[
-      {"id":"inherit","name":"随本人","instruction":""},
-      {"id":"chat","name":"自然聊天","instruction":"像自然聊天，不用标题、列表或书面小结。"},
-      {"id":"paragraphs","name":"分段","instruction":"需要时分成短段，便于阅读，不硬凑段落。"},
-      {"id":"points","name":"分点","instruction":"确有多个要点时简短分点，不给一句话硬加列表。"}]}
+    {
+      "id": "length",
+      "name": "篇幅",
+      "kind": "choice",
+      "options": [
+        {
+          "id": "inherit",
+          "name": "随本人",
+          "instruction": ""
+        },
+        {
+          "id": "brief",
+          "name": "精简",
+          "instruction": "尽量一两句说清，保留关键条件，不机械凑字数。"
+        },
+        {
+          "id": "medium",
+          "name": "适中",
+          "instruction": "表达完整，解释到需要的程度，不铺陈。"
+        },
+        {
+          "id": "full",
+          "name": "充分",
+          "instruction": "必要的理由与条件说充分，不为变长添加事实。"
+        }
+      ]
+    },
+    {
+      "id": "formality",
+      "name": "正式程度",
+      "kind": "choice",
+      "options": [
+        {
+          "id": "inherit",
+          "name": "随本人",
+          "instruction": ""
+        },
+        {
+          "id": "casual",
+          "name": "日常",
+          "instruction": "使用日常口语，不写成公文。"
+        },
+        {
+          "id": "neutral",
+          "name": "中性",
+          "instruction": "用平实得体的措辞，不过分口语或正式。"
+        },
+        {
+          "id": "formal",
+          "name": "正式",
+          "instruction": "措辞正式、准确，减少口头语，不堆官话。"
+        }
+      ]
+    },
+    {
+      "id": "directness",
+      "name": "直接程度",
+      "kind": "choice",
+      "options": [
+        {
+          "id": "inherit",
+          "name": "随本人",
+          "instruction": ""
+        },
+        {
+          "id": "soft",
+          "name": "委婉",
+          "instruction": "委婉表达同一立场，不能把拒绝改成答应。"
+        },
+        {
+          "id": "balanced",
+          "name": "适度",
+          "instruction": "清楚表达，也给对方自然接话的空间。"
+        },
+        {
+          "id": "direct",
+          "name": "直接",
+          "instruction": "直接说重点，少铺垫；直接不等于辱骂。"
+        }
+      ]
+    },
+    {
+      "id": "warmth",
+      "name": "亲近程度",
+      "kind": "choice",
+      "options": [
+        {
+          "id": "inherit",
+          "name": "随本人",
+          "instruction": ""
+        },
+        {
+          "id": "reserved",
+          "name": "克制",
+          "instruction": "保留距离感，少热络与亲昵称呼。"
+        },
+        {
+          "id": "friendly",
+          "name": "友好",
+          "instruction": "友好自然，关照对方的处境。"
+        },
+        {
+          "id": "intimate",
+          "name": "亲近",
+          "instruction": "表达亲近与温度；这只是说话方式，不代表已确立恋人关系，不新增亲密经历或承诺。"
+        }
+      ]
+    },
+    {
+      "id": "emotion",
+      "name": "情绪力度",
+      "kind": "choice",
+      "options": [
+        {
+          "id": "inherit",
+          "name": "随本人",
+          "instruction": ""
+        },
+        {
+          "id": "calm",
+          "name": "平静",
+          "instruction": "表达平静，不放大情绪；仍可以温暖、幽默或反讽。"
+        },
+        {
+          "id": "expressive",
+          "name": "鲜明",
+          "instruction": "让已有的态度与情绪更可感，不制造本人没有表露的情绪。"
+        },
+        {
+          "id": "intense",
+          "name": "强烈",
+          "instruction": "鲜明有力地表达已有情绪，不改变立场，不添加指责或未经证实的事实。"
+        }
+      ]
+    },
+    {
+      "id": "audience",
+      "name": "话题熟悉度",
+      "kind": "choice",
+      "options": [
+        {
+          "id": "inherit",
+          "name": "随本人",
+          "instruction": ""
+        },
+        {
+          "id": "general",
+          "name": "大众",
+          "instruction": "普通读者也容易理解，必要时解释术语。"
+        },
+        {
+          "id": "informed",
+          "name": "熟悉话题",
+          "instruction": "面向已熟悉话题的人，省去常识性解释。"
+        },
+        {
+          "id": "expert",
+          "name": "专业同行",
+          "instruction": "面向专业同行，准确使用已有专业信息；专业不等于新增知识或堆术语。"
+        }
+      ]
+    },
+    {
+      "id": "rhetoric",
+      "name": "表达手法",
+      "kind": "multi",
+      "maxItems": 3,
+      "options": [
+        {
+          "id": "plain",
+          "name": "不加手法",
+          "instruction": "平实直陈，不用玩笑、反讽或暗示。"
+        },
+        {
+          "id": "humor",
+          "name": "幽默",
+          "instruction": "用贴题的轻幽默表达，不强行玩梗。"
+        },
+        {
+          "id": "irony",
+          "name": "反讽",
+          "instruction": "用冷静、锋利的反讽点破当前矛盾、利益诉求与话术；先检验对方前提，不轻信诱导。推测只能作为疑问，不把阴谋猜测说成事实，不凭空编造攻击依据；少铺垫，不谩骂，不推演没有依据的必然结局。"
+        },
+        {
+          "id": "self_deprecation",
+          "name": "自嘲",
+          "instruction": "可用自嘲减轻语气，不捏造本人经历、能力或处境。"
+        },
+        {
+          "id": "hint",
+          "name": "含蓄暗示",
+          "instruction": "把已经表达的意图或好感含蓄地透露出来，留出接话余地，不新增事实或承诺。"
+        },
+        {
+          "id": "flirt",
+          "name": "暧昧试探",
+          "instruction": "用轻轻示好、期待继续互动、留一点余地的方式试探好感；可以没有幽默和 Emoji 也能让人感到暧昧。对话或本人意图不允许时不强撩；不直接表白，不把暧昧对象当已确认的恋人，不编共同经历、排他关系或承诺。用本人允许的当下愿望或请求承载好感，不编过去一直在等、原本打算、睡不着等未经提供的状态或动机。"
+        },
+        {
+          "id": "teasing",
+          "name": "俏皮调侃",
+          "instruction": "用轻轻的逗趣、接梗或俏皮问句互动，分寸服从对话与人物关系。"
+        },
+        {
+          "id": "coquettish",
+          "name": "撒娇",
+          "instruction": "用柔软俏皮的语气表达原有意思，不借此新增要求、亲密称呼或关系承诺。"
+        }
+      ]
+    },
+    {
+      "id": "emoji",
+      "name": "Emoji",
+      "kind": "choice",
+      "options": [
+        {
+          "id": "inherit",
+          "name": "随本人",
+          "instruction": ""
+        },
+        {
+          "id": "none",
+          "name": "不用",
+          "instruction": "不使用 Emoji。"
+        },
+        {
+          "id": "few",
+          "name": "少量",
+          "instruction": "适合时使用零至一个贴题 Emoji。"
+        },
+        {
+          "id": "many",
+          "name": "丰富",
+          "instruction": "适量增加 Emoji，不能影响阅读或改变意思。"
+        }
+      ]
+    },
+    {
+      "id": "structure",
+      "name": "结构",
+      "kind": "choice",
+      "options": [
+        {
+          "id": "inherit",
+          "name": "随本人",
+          "instruction": ""
+        },
+        {
+          "id": "chat",
+          "name": "自然聊天",
+          "instruction": "像自然聊天，不用标题、列表或书面小结。"
+        },
+        {
+          "id": "paragraphs",
+          "name": "分段",
+          "instruction": "需要时分成短段，便于阅读，不硬凑段落。"
+        },
+        {
+          "id": "points",
+          "name": "分点",
+          "instruction": "确有多个要点时简短分点，不给一句话硬加列表。"
+        }
+      ]
+    }
   ],
   "templates": [
-    {"id":"natural","name":"自然","attributes":{"length":"brief","formality":"casual","directness":"balanced","warmth":"friendly","emotion":"calm","audience":"inherit","rhetoric":[],"emoji":"inherit","structure":"chat"}},
-    {"id":"caring","name":"体贴","attributes":{"length":"medium","formality":"casual","directness":"soft","warmth":"friendly","emotion":"expressive","audience":"inherit","rhetoric":[],"emoji":"few","structure":"chat"}},
-    {"id":"direct","name":"直说","attributes":{"length":"brief","formality":"neutral","directness":"direct","warmth":"reserved","emotion":"calm","audience":"inherit","rhetoric":["plain"],"emoji":"none","structure":"chat"}},
-    {"id":"playful","name":"俏皮","attributes":{"length":"brief","formality":"casual","directness":"balanced","warmth":"friendly","emotion":"expressive","audience":"inherit","rhetoric":["humor","teasing"],"emoji":"few","structure":"chat"}},
-    {"id":"considered","name":"周全","attributes":{"length":"medium","formality":"neutral","directness":"balanced","warmth":"friendly","emotion":"calm","audience":"inherit","rhetoric":[],"emoji":"none","structure":"paragraphs"}},
-    {"id":"witty","name":"机智","attributes":{"length":"brief","formality":"casual","directness":"balanced","warmth":"friendly","emotion":"calm","audience":"inherit","rhetoric":["humor"],"emoji":"none","structure":"chat"}},
-    {"id":"mean","name":"冷讽","attributes":{"length":"brief","formality":"casual","directness":"direct","warmth":"reserved","emotion":"calm","audience":"inherit","rhetoric":["irony"],"emoji":"none","structure":"chat"}},
-    {"id":"flirt","name":"暧昧","attributes":{"length":"brief","formality":"casual","directness":"soft","warmth":"intimate","emotion":"calm","audience":"inherit","rhetoric":["flirt"],"emoji":"few","structure":"chat"}},
-    {"id":"pink","name":"粉红泡泡","attributes":{"length":"brief","formality":"casual","directness":"soft","warmth":"intimate","emotion":"expressive","audience":"inherit","rhetoric":["hint","flirt","coquettish"],"emoji":"few","structure":"chat"}},
-    {"id":"coquettish","name":"撒娇","attributes":{"length":"brief","formality":"casual","directness":"soft","warmth":"intimate","emotion":"expressive","audience":"inherit","rhetoric":["coquettish"],"emoji":"few","structure":"chat"}}
+    {
+      "id": "flirt",
+      "name": "克制暧昧",
+      "attributes": {
+        "length": "brief",
+        "formality": "casual",
+        "directness": "soft",
+        "warmth": "intimate",
+        "emotion": "calm",
+        "audience": "inherit",
+        "rhetoric": [
+          "hint",
+          "flirt"
+        ],
+        "emoji": "none",
+        "structure": "chat"
+      }
+    },
+    {
+      "id": "mean",
+      "name": "Mean",
+      "attributes": {
+        "length": "brief",
+        "formality": "casual",
+        "directness": "direct",
+        "warmth": "reserved",
+        "emotion": "calm",
+        "audience": "inherit",
+        "rhetoric": [
+          "irony"
+        ],
+        "emoji": "none",
+        "structure": "chat"
+      }
+    },
+    {
+      "id": "playful",
+      "name": "接梗",
+      "attributes": {
+        "length": "brief",
+        "formality": "casual",
+        "directness": "balanced",
+        "warmth": "friendly",
+        "emotion": "expressive",
+        "audience": "inherit",
+        "rhetoric": [
+          "humor",
+          "teasing"
+        ],
+        "emoji": "few",
+        "structure": "chat"
+      }
+    },
+    {
+      "id": "caring",
+      "name": "共情",
+      "attributes": {
+        "length": "medium",
+        "formality": "casual",
+        "directness": "soft",
+        "warmth": "friendly",
+        "emotion": "expressive",
+        "audience": "inherit",
+        "rhetoric": [],
+        "emoji": "few",
+        "structure": "chat"
+      }
+    },
+    {
+      "id": "professional",
+      "name": "干练",
+      "attributes": {
+        "length": "medium",
+        "formality": "neutral",
+        "directness": "direct",
+        "warmth": "friendly",
+        "emotion": "calm",
+        "audience": "informed",
+        "rhetoric": [
+          "plain"
+        ],
+        "emoji": "none",
+        "structure": "paragraphs"
+      }
+    },
+    {
+      "id": "boundaries",
+      "name": "边界",
+      "attributes": {
+        "length": "brief",
+        "formality": "neutral",
+        "directness": "direct",
+        "warmth": "reserved",
+        "emotion": "calm",
+        "audience": "inherit",
+        "rhetoric": [
+          "plain"
+        ],
+        "emoji": "none",
+        "structure": "chat"
+      }
+    },
+    {
+      "id": "natural",
+      "name": "自然",
+      "attributes": {
+        "length": "brief",
+        "formality": "casual",
+        "directness": "balanced",
+        "warmth": "friendly",
+        "emotion": "calm",
+        "audience": "inherit",
+        "rhetoric": [],
+        "emoji": "inherit",
+        "structure": "chat"
+      }
+    },
+    {
+      "id": "direct",
+      "name": "直说",
+      "attributes": {
+        "length": "brief",
+        "formality": "neutral",
+        "directness": "direct",
+        "warmth": "reserved",
+        "emotion": "calm",
+        "audience": "inherit",
+        "rhetoric": [
+          "plain"
+        ],
+        "emoji": "none",
+        "structure": "chat"
+      }
+    },
+    {
+      "id": "considered",
+      "name": "周全",
+      "attributes": {
+        "length": "medium",
+        "formality": "neutral",
+        "directness": "balanced",
+        "warmth": "friendly",
+        "emotion": "calm",
+        "audience": "inherit",
+        "rhetoric": [],
+        "emoji": "none",
+        "structure": "paragraphs"
+      }
+    },
+    {
+      "id": "witty",
+      "name": "机智",
+      "attributes": {
+        "length": "brief",
+        "formality": "casual",
+        "directness": "balanced",
+        "warmth": "friendly",
+        "emotion": "calm",
+        "audience": "inherit",
+        "rhetoric": [
+          "humor"
+        ],
+        "emoji": "none",
+        "structure": "chat"
+      }
+    },
+    {
+      "id": "pink",
+      "name": "粉红泡泡",
+      "attributes": {
+        "length": "brief",
+        "formality": "casual",
+        "directness": "soft",
+        "warmth": "intimate",
+        "emotion": "expressive",
+        "audience": "inherit",
+        "rhetoric": [
+          "hint",
+          "flirt",
+          "coquettish"
+        ],
+        "emoji": "few",
+        "structure": "chat"
+      }
+    },
+    {
+      "id": "coquettish",
+      "name": "撒娇",
+      "attributes": {
+        "length": "brief",
+        "formality": "casual",
+        "directness": "soft",
+        "warmth": "intimate",
+        "emotion": "expressive",
+        "audience": "inherit",
+        "rhetoric": [
+          "coquettish"
+        ],
+        "emoji": "few",
+        "structure": "chat"
+      }
+    }
   ]
 }

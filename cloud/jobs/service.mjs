@@ -117,7 +117,7 @@ export class Jobs {
           job.id,
           controller.signal.aborted ? "cancelled" : "failed",
           null,
-          {},
+          e.provider ? { model: e.providerModel, usage: e.provider } : {},
           {
             code: e instanceof ServiceError ? e.code : "MODEL_ERROR",
             message:

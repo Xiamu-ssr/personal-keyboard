@@ -2,9 +2,9 @@ schemaVersion: 6
 meta:
   title: 豆豆输入法
   subtitle: 域与实体固定，数据在其间流动
-  version: 0.9.1-alpha.1
+  version: 0.9.2-alpha.1
   reviewedAt: 2026-10-25
-  status: App / Cloud 0.9.1 · 四栏工作区 · 翻译 · Credit
+  status: App / Cloud 0.9.2 · 点选翻译 · 六格表达
 domains:
   - id: phone
     name: 用户手机
@@ -43,14 +43,14 @@ domains:
       - 同步个人记忆缓存，键盘使用时处理待上传变化。
     fields:
       空格口述: 短按空格；按住进入弧形撤回/换行界面，松手恢复打字。实时文字使用独占 composing 区域，用户开始修改后迟到结果不覆盖。
-      录音笔: 录音页保留本地音频与实时文字，切换翻译或收起键盘继续；断网或积分不足只暂停转写，原音可续转。
+      录音笔: 点栏目即录；正在录时回到同一段。切栏/收起键盘继续，断网或积分不足保留原音。
       帮我回: 一次点击自动缩矮、看当前及较早一屏，恢复聊天位置后推理。无更早内容只取一屏；不手工选对象。六格各一条；单格换三条；全部换一批，旧组可前后查看。
       键盘: 中文26键、English、数字、分类符号与表情；回车提交原始拼音，空格选首候选。万象现代词库与个人词库共同排序。
       首页: 聊天/评论练习、六槽调色盘、文风与人物星图。每个槽位有名称与九项独立表达属性，点入编辑；练习每次重新进入重置。
       我的: 账户/权益、亮色/暗色皮肤、按键轻振、历史时长与系统权限直接展开；安全与备份归账户。
       皮肤: 本机选择，App、键盘、语音面板、原生弹窗与系统栏使用同一套语义色；默认保留暗色。换肤保留草稿、录音、账号与槽位。
-      工作区: 同一工具栏切换输入、录音、翻译；键位和长按空格语音不变。切换不自动填入。
-      翻译: 当前输入、录音稿、键盘编辑或粘贴作为原文；译文留在工具中，点填入才写进聊天。独立草稿不被录音稿自动覆盖。
+      工作区: 输入、录音、帮我回、翻译；同一工具栏，保留键位与空格语音。
+      翻译: 点语言直接替换输入框；暂存原文，换语言复用，原文按钮还原。录音来源留工具内。
     data:
       - 文字历史 / 军师截图
       - 个人记忆缓存 / 待上传变化
@@ -96,24 +96,23 @@ domains:
           - 新增/改动在本地持久入队，空闲45秒合批上传；使用App/键盘时补交，WorkManager联网补偿，最短15分钟。
           - Cloud文本模型处理已上传增量；手机短时追踪完成并刷新，不要求用户进入首页常驻。
       - id: translation
-        title: 翻译草稿
-        summary: 原文 · 译文 · 语言
-        details:
-          - 本机按账号保留一份工具草稿；请求返回不修改聊天。
-          - 完成后主动作是替换原文或填入；宿主草稿变化则保留新草稿。
-          - 改原文或语言后，旧结果不再适用；已有原文须本人选择才能换成录音稿。
-          - 译文不作为本人原生文风的学习证据。
+        title: 翻译
+        summary: 点语言替换 · 原文还原
+        fields:
+          原文: 当前输入会话临时保存；换语言始终复用原文。
+          操作: 点语言直接替换输入框；点原文还原，已译语言可直接回看。
+          录音稿: 在工具内翻译，不自动写聊天。
+          保护: 改字或换输入框后，迟到结果不得覆盖。
         format:
           fields:
-            source: 原文。
-            language: 来源语言；auto自动识别。
-            target: 目标语言。
-            result: 当前原文和语言对应的译文。
+            original: 原文；只在当前会话内存中保留。
+            displayed: 当前显示的原文或译文。
+            language: 当前显示语言；空值为原文。
+            translations: 本次原文按目标语言缓存的译文。
           example:
-            source: 明天上午十点见。
-            language: auto
-            target: en
-            result: See you at ten tomorrow morning.
+            original: 明天上午十点见。
+            displayed: See you at ten tomorrow morning.
+            language: en
   - id: cloud
     name: Cloud 服务
     shortName: Cloud
@@ -157,7 +156,7 @@ domains:
         summary: 账号 · Credit · 备份
         details:
           - 邀请码注册、账号密码登录，恢复码重设密码。新账户一次性赠送3,000 Credit。
-          - 每次成功生成扣一次；六格算一批，单格换三条算一批，浏览旧组不扣。失败/原任务重试不重复扣。
+          - 按实际模型用量扣Credit；六格同次生成，单格换三条另调一次；浏览旧组不扣。
           - 个人记忆与调色盘随账户同步；完整历史备份按权益开放。
         fields:
           积分: 1 Credit 对应0.001元；当前按阿里云公开标准价×1.75、供应商实际输入/输出Token结算。
@@ -191,6 +190,8 @@ domains:
               emoji: few
               structure: chat
         fields:
+          默认: 克制暧昧、Mean、接梗、共情、干练、边界。
+          更新: 未修改的旧预设迁移；自定义名称与属性保留。
           保存: 完整六槽＋baseVersion＋requestId；schemaVersion为2。
           表达手法: 最多三种；空列表随本人，plain为显式直陈且不能与其他手法混选。
       - id: hotwords
@@ -303,7 +304,9 @@ domains:
           - 帮我回：一次多模态返回建议、对话身份与精简聊天文字，不另跑OCR。
           - 记忆更新：文本推理；输入完整主本与增量历史，输出受限操作。
         fields:
-          模型: qwen3.8-flash · 阿里云百炼直连。
+          模型: qwen3.8-flash
+          供应商: 阿里云百炼直连。
+          调用: 首次/换一批一次返回六条；单槽换说法一次返回三条。
           输入: 文本；军师另附本次截图。
           输出: 按任务约定的 JSON，Cloud 校验后使用。
           军师: 同一次看图推理先核对原话；严格返回六种表达或同语气三条，不替本人决定。
@@ -805,7 +808,7 @@ businesses:
         channel: app-cloud
         direction: ba
         title: 军师结果
-        body: App 将截图、聊天内容与建议关联；成功生成扣一次。
+        body: App 将截图、聊天内容与建议关联；成功后按用量结算 Credit。
         delay: 1700
         status:
           app.history: 保存军师结果
@@ -931,13 +934,13 @@ businesses:
           - learning-4
   - id: translation
     name: 翻译
-    summary: 原文和译文留在工具里，本人选择后填入。
+    summary: 点语言替换输入，原文可还原。
     events:
       - id: translation-1
         channel: phone-app
         direction: ab
         title: 原文与语言
-        body: 选择当前输入、录音稿，或在翻译页编辑原文。
+        body: 暂存当前输入原文，选择目标语言；录音稿只在工具内处理。
         delay: 1700
         status:
           app.translation: 原文就绪
@@ -946,7 +949,7 @@ businesses:
         channel: app-cloud
         direction: ab
         title: 本次翻译
-        body: 只上传本次原文和语言，不附人物、热词或文风。
+        body: 每次都用暂存原文；不附人物、热词或文风。
         delay: 1700
         fields:
           原文: 明天上午十点见。
@@ -988,28 +991,28 @@ businesses:
       - id: translation-5
         channel: app-cloud
         direction: ba
-        title: 译文回到工具
-        body: 保留原文和译文，不自动修改聊天框。
+        title: 译文与原文快照
+        body: 立即替换当前输入框，保留原文；录音来源只更新工具文字。
         delay: 1700
         status:
-          app.translation: 可复制或填入
+          app.translation: 已替换，原文可还原
         after:
           - translation-4
       - id: translation-6
         channel: phone-app
         direction: ab
-        title: 本人选择填入
-        body: 点填入才把当前译文交给输入框。
+        title: 点原文
+        body: 读取临时原文，不调用模型。
         delay: 1700
         after:
           - translation-5
       - id: translation-7
         channel: phone-app
         direction: ba
-        title: 填入译文
-        body: 填入当前输入位置，由本人发送。
+        title: 还原原文
+        body: 替换回原文；已有译文继续缓存。
         delay: 1700
         status:
-          phone.chat: See you at ten tomorrow morning.
+          phone.chat: 明天上午十点见。
         after:
           - translation-6

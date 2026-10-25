@@ -1,5 +1,6 @@
 import { Palettes } from './advisor/palette.mjs';
 import { migratePalettes } from './advisor/migrate.mjs';
+import { migrateDefaultSlots } from './advisor/defaults-migration.mjs';
 import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -29,6 +30,8 @@ import {
   sameOrigin,
 } from "./http/router.mjs";
 
+const { version: productVersion } = JSON.parse(await fs.readFile(new URL('./package.json', import.meta.url), 'utf8'));
+
 export async function createCloudServer({
   cfg,
   db = new Database(cfg.databaseUrl),
@@ -38,6 +41,7 @@ export async function createCloudServer({
 } = {}) {
   await db.migrate(cfg.plans, cfg.pricing);
   await migratePalettes(db, cfg);
+  await migrateDefaultSlots(db, cfg);
   await models.init();
   await memoryModel.init();
   const ledger = new Ledger(db, cfg),
@@ -71,7 +75,7 @@ export async function createCloudServer({
         await db.query("SELECT 1");
         return json(res, {
           status: "ok",
-          version: "0.9.1-alpha.1",
+          version: productVersion,
           readiness: {
             account: true,
             asr: cfg.asrReady,

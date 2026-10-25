@@ -18,6 +18,14 @@ public final class RecordingPanel {
     host = h;
   }
 
+  /** Entering the tab starts a fresh recording, unless this account is already recording. */
+  public void enter() {
+    RecordingService current = RecordingService.current;
+    if (current == null) recordId = "";
+    else if (current.belongsToCurrentAccount() && !current.active()) current.startNextRecording();
+    show();
+  }
+
   public String text() {
     RecordingService service = RecordingService.current;
     if (service != null && service.belongsToCurrentAccount()) return service.text();
@@ -57,7 +65,8 @@ public final class RecordingPanel {
     }
     host.cancelVoice();
     host.commitComposing();
-    if (RecordingService.current == null && recordId.isEmpty())
+    final boolean starting = RecordingService.current == null && recordId.isEmpty();
+    if (starting)
       try {
         c.startForegroundService(new Intent(c, RecordingService.class));
       } catch (Exception e) {
@@ -123,6 +132,7 @@ public final class RecordingPanel {
     final int serial = ++renderSerial;
     String[] last = {""};
     boolean[] saved = {false};
+    long started = android.os.SystemClock.uptimeMillis();
     Runnable tick =
         new Runnable() {
           public void run() {
@@ -144,9 +154,16 @@ public final class RecordingPanel {
               clock.setText(duration(service.bytes()));
               status.setText(service.status());
               if (!service.active()) {
-                stop.setText("保存中…");
+                stop.setText(service.startingNext() ? "正在开始…" : "保存中…");
                 stop.setEnabled(false);
+              } else {
+                stop.setText("结束");
+                stop.setEnabled(true);
               }
+            } else if (starting && recordId.isEmpty()
+                && android.os.SystemClock.uptimeMillis() - started < 5000) {
+              status.setText("正在开始…");
+              stop.setEnabled(false);
             } else {
               if (!saved[0]) { clock.setText(duration(savedBytes())); saved[0] = true; }
               waveform.level(0);

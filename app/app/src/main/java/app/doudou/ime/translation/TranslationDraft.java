@@ -1,47 +1,48 @@
 package app.doudou.ime.translation;
 
-import app.doudou.ime.app.KeyboardApp;
-import org.json.JSONObject;
+import java.util.HashMap;
+import java.util.Map;
 
-/** One account-scoped local tool draft; translations are never evidence of the user's writing style. */
+/** Temporary original and translations, scoped to one account and live editor. Never persisted. */
 public final class TranslationDraft {
-  public String source = "", target = "en", language = "auto", result = "", detected = "";
-  public long revision;
-  private final String account;
+  private String account = "", original = "", displayed = "", language = "";
+  private long editor = -1, revision;
+  private boolean local;
+  private final Map<String, String> translations = new HashMap<>();
 
-  public TranslationDraft(KeyboardApp app) {
-    account = app.cloud.userId();
-    try {
-      JSONObject saved = new JSONObject(app.store.meta("translation:" + account, "{}"));
-      source = saved.optString("source");
-      target = saved.optString("target", "en");
-      language = saved.optString("language", "auto");
-      result = saved.optString("result");
-      detected = saved.optString("detected");
-    } catch (Exception ignored) { /* An absent tool draft has no effect on history or recordings. */ }
-  }
-
-  public boolean belongsTo(KeyboardApp app) { return account.equals(app.cloud.userId()); }
-
-  public void change(String text, String from, String to) {
-    if (source.equals(text) && language.equals(from) && target.equals(to)) return;
-    source = text; language = from; target = to;
-    result = ""; detected = ""; revision++;
-  }
-
-  public boolean accept(long requested, String text, String detectedLanguage) {
-    if (revision != requested) return false;
-    result = text; detected = detectedLanguage; return true;
-  }
-
-  public void save(KeyboardApp app) {
-    if (!belongsTo(app)) return;
-    try {
-      app.store.setMeta("translation:" + account, new JSONObject()
-          .put("source", source).put("language", language).put("target", target)
-          .put("result", result).put("detected", detected).toString());
-    } catch (Exception e) {
-      throw new IllegalStateException("翻译草稿未能保存", e);
+  public void bind(String user, long generation, boolean recording, String text) {
+    // A temporarily unreadable InputConnection must never erase the captured original.
+    if (text == null) {
+      if (account.equals(user) && editor == generation && local == recording) return;
+      text = "";
     }
+    if (account.equals(user) && editor == generation && local == recording
+        && (recording ? original : displayed).equals(text)) return;
+    account = user; editor = generation; local = recording;
+    original = displayed = text; language = ""; translations.clear(); revision++;
   }
+
+  public boolean matches(String user, long generation, String text) {
+    return account.equals(user) && editor == generation && (local || displayed.equals(text));
+  }
+
+  public String original() { return original; }
+  public String displayed() { return displayed; }
+  public String language() { return language; }
+  public boolean local() { return local; }
+  public long revision() { return revision; }
+  public String cached(String target) { return translations.get(target); }
+
+  public boolean remember(long requested, String target, String result) {
+    if (requested != revision || result == null || result.trim().isEmpty()) return false;
+    translations.put(target, result); return true;
+  }
+
+  public void display(String target) {
+    String value = translations.get(target);
+    if (value == null) throw new IllegalStateException("译文尚未完成");
+    displayed = value; language = target;
+  }
+
+  public void restore() { displayed = original; language = ""; revision++; }
 }

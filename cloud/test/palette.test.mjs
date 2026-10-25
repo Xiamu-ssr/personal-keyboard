@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { attributes, expressionAttributes, expressionInstruction, expressionTemplates } from '../advisor/expression.mjs';
 import { defaultPalette, paletteValue, requestedSlots } from '../advisor/palette.mjs';
+import { refreshDefaultSlots } from '../advisor/defaults-migration.mjs';
+import { readFileSync } from 'node:fs';
 
 test('six named slots contain complete independent preferences instead of one expression type', () => {
   const palette = defaultPalette();
@@ -13,10 +15,23 @@ test('six named slots contain complete independent preferences instead of one ex
     assert(!Object.hasOwn(slot, 'expression'));
   }
   assert.deepEqual(paletteValue(palette.slots), palette.slots);
-  const drafts = requestedSlots(palette, 'slot4');
+  const drafts = requestedSlots(palette, 'slot3');
   assert.equal(drafts.length, 3);
   assert.deepEqual(drafts.map(s => s.variant), [1,2,3]);
   assert(drafts.every(s => s.instruction.includes('轻幽默')));
+  assert.deepEqual(palette.slots.map(s => s.name), ['克制暧昧', 'Mean', '接梗', '共情', '干练', '边界']);
+});
+
+test('new defaults migrate untouched slots once without overwriting a custom name or attribute', () => {
+  const previous = JSON.parse(readFileSync(new URL('../advisor/previous-defaults.json', import.meta.url), 'utf8'));
+  previous[0].name = '我的自定义';
+  previous[3].attributes.emoji = 'none';
+  const next = refreshDefaultSlots(previous);
+  assert.deepEqual(next[0], previous[0]);
+  assert.deepEqual(next[3], previous[3]);
+  assert.equal(next[1].name, 'Mean');
+  assert.equal(next[2].name, '接梗');
+  assert.deepEqual(refreshDefaultSlots(next), next);
 });
 
 test('romantic intent, warmth, irony and emotion are independently expressible', () => {
@@ -25,7 +40,7 @@ test('romantic intent, warmth, irony and emotion are independently expressible',
   assert.equal(mean.attributes.emotion, 'calm');
   assert.deepEqual(mean.attributes.rhetoric, ['irony']);
   assert.equal(flirt.attributes.warmth, 'intimate');
-  assert.deepEqual(flirt.attributes.rhetoric, ['flirt']);
+  assert.deepEqual(flirt.attributes.rhetoric, ['hint', 'flirt']);
   const noEmoji = { ...flirt.attributes, emoji: 'none' };
   const compiled = expressionInstruction(noEmoji);
   assert(compiled.includes('暧昧试探'));

@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import { requireValue, ServiceError } from '../http/errors.mjs';
 import { digest } from '../security.mjs';
 import { isUuid } from '../billing/ledger.mjs';
+import { providerFailure } from './provider-error.mjs';
 
 const bounded = (value, max, name = '文字') => {
   requireValue(typeof value === 'string' && value.length <= max, 'INVALID_INPUT', name + '过长或格式错误');
@@ -129,8 +130,9 @@ export class TextModels {
       throw new ServiceError('MODEL_NETWORK', '模型连接失败，请稍后重试', 502);
     }
     if (!response.ok) {
-      await response.body?.cancel();
-      throw new ServiceError(response.status === 429 ? 'PROVIDER_LIMIT' : 'PROVIDER_ERROR', response.status === 429 ? '供应商限流，请稍后重试' : '供应商调用失败，预留已释放', 502);
+      const error = await providerFailure(response);
+      error.providerModel = model;
+      throw error;
     }
     let size = 0; const chunks = [];
     for await (const chunk of response.body) { size += chunk.length; requireValue(size <= 300000, 'MODEL_FORMAT', '模型返回过大', 502); chunks.push(chunk); }

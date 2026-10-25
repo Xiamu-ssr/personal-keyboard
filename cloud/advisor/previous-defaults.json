@@ -1,0 +1,99 @@
+[
+  {
+    "id": "slot1",
+    "name": "自然",
+    "attributes": {
+      "length": "brief",
+      "formality": "casual",
+      "directness": "balanced",
+      "warmth": "friendly",
+      "emotion": "calm",
+      "audience": "inherit",
+      "rhetoric": [],
+      "emoji": "inherit",
+      "structure": "chat"
+    }
+  },
+  {
+    "id": "slot2",
+    "name": "体贴",
+    "attributes": {
+      "length": "medium",
+      "formality": "casual",
+      "directness": "soft",
+      "warmth": "friendly",
+      "emotion": "expressive",
+      "audience": "inherit",
+      "rhetoric": [],
+      "emoji": "few",
+      "structure": "chat"
+    }
+  },
+  {
+    "id": "slot3",
+    "name": "直说",
+    "attributes": {
+      "length": "brief",
+      "formality": "neutral",
+      "directness": "direct",
+      "warmth": "reserved",
+      "emotion": "calm",
+      "audience": "inherit",
+      "rhetoric": [
+        "plain"
+      ],
+      "emoji": "none",
+      "structure": "chat"
+    }
+  },
+  {
+    "id": "slot4",
+    "name": "俏皮",
+    "attributes": {
+      "length": "brief",
+      "formality": "casual",
+      "directness": "balanced",
+      "warmth": "friendly",
+      "emotion": "expressive",
+      "audience": "inherit",
+      "rhetoric": [
+        "humor",
+        "teasing"
+      ],
+      "emoji": "few",
+      "structure": "chat"
+    }
+  },
+  {
+    "id": "slot5",
+    "name": "周全",
+    "attributes": {
+      "length": "medium",
+      "formality": "neutral",
+      "directness": "balanced",
+      "warmth": "friendly",
+      "emotion": "calm",
+      "audience": "inherit",
+      "rhetoric": [],
+      "emoji": "none",
+      "structure": "paragraphs"
+    }
+  },
+  {
+    "id": "slot6",
+    "name": "机智",
+    "attributes": {
+      "length": "brief",
+      "formality": "casual",
+      "directness": "balanced",
+      "warmth": "friendly",
+      "emotion": "calm",
+      "audience": "inherit",
+      "rhetoric": [
+        "humor"
+      ],
+      "emoji": "none",
+      "structure": "chat"
+    }
+  }
+]

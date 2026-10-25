@@ -67,7 +67,7 @@ test('advisor output follows six configured slots or three variants without inve
   const answerPositions=(slots,texts)=>Object.fromEntries(slots.map((_,i)=>['r'+(i+1),texts[i]]));
   const payload={replies:answerPositions(input.slots,input.slots.map(s=>'reply '+s.id)),messages:[{speaker:'other',image:1,text:'Hello'}],identity:{personId:'00000000-0000-4000-8000-000000000001',platform:'fixture',nickname:'小林',confidence:.9}};
   const full=validateModelResult('advisor',JSON.stringify(payload),input);
-  assert.equal(full.replies.length,6);assert.equal(full.replies[0].style,'自然');assert.equal(full.identity.personId,'');
+  assert.equal(full.replies.length,6);assert.equal(full.replies[0].style,'克制暧昧');assert.equal(full.identity.personId,'');
   assert.throws(()=>validateModelResult('advisor',JSON.stringify({...payload,replies:{r1:payload.replies.r1}}),input),/完整/);
   const variants={...input,slotId:'slot3',slots:requestedSlots(defaultPalette(),'slot3')};
   const format=advisorResponseFormat(variants);
@@ -75,7 +75,7 @@ test('advisor output follows six configured slots or three variants without inve
   assert.deepEqual(format.json_schema.schema.properties.replies.required,['r1','r2','r3']);
   assert.equal(format.json_schema.schema.properties.replies.properties.r2.type,'string');
   const result=validateModelResult('advisor',JSON.stringify({...payload,replies:answerPositions(variants.slots,['a','b','c'])}),variants);
-  assert(result.replies.every(r=>r.slotId==='slot3'&&r.style==='直说'));
+  assert(result.replies.every(r=>r.slotId==='slot3'&&r.style==='接梗'));
   assert.throws(()=>validateModelResult('advisor',JSON.stringify({...payload,replies:answerPositions(variants.slots,['a','a','c'])}),variants),/重复/);
   assert.throws(()=>validateModelResult('advisor',JSON.stringify({...payload,replies:answerPositions(variants.slots,['a','b','c'])}),{...variants,previousReplies:['b']}),/重复/);
   const wrong=answerPositions(variants.slots,['a','b','c']);wrong.r2={text:'b'};

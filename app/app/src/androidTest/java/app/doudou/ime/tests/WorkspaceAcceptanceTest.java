@@ -38,6 +38,8 @@ public final class WorkspaceAcceptanceTest {
     ins = InstrumentationRegistry.getInstrumentation();
     app = (KeyboardApp)ins.getTargetContext().getApplicationContext();
     JSONObject fixture = new JSONObject(new String(Files.readAllBytes(new File(app.getCacheDir(), "product-qa.json").toPath()), StandardCharsets.UTF_8));
+    if (!app.cloud.loggedIn() && "ranchu".equals(Build.HARDWARE))
+      app.cloud.login(fixture.getString("handle"), fixture.getString("password"));
     assertTrue("Keep the pre-existing dedicated account logged in", app.cloud.loggedIn());
     assertEquals("Dedicated ordinary QA account only", fixture.getString("handle"), app.cloud.handle());
     account = app.cloud.userId();
@@ -55,8 +57,14 @@ public final class WorkspaceAcceptanceTest {
   }
 
   @After public void finishOnlyOwnedWork() throws Exception {
-    if (!ownedRecording.isEmpty() && RecordingService.current != null && ownedRecording.equals(RecordingService.current.id()))
+    if (!ownedRecording.isEmpty() && RecordingService.current != null && ownedRecording.equals(RecordingService.current.id())) {
       onMain(() -> RecordingService.current.finish());
+      long until = SystemClock.uptimeMillis() + 25000;
+      while (RecordingService.current != null && ownedRecording.equals(RecordingService.current.id())
+          && SystemClock.uptimeMillis() < until) SystemClock.sleep(100);
+      assertTrue("Owned recording finishes before the next acceptance case", RecordingService.current == null
+          || !ownedRecording.equals(RecordingService.current.id()));
+    }
     if (activity != null) onMain(activity::finish);
     if (bill != null) onMain(bill::finish);
     if (ui != null) {
@@ -65,30 +73,40 @@ public final class WorkspaceAcceptanceTest {
     if (account != null) { assertEquals(account, app.cloud.userId()); assertTrue(app.cloud.loggedIn()); }
   }
 
-  @Test public void realTranslationIsExplicitEditableAndNeverFillsUntilAsked() throws Exception {
-    String baseline = value();
-    click("翻译"); await("翻译原文", 5000);
-    // Exercise the real local editor even if this QA account already has a translation draft.
-    click("翻译原文"); await("修改后返回", 5000);
-    AccessibilityNodeInfo local = imeEditor();
-    Bundle text = new Bundle(); text.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, baseline);
-    assertTrue(local.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, text));
-    click("返回"); await("开始翻译", 5000);
-    // Choose a known target through the actual menu; keep automatic source detection.
-    click("原文语言"); click("自动识别");
-    click("目标语言"); click("英语");
-    click("开始翻译");
-    AccessibilityNodeInfo translated = await("译文", 90000);
-    String result = translated.getText().toString(); assertFalse(result.isEmpty()); assertFalse(result.equals(baseline));
-    assertEquals("No automatic editor replacement", baseline, value());
-    assertTrue("Replace becomes available only for a complete result", await("替换原文", 3000).isEnabled());
-    shot("translation-result");
-    click("输入"); await("空格", 5000);
-    assertEquals("Switching workspaces preserves the host draft", baseline, value());
-    click("翻译"); assertEquals(result, await("译文", 5000).getText().toString());
-    click("替换原文"); await("空格", 5000);
-    assertEquals("Explicit translation replaces its original draft instead of duplicating it", result, value());
+  @Test public void languageTapsReplaceTheEditorFromOneOriginalAndRestoreWithoutAnotherRequest() throws Exception {
+    String original = value();
+    click("翻译"); await("翻译成英语", 5000);
+    click("翻译成英语");
+    long ready = SystemClock.uptimeMillis() + 90000;
+    while (value().equals(original) && SystemClock.uptimeMillis() < ready) SystemClock.sleep(100);
+    String english = value();
+    assertFalse("One language tap replaces the editor", english.equals(original));
+    assertTrue(await("翻译成英语", 5000).isSelected());
     shot("translation-filled");
+    click("翻译成日语");
+    ready = SystemClock.uptimeMillis() + 90000;
+    while (value().equals(english) && SystemClock.uptimeMillis() < ready) SystemClock.sleep(100);
+    String japanese = value();
+    assertNotEquals(english, japanese);
+    assertTrue(await("翻译成日语", 5000).isSelected());
+    assertFalse("Translations replace rather than append", japanese.startsWith(english));
+    click("还原原文");
+    assertEquals(original, value());
+    click("翻译成英语");
+    SystemClock.sleep(300);
+    assertEquals("Revisiting a language uses its cached translation", english, value());
+    click("输入"); await("空格", 5000);
+    click("翻译"); await("翻译成英语", 5000);
+    click("还原原文"); assertEquals("Original survives switching workspace", original, value());
+    shot("translation-result");
+    click("翻译成法语");
+    String manual = "我改主意了，明天不去。";
+    onMain(() -> { editor.setText(manual); editor.setSelection(editor.length()); });
+    ready = SystemClock.uptimeMillis() + 90000;
+    AccessibilityNodeInfo state;
+    while ((state = node("翻译状态")) != null && "翻译中…".contentEquals(state.getText())
+        && SystemClock.uptimeMillis() < ready) SystemClock.sleep(100);
+    assertEquals("A late translation never replaces a manual edit", manual, value());
   }
 
   @Test public void recordingContinuesAcrossTranslationInputAndKeyboardHide() throws Exception {
@@ -99,7 +117,7 @@ public final class WorkspaceAcceptanceTest {
     assertNotNull(RecordingService.current); ownedRecording = RecordingService.current.id();
     while (RecordingService.current.bytes() < 16000 && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
     long first = RecordingService.current.bytes(); assertTrue("Audio persisted before tools are switched", first > 0);
-    click("翻译"); await("开始翻译", 5000); SystemClock.sleep(600);
+    click("翻译"); await("翻译成英语", 5000); SystemClock.sleep(600);
     assertEquals("Recording remains visible while working elsewhere", "正在录音", await("录音", 3000).getStateDescription());
     assertEquals(ownedRecording, RecordingService.current.id()); assertTrue(RecordingService.current.active());
     assertTrue("Microphone continues in the other workspace", RecordingService.current.bytes() > first);
@@ -118,8 +136,37 @@ public final class WorkspaceAcceptanceTest {
     assertTrue("Recorded audio remains available after service stop", saved.audio(0).length() > 0);
     assertEquals(baseline, value()); await("新录音", 5000); shot("recorder-saved");
     String duration=await("录音时长",3000).getText().toString(); assertNotEquals("00:00",duration);
-    click("翻译"); await("翻译原文",5000); click("录音"); await("新录音",5000);
-    assertEquals("Saved recording duration survives workspace navigation",duration,await("录音时长",3000).getText().toString());
+    click("翻译"); await("翻译成英语",5000); click("录音");
+    deadline = SystemClock.uptimeMillis() + 8000;
+    while (RecordingService.current == null && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
+    assertNotNull("A saved recording must not block one-tap new recording", RecordingService.current);
+    assertNotEquals(ownedRecording, RecordingService.current.id());
+    ownedRecording = RecordingService.current.id();
+    assertTrue(RecordingService.current.active());
+    onMain(() -> RecordingService.current.finish());
+    click("录音");
+    click("输入"); await("空格", 5000);
+    deadline = SystemClock.uptimeMillis() + 8000;
+    while (RecordingService.current != null && ownedRecording.equals(RecordingService.current.id())
+        && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
+    while (RecordingService.current == null && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
+    assertNotNull("Tapping selected Recording starts the next take after local audio is saved", RecordingService.current);
+    assertNotEquals(ownedRecording, RecordingService.current.id());
+    ownedRecording = RecordingService.current.id();
+    assertTrue(RecordingService.current.active());
+    long bytes = RecordingService.current.bytes(); SystemClock.sleep(1200);
+    assertTrue("The requested next take records even after immediately leaving the tab",
+        RecordingService.current.bytes() > bytes);
+    click("录音"); assertTrue("A resumed take can be ended", await("结束", 5000).isEnabled());
+    onMain(() -> {
+      RecordingService service = RecordingService.current;
+      service.finish(); service.startNextRecording(); service.finish();
+      ownedRecording = service.id();
+    });
+    deadline = SystemClock.uptimeMillis() + 25000;
+    while (RecordingService.current != null && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
+    SystemClock.sleep(500);
+    assertNull("End also cancels a pending next take and cannot restart the microphone", RecordingService.current);
   }
 
   @Test public void emojiPickerCommitsWholeEmojiAndDeleteRemovesOneCluster() throws Exception {
@@ -144,6 +191,7 @@ public final class WorkspaceAcceptanceTest {
 
   @Test public void holdSpaceKeepsTheVoiceSurfaceAndCancelPreservesDraft() throws Exception {
     String before = value();
+    ui.waitForIdle(200, 5000); ins.waitForIdleSync();
     android.graphics.Rect space = new android.graphics.Rect(); await("空格", 5000).getBoundsInScreen(space);
     long time = SystemClock.uptimeMillis(); float x = space.exactCenterX(), y = space.exactCenterY();
     android.view.MotionEvent down = android.view.MotionEvent.obtain(time,time,android.view.MotionEvent.ACTION_DOWN,x,y,0);
@@ -152,6 +200,16 @@ public final class WorkspaceAcceptanceTest {
       await("撤回输入",5000); await("松手结束",5000);
       assertNull("Voice replaces the letter keys while the finger is held",node("q"));
       SystemClock.sleep(250); shot("voice-held");
+    }
+    catch (AssertionError e) {
+      shot("voice-failure");
+      StringBuilder state = new StringBuilder();
+      for (AccessibilityWindowInfo window : ui.getWindows()) {
+        AccessibilityNodeInfo root = window.getRoot();
+        if (root != null && app.getPackageName().contentEquals(root.getPackageName())) labels(root, state);
+      }
+      Files.write(new File(app.getCacheDir(), "qa-v092-voice-failure.txt").toPath(), state.toString().getBytes(StandardCharsets.UTF_8));
+      throw e;
     }
     finally {
       android.view.MotionEvent cancel = android.view.MotionEvent.obtain(time,SystemClock.uptimeMillis(),android.view.MotionEvent.ACTION_CANCEL,x,y,0);
@@ -165,9 +223,9 @@ public final class WorkspaceAcceptanceTest {
     while(CaptureService.current==null&&SystemClock.uptimeMillis()<bound)SystemClock.sleep(100);
     assertNotNull("Owned-device screenshot service was provisioned outside this test", CaptureService.current);
     String before = value(); click("帮我回");
-    await("翻译",20000); click("翻译"); await("翻译原文",5000);
+    await("翻译",20000); click("翻译"); await("翻译成英语",5000);
     SystemClock.sleep(12000);
-    assertNotNull("A late advisor callback must not replace the translation workspace",node("翻译原文"));
+    assertNotNull("A late advisor callback must not replace the translation workspace",node("翻译成英语"));
     click("帮我回");
     long ready=SystemClock.uptimeMillis()+90000; AccessibilityNodeInfo answer;
     while((answer=reply())==null&&SystemClock.uptimeMillis()<ready) {

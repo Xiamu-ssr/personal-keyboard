@@ -14,7 +14,7 @@
 
 ## 运行
 
-在 `deploy/` 把两个 `.env.example` 复制为对应 `.env`，配置数据库密码、随机主密钥、令牌密钥及 scrypt 管理密码哈希，权限设为 600。生成后保留这些密钥，升级不得重建。执行 `docker compose -f cloud/deploy/compose.yaml up -d --build`。只监听宿主 loopback 8089；Nginx 转发 `/keyboard-api/`，包含 WebSocket 和关闭请求体落盘缓冲。
+在 `deploy/` 把两个 `.env.example` 复制为对应 `.env`，配置数据库密码、随机主密钥、令牌密钥及 scrypt 管理密码哈希，权限设为 600。生成后保留这些密钥，升级不得重建。执行 `docker compose -f cloud/deploy/compose.yaml up -d --build`。API 仅监听宿主 loopback；Nginx 转发 `/keyboard-api/`，包含 WebSocket 和关闭请求体落盘缓冲。发布时可先用另一个本地端口健康检查，再切换反代。
 
 App 入口：`https://106.14.88.147/keyboard-api`；后台：`/keyboard-api/admin/`。使用正常系统证书验证，不信任全部证书，不把供应商密钥放进 APK。换 IP 需要发新 APK；后续采用域名可只更改 DNS。
 
@@ -26,7 +26,9 @@ ASR 为 `qwen-audio-3.1-asr-flash-message`，原生 WebSocket；每段最长90�
 
 ## 权益与数据
 
-军师在同一次视觉请求内启用最多1,024 tokens 的思考预算，并用严格 JSON Schema 约束六种表达／三个变体；文字改写和记忆更新保留原协议。视觉容量检查计入 schema，另为图片计4,096 tokens/张，并保守预留16,384 tokens 覆盖输出、思考与协议。参考[结构化输出](https://help.aliyun.com/zh/model-studio/qwen-structured-output)和[思考预算](https://help.aliyun.com/zh/model-studio/deep-thinking)。这不构成对生成事实正确率的保证，仍须使用真实未知／接受／拒绝样例复核。
+军师首次/换一批各调用一次多模态模型，返回全部六格；单槽换说法调用一次返回三条，浏览旧答案不调用。思考预算4,096 tokens，严格 JSON Schema 约束完整回复与聊天摘录；不另跑 OCR。视觉容量检查计入 schema，另为图片计4,096 tokens/张，并保守预留16,384 tokens 覆盖输出、思考与协议。参考[结构化输出](https://help.aliyun.com/zh/model-studio/qwen-structured-output)和[思考预算](https://help.aliyun.com/zh/model-studio/deep-thinking)。
+
+默认六槽：克制暧昧、Mean、接梗、共情、干练、边界。默认升级只替换未修改的旧槽位；自定义名称和属性保留，迁移只执行一次。供应商错误分别记录余额、免费额度、限流和授权错误；后台保留安全错误码与请求ID，不保存错误正文。
 
 每新账号一次性3,000 Credit；1 Credit=0.001元。语音、润色、军师和翻译统一积分，以阿里云北京公开标准价上浮75%，按成功任务的真实输入/输出Token结算。任务冻结费率、预留并退余，失败/取消不扣、原请求恢复不重复扣。自动记忆学习包含在当前服务成本内，不另扣分。赠送套餐与供应商计价独立版本化；后台改价不影响已有任务。旧字符/次数额度一次性转换并归档；回退旧API必须还原数据库备份。计价不包含赠额、促销和缓存折扣。
 

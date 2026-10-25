@@ -16,3 +16,5 @@ FORM: User-pinned Doubao craft and gesture fidelity with the previous grayscale 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 2026-10-25 0.9.1 direction: preserve the keyboard height and gray skins; four workspaces occupy the existing toolbar. Translation stays local until explicit Fill; recording continues across navigation. Graduated palette dimensions use discrete native sliders, while rhetoric and structure stay categorical. One Credit balance replaces separate quotas.
+
+2026-10-25 0.9.2 correction: keep the input keyboard unchanged. Translation uses a two-column language capsule grid; tapping a language directly replaces the live editor from a temporary captured original. Original restores it; cached language choices never retranslate another translation. Recording-origin translation remains inside the tool. Entering Recording starts a new recording unless one is already active. Presets: restrained flirt, Mean, banter, empathy, concise work, boundaries.

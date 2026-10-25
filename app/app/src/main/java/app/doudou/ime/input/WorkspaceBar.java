@@ -83,7 +83,9 @@ public final class WorkspaceBar extends LinearLayout {
       });
       tab.setEnabled(mode == Mode.INPUT || !privateMode);
       tab.setAlpha(tab.isEnabled() ? 1 : .4f);
-      tab.setOnClickListener(v -> { if (mode != selected) actions.select(mode); });
+      tab.setOnClickListener(v -> {
+        if (mode != selected || mode == Mode.RECORDING) actions.select(mode);
+      });
       int labelWidth = (int)Math.ceil(tab.getPaint().measureText(labels[i])) + Ui.dp(c, 8);
       tabs.addView(tab, selected == mode ? new LayoutParams(0, Ui.dp(c, 48), 1)
           : new LayoutParams(Math.max(Ui.dp(c, 48), labelWidth), Ui.dp(c, 48)));

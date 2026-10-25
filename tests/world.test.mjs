@@ -24,7 +24,7 @@ test("four business views share entities, never duplicate processing steps as no
   });
   assert.deepEqual(
     source.domains.find((d) => d.id === "app").nodes.map((n) => n.title),
-    ["历史", "记忆缓存", "翻译草稿"],
+    ["历史", "记忆缓存", "翻译"],
   );
   assert.deepEqual(
     source.domains.find((d) => d.id === "cloud").nodes.map((n) => n.title),

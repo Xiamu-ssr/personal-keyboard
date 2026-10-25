@@ -153,8 +153,9 @@ public final class WorkspaceToolsTest {
 
           calls.selected.clear();
           assertTrue(tab.performClick());
-          assertEquals(mode == selected ? 0 : 1, calls.selected.size());
-          if (mode != selected) assertEquals(mode, calls.selected.get(0));
+          boolean routes = mode != selected || mode == WorkspaceBar.Mode.RECORDING;
+          assertEquals(routes ? 1 : 0, calls.selected.size());
+          if (routes) assertEquals(mode, calls.selected.get(0));
           assertEquals("Only rebuilding with a different mode changes selection",
               mode == selected, tab.isSelected());
         }
@@ -245,146 +246,61 @@ public final class WorkspaceToolsTest {
   }
 
   @Test
-  public void sourceAndEitherLanguageRevisionRejectLateResults() {
-    TranslationDraft draft = new TranslationDraft(services);
-    draft.change("初始原文", "auto", "en");
-    long initial = draft.revision;
-    draft.change("后来手改的原文", "auto", "en");
-    assertTrue(draft.revision > initial);
-    assertFalse(draft.accept(initial, "late source result", "zh"));
-    assertEquals("后来手改的原文", draft.source);
-    assertEquals("", draft.result);
-    assertEquals("", draft.detected);
-
-    assertTrue(draft.accept(draft.revision, "current local fixture", "zh"));
-    long beforeTarget = draft.revision;
-    draft.change(draft.source, "auto", "ja");
-    assertFalse(draft.accept(beforeTarget, "late target result", "zh"));
-    assertEquals("ja", draft.target);
-    assertEquals("", draft.result);
-    assertEquals("", draft.detected);
-
-    long beforeSourceLanguage = draft.revision;
-    draft.change(draft.source, "zh", "ja");
-    assertFalse(draft.accept(beforeSourceLanguage, "late detection result", "en"));
-    assertEquals("zh", draft.language);
-    assertEquals("", draft.result);
-    assertEquals("", draft.detected);
-    assertTrue(draft.accept(draft.revision, "最新本地夹具", "zh"));
-    assertEquals("最新本地夹具", draft.result);
-  }
-
-  @Test
-  public void sameAccountDraftSurvivesDatabaseCloseAndReopen() {
-    TranslationDraft saved = new TranslationDraft(services);
-    saved.change("保存的原文，123。", "ja", "zh");
-    assertTrue(saved.accept(saved.revision, "仅为测试夹具的译文", "ja"));
-    saved.save(services);
-    String account = services.cloud.userId();
-    services.store.close();
-    assertTrue("Persistence uses a real on-disk fixture", databaseFile.isFile());
-    services.store = new MemoryStore(fixtureContext, databaseFile.getAbsolutePath());
-
-    TranslationDraft loaded = new TranslationDraft(services);
-    assertTrue(loaded.belongsTo(services));
-    assertEquals(account, services.cloud.userId());
-    assertFalse(services.cloud.loggedIn());
-    assertEquals(saved.source, loaded.source);
-    assertEquals(saved.language, loaded.language);
-    assertEquals(saved.target, loaded.target);
-    assertEquals(saved.result, loaded.result);
-    assertEquals(saved.detected, loaded.detected);
-  }
-
-  @Test
-  public void recordingOfferPreservesIndependentDraftUntilExplicitReplacement() {
-    seed("独立编辑的原文 A", "已有译文 A");
+  public void translationOpensAVisibleLanguageGridWithoutAnotherEditorOrFillStep() {
     ins.runOnMainSync(() -> {
       Host fixture = new Host(uiContext(1.3f));
-      TranslationController controller = new TranslationController(fixture.proxy);
-      controller.show("录音稿 B");
-      assertText(fixture.panel, "翻译原文", "独立编辑的原文 A");
-      assertText(fixture.panel, "译文", "已有译文 A");
-      assertEquals("独立编辑的原文 A", new TranslationDraft(services).source);
-      assertEquals("已有译文 A", new TranslationDraft(services).result);
-      assertTrue(fixture.inserted.isEmpty());
-
-      View replace = require(fixture.panel, "换成这段录音稿");
-      assertTrue(replace.performClick());
-      assertText(fixture.panel, "翻译原文", "录音稿 B");
-      assertNull(find(fixture.panel, "译文"));
-      assertNull(find(fixture.panel, "换成这段录音稿"));
-      assertNull("No insertion action before a complete translation", find(fixture.panel, "填入"));
-      assertTrue(require(fixture.panel, "开始翻译").isEnabled());
-      TranslationDraft replaced = new TranslationDraft(services);
-      assertEquals("录音稿 B", replaced.source);
-      assertEquals("", replaced.result);
-      assertEquals("", replaced.detected);
-      assertTrue("Import is local, not a host-editor insertion", fixture.inserted.isEmpty());
-      assertEquals(0, fixture.typing);
-      assertEquals("宿主聊天草稿", fixture.editor);
-    });
-  }
-
-  @Test
-  public void reopeningWithNoEmptyOrIdenticalRecordingKeepsSourceAndResult() {
-    seed("已有原文", "已有本地译文");
-    ins.runOnMainSync(() -> {
-      Host fixture = new Host(uiContext(1f));
-      TranslationController controller = new TranslationController(fixture.proxy);
-      // Exercise removing a previously offered recording, not only a fresh controller.
-      controller.show("另一段录音稿");
-      require(fixture.panel, "换成这段录音稿");
-      for (String recording : new String[] {null, "", "已有原文"}) {
-        controller.show(recording);
-        assertText(fixture.panel, "翻译原文", "已有原文");
-        assertText(fixture.panel, "译文", "已有本地译文");
-        assertNull(find(fixture.panel, "换成这段录音稿"));
-        assertEquals("已有原文", new TranslationDraft(services).source);
-        assertEquals("已有本地译文", new TranslationDraft(services).result);
-        assertTrue(fixture.inserted.isEmpty());
-      }
-    });
-  }
-
-  @Test
-  public void emptyWorkspaceCanPrefillRecordingWithoutWritingChat() {
-    ins.runOnMainSync(() -> {
-      Host fixture = new Host(uiContext(1f));
-      TranslationController controller = new TranslationController(fixture.proxy);
-      controller.show("刚带入的录音稿");
-      assertText(fixture.panel, "翻译原文", "刚带入的录音稿");
-      assertEquals("刚带入的录音稿", new TranslationDraft(services).source);
-      assertNull(find(fixture.panel, "换成这段录音稿"));
-      assertNull("No insertion action before a complete translation", find(fixture.panel, "填入"));
-      assertTrue(require(fixture.panel, "开始翻译").isEnabled());
-      assertTrue(fixture.inserted.isEmpty());
-      assertEquals("宿主聊天草稿", fixture.editor);
-    });
-  }
-
-  @Test
-  public void showingLocalResultWritesNothingUntilExplicitFill() {
-    seed("本地原文夹具", "本地译文夹具");
-    ins.runOnMainSync(() -> {
-      Host fixture = new Host(uiContext(1f));
       new TranslationController(fixture.proxy).show(null);
+      measure(fixture.panel, 360, KeyboardView.HEIGHT_DP);
+      for (String name : new String[] {"中文", "英语", "日语", "韩语", "法语", "德语", "西班牙语", "俄语", "葡萄牙语"})
+        assertTrue(require(fixture.panel, "翻译成" + name).isEnabled());
+      assertFalse(require(fixture.panel, "还原原文").isEnabled());
+      assertNull(find(fixture.panel, "翻译原文"));
+      assertNull(find(fixture.panel, "开始翻译"));
+      assertNull(find(fixture.panel, "填入"));
       assertTrue(fixture.inserted.isEmpty());
-      assertEquals(0, fixture.typing);
-      View fill = require(fixture.panel, "填入");
-      assertTrue(fill.isEnabled());
-      assertTrue(fill.performClick());
-      assertEquals(1, fixture.inserted.size());
-      assertEquals("本地译文夹具", fixture.inserted.get(0));
-      assertEquals(1, fixture.typing);
+      assertEquals("宿主聊天草稿", fixture.editor);
     });
   }
 
-  private void seed(String source, String result) {
-    TranslationDraft draft = new TranslationDraft(services);
-    draft.change(source, "auto", "en");
-    assertTrue(draft.accept(draft.revision, result, "zh"));
-    draft.save(services);
+  @Test
+  public void eachRecordingImportUsesThatRecordingWithoutWritingIntoChat() {
+    ins.runOnMainSync(() -> {
+      Host fixture = new Host(uiContext(1f));
+      TranslationController controller = new TranslationController(fixture.proxy);
+      controller.show("录音原文 A");
+      assertText(fixture.panel, "录音译文", "录音原文 A");
+      controller.show("录音原文 B");
+      assertText(fixture.panel, "录音译文", "录音原文 B");
+      assertTrue(fixture.inserted.isEmpty());
+      assertEquals("宿主聊天草稿", fixture.editor);
+      controller.show(null);
+      assertNull(find(fixture.panel, "录音译文"));
+      assertFalse(require(fixture.panel, "还原原文").isEnabled());
+    });
+  }
+
+  @Test
+  public void recordingTranslationCannotEraseTheChatOriginalOrCachedLanguages() throws Exception {
+    ins.runOnMainSync(() -> {
+      try {
+        Host fixture = new Host(uiContext(1f));
+        TranslationController controller = new TranslationController(fixture.proxy);
+        controller.show(null);
+        Field field = TranslationController.class.getDeclaredField("draft");
+        field.setAccessible(true);
+        TranslationDraft chat = (TranslationDraft) field.get(controller);
+        chat.remember(chat.revision(), "en", "Chat translation"); chat.display("en");
+        fixture.editor = "Chat translation";
+        controller.show("录音原文");
+        assertNotSame(chat, field.get(controller));
+        controller.show(null);
+        assertSame(chat, field.get(controller));
+        assertEquals("宿主聊天草稿", chat.original());
+        assertEquals("Chat translation", chat.cached("en"));
+        require(fixture.panel, "还原原文").performClick();
+        assertEquals("宿主聊天草稿", fixture.editor);
+      } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+    });
   }
 
   private void openWindow() {
@@ -621,7 +537,7 @@ public final class WorkspaceToolsTest {
   private final class Host {
     final EditorHost proxy;
     final List<String> inserted = new ArrayList<>();
-    final String editor = "宿主聊天草稿";
+    String editor = "宿主聊天草稿";
     LinearLayout panel;
     String mode = "translation";
     int typing;
@@ -650,6 +566,9 @@ public final class WorkspaceToolsTest {
                 assertEquals(WorkspaceBar.Mode.TRANSLATION, args[0]);
                 return new WorkspaceBar(context, (WorkspaceBar.Mode) args[0], false, new Routes());
               case "protectedInsert": inserted.add((String) args[0]); return true;
+              case "protectedReplace":
+                if (!java.util.Objects.equals(editor, args[0])) return false;
+                editor = (String) args[1]; return true;
               case "typing": typing++; mode = "input"; return null;
               case "toString": return "WorkspaceToolsTest.EditorHost";
               case "hashCode": return System.identityHashCode(object);

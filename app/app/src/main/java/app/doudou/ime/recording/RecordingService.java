@@ -23,7 +23,7 @@ public final class RecordingService extends Service {
     return level;
   }
 
-  private RecordingStore store;
+  private volatile RecordingStore store;
   private final List<AsrStream> streams = Collections.synchronizedList(new ArrayList<>());
   private final Handler main = new Handler(Looper.getMainLooper());
 
@@ -48,6 +48,8 @@ public final class RecordingService extends Service {
   }
 
   public void finish() {
+    nextRequested = false;
+    if (audioClosed) main.post(settleClosedTake);
     status = "正在保存";
     recording = false;
     AudioRecord r = microphone;
@@ -56,6 +58,57 @@ public final class RecordingService extends Service {
         r.stop();
       } catch (Exception ignored) {
       }
+  }
+
+  private volatile boolean audioClosed, nextRequested, destroyed;
+  private final Runnable closeIdle = () -> {
+    if (destroyed || recording || !audioClosed || nextRequested) return;
+    cancelStreams();
+    stopSelf();
+  };
+  private final Runnable settleClosedTake = () -> {
+    if (destroyed || recording || !audioClosed) return;
+    main.removeCallbacks(closeIdle);
+    if (!nextRequested || !belongsToCurrentAccount()) {
+      nextRequested = false;
+      main.postDelayed(closeIdle, streams.isEmpty() ? 0 : 20000);
+      return;
+    }
+    cancelStreams();
+    try {
+      beginTake();
+    } catch (Exception e) {
+      status = "无法开始录音，请检查麦克风权限";
+      app.doudou.ime.design.Ui.toast(this, status);
+      stopSelf();
+    }
+  };
+
+  /** The foreground service owns the next take, even if the keyboard switches away immediately. */
+  public void startNextRecording() {
+    if (recording || !belongsToCurrentAccount()) return;
+    nextRequested = true;
+    if (audioClosed) settleClosedTake.run();
+  }
+
+  private void cancelStreams() {
+    synchronized (streams) {
+      for (AsrStream stream : new java.util.ArrayList<>(streams)) stream.cancel();
+      streams.clear();
+    }
+  }
+
+  public boolean startingNext() { return nextRequested; }
+
+  private void beginTake() throws Exception {
+    String id = KeyboardApp.instance.histories.create("recording", "");
+    store = new RecordingStore(this, id);
+    store.publish();
+    current = this;
+    audioClosed = nextRequested = false;
+    online = true; level = 0; status = "正在录音";
+    recording = true;
+    new Thread(this::capture, "doudou-recorder").start();
   }
 
   @Override
@@ -97,12 +150,7 @@ public final class RecordingService extends Service {
             .build();
     try {
       startForeground(811, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
-      String id = KeyboardApp.instance.histories.create("recording", "");
-      store = new RecordingStore(this, id);
-      store.publish();
-      current = this;
-      recording = true;
-      new Thread(this::capture, "doudou-recorder").start();
+      beginTake();
     } catch (Exception e) {
       status = "无法开始录音，请检查麦克风权限";
       app.doudou.ime.design.Ui.toast(this, status);
@@ -113,6 +161,7 @@ public final class RecordingService extends Service {
 
   private AsrStream stream(int index) {
     if (!online || !KeyboardApp.instance.cloud.loggedIn() || !store.accountMatches()) return null;
+    final RecordingStore owner = store;
     AsrStream stream = new AsrStream(this);
     streams.add(stream);
     try {
@@ -120,23 +169,26 @@ public final class RecordingService extends Service {
           new VoiceInput.Listener() {
             public void text(String text, boolean fin) {
               try {
-                store.text(index, text, fin);
+                owner.text(index, text, fin);
                 if (fin) {
                   streams.remove(stream);
-                  if (!recording && streams.isEmpty()) stopSelf();
+                  if (owner == store && !recording && audioClosed && !nextRequested
+                      && streams.isEmpty()) stopSelf();
                 }
               } catch (Exception e) {
-                status = "文字保存失败，音频仍保留";
+                if (owner == store) status = "文字保存失败，音频仍保留";
               }
             }
 
             public void error(String code, String message) {
               try {
-                if ("NO_SPEECH".equals(code)) store.text(index, "", true);
+                if ("NO_SPEECH".equals(code)) owner.text(index, "", true);
                 else {
-                  store.error(index, code);
-                  online = false;
-                  status = recording ? "录音中 · 转写已暂停" : "音频已保存 · 转写已暂停";
+                  owner.error(index, code);
+                  if (owner == store) {
+                    online = false;
+                    status = recording ? "录音中 · 转写已暂停" : "音频已保存 · 转写已暂停";
+                  }
                 }
               } catch (Exception ignored) {
               }
@@ -152,7 +204,7 @@ public final class RecordingService extends Service {
             public void ready() {}
           },
           "",
-          store.chunk(index).getString("requestId"));
+          owner.chunk(index).getString("requestId"));
       return stream;
     } catch (Exception e) {
       streams.remove(stream);
@@ -255,16 +307,8 @@ public final class RecordingService extends Service {
       } catch (Exception ignored) {
       }
       status = reason;
-      // Give final ASR up to 20 seconds; audio capture is already safely closed.
-      main.postDelayed(
-          () -> {
-            synchronized (streams) {
-              for (AsrStream s : streams) s.cancel();
-              streams.clear();
-            }
-            stopSelf();
-          },
-          streams.isEmpty() ? 0 : 20000);
+      audioClosed = true;
+      if (!destroyed) main.post(settleClosedTake);
     }
   }
 
@@ -274,11 +318,10 @@ public final class RecordingService extends Service {
 
   @Override
   public void onDestroy() {
+    destroyed = true;
+    nextRequested = false;
     finish();
-    synchronized (streams) {
-      for (AsrStream s : streams) s.cancel();
-      streams.clear();
-    }
+    cancelStreams();
     if (current == this) current = null;
     main.removeCallbacksAndMessages(null);
     super.onDestroy();

@@ -268,6 +268,7 @@ public final class KeyboardService extends InputMethodService
   private void cancelJobs() {
     if (voice != null) voice.cancel();
     if (advisorController != null) advisorController.cancel();
+    if (translation != null) translation.cancel();
     localEditor = null;
     finishLocal = null;
   }
@@ -277,6 +278,7 @@ public final class KeyboardService extends InputMethodService
   }
 
   private void reset(String next, int height) {
+    if (translation != null && !next.equals("translation")) translation.cancel();
     mode = next;
     contentHeight = height;
     root.removeAllViews();
@@ -312,7 +314,7 @@ public final class KeyboardService extends InputMethodService
   public View workspaceBar(WorkspaceBar.Mode selected) {
     return new WorkspaceBar(this, selected, privateMode(), new WorkspaceBar.Actions() {
       public void select(WorkspaceBar.Mode next) {
-        if (next == WorkspaceBar.Mode.RECORDING) recordingPanel.show();
+        if (next == WorkspaceBar.Mode.RECORDING) recordingPanel.enter();
         else if (next == WorkspaceBar.Mode.ADVISOR) startAdvisor(false);
         else if (next == WorkspaceBar.Mode.TRANSLATION)
           translation.show(mode.equals("recorder") ? recordingPanel.text() : null);
@@ -423,7 +425,7 @@ public final class KeyboardService extends InputMethodService
               }
 
               public void recorder() {
-                if (localEditor == null) recordingPanel.show();
+                if (localEditor == null) recordingPanel.enter();
               }
 
               public void hide() {
@@ -671,9 +673,11 @@ public final class KeyboardService extends InputMethodService
     InputConnection ic = input();
     if (ic == null) return null;
     ExtractedTextRequest req = new ExtractedTextRequest();
-    req.hintMaxChars = 12001;
+    // The largest supported translation is 16k code points (up to 32k UTF-16 units).
+    // Keep a bounded complete snapshot large enough to restore it, including supplementary text.
+    req.hintMaxChars = 65537;
     ExtractedText x = ic.getExtractedText(req, 0);
-    if (x == null || x.startOffset != 0 || x.text == null || x.text.length() > 12000) return null;
+    if (x == null || x.startOffset != 0 || x.text == null || x.text.length() > 65536) return null;
     return x.text.toString();
   }
 
