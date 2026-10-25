@@ -1,9 +1,9 @@
 {
-  "version": "0.8.0-alpha.1",
+  "version": "0.8.1-alpha.1",
   "files": {
     "doudou-keyboard.apk": {
-      "sha256": "1314622f519c34f0c0c03f5465a05b1399c63ce5e6b2b27c305f1204fe61872e",
-      "bytes": 25386634
+      "sha256": "5e3899d88fd3affc0fdc8b27af32a2fdf57ce3de4e95677000152b81eb17435c",
+      "bytes": 25192750
     },
     "home.png": {
       "sha256": "dca15b9fc4a5dfc88d94933191f27d9b3cbb72f41e906fc3687925edb1519aa3",
@@ -41,5 +41,9 @@
       "sha256": "fc0fe861a64c582b513c9b8f0dc0d72027da4db5e7554ccc5e655dbc74bbf2c4",
       "bytes": 113416
     }
+  },
+  "demonstrationSource": {
+    "version": "0.8.0-alpha.1",
+    "apkSha256": "1314622f519c34f0c0c03f5465a05b1399c63ce5e6b2b27c305f1204fe61872e"
   }
 }

@@ -186,7 +186,7 @@ components:
 
 这是从代码提取的记录，不是新方向或功能验收。范围为原生 Android Views 的键盘、Home、My 及其共用组件；无已选 mockcomp，方向 seed 为 `98724ec0eaa78a89`，模式仍归表面契约所有。记录依据为 [PRODUCT.md](PRODUCT.md)、[方向契约](.impeccable/surfaces/a-app-doudou-ime-app-keyboardservice-java-ac7b9973.md)、[reviewer verdict](.runtime/v08/finish-verdict.md) 与真实源码。
 
-已实算 [最终 APK](spec/demo/doudou-keyboard.apk) 的 SHA-256：`1314622f519c34f0c0c03f5465a05b1399c63ce5e6b2b27c305f1204fe61872e`。[capture manifest](.impeccable/review/capture-manifest.json) 记录标准约 411dp / fontScale 1.0 和 360dp / fontScale 1.3；本次只读核看其中 Home、typing、voice、My 与大字 Home。管理页样本含临时本地 UI fixture，不能证明真实学习数据；不重做设备验收。verdict 中唯一未关闭的 F1 属模型语义，不纳入视觉 token。
+0.8.0 视觉参考 APK 的 SHA-256：`1314622f519c34f0c0c03f5465a05b1399c63ce5e6b2b27c305f1204fe61872e`。0.8.1 仅修复输入视图生命周期；当前 APK 摘要见 [artifact.json](spec/demo/artifact.json)。[capture manifest](.impeccable/review/capture-manifest.json) 记录标准约 411dp / fontScale 1.0 和 360dp / fontScale 1.3；本次只读核看其中 Home、typing、voice、My 与大字 Home。管理页样本含临时本地 UI fixture，不能证明真实学习数据；不重做设备验收。verdict 中唯一未关闭的 F1 属模型语义，不纳入视觉 token。
 
 frontmatter 是实际 primitive 与组件引用的规范层；名称主要沿用 `Ui` 常量的小写形式，源码尚未命名的圆角、间距与字号用描述性键归档，并未回写成代码 token。尺寸保留 Android 的 dp/sp；百分数只在相应原生父容器内成立。sidecar 使用 schemaVersion 2，提供实际 elevation、motion、颜色元数据及十个独立组件样本，不另建重复的 primitive 数组。样本 CSS 的 px 仅按 density 1 / fontScale 1 表达 dp/sp；系统字形、原生涟漪和阴影仍以 Android 实现为准。无彩色八阶色板的源码证据，因此不合成新色阶；sidecar 的灰阶 strip 只引用现有颜色。
 

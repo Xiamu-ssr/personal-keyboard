@@ -26,6 +26,7 @@ public final class AdvisorController extends PanelController {
   private boolean second, scrollPending;
   private boolean restoreNeeded;
   private boolean restoreAfterGesture;
+  private boolean captureGesture;
   private int gestureTop;
   private int pendingGesture = -1;
   private View captureCancel;
@@ -41,12 +42,52 @@ public final class AdvisorController extends PanelController {
     pendingGesture = -1;
     restoreNeeded = false;
     restoreAfterGesture = false;
+    captureGesture = false;
     advisor.cancel();
     model.cancel();
     replies.clear();
     intent = "";
     firstSignature = null;
     lastApplied = null;
+  }
+
+  /** Only our own bounded drag may temporarily hide this editor's input surface. */
+  public boolean retainDuringGesture(boolean finishingInput) {
+    return !finishingInput && captureGesture && advisor.generation == host.generation();
+  }
+
+  public boolean retainsInputView() {
+    return captureGesture && advisor.generation == host.generation();
+  }
+
+  private void scroll(boolean earlier, int top, CaptureService.Scrolled callback) {
+    final long generation = host.generation();
+    captureGesture = true;
+    CaptureService.Scrolled completed =
+        success -> {
+          if (generation != host.generation()) return;
+          recoverInputView(generation, success, callback, 0);
+        };
+    if (earlier) CaptureService.earlier(top, completed);
+    else CaptureService.later(top, completed);
+  }
+
+  private void recoverInputView(
+      long generation, boolean success, CaptureService.Scrolled callback, int attempt) {
+    if (generation != host.generation()) return;
+    if (host.inputViewVisible()) {
+      captureGesture = false;
+      callback.complete(success);
+      return;
+    }
+    if (attempt >= 40) {
+      // Do not keep capturing or send a request with an absent editor.
+      cancel();
+      typing();
+      return;
+    }
+    if (attempt == 0) host.showInputView();
+    main.postDelayed(() -> recoverInputView(generation, success, callback, attempt + 1), 50);
   }
 
   private void cancelCapture() {
@@ -57,6 +98,7 @@ public final class AdvisorController extends PanelController {
     cancel();
     restoreNeeded = needsRestore;
     restoreAfterGesture = pending;
+    captureGesture = pending;
     if (captureCancel != null) captureCancel.setEnabled(false);
     if (captureLabel != null) captureLabel.setText("正在返回");
     if (!pending)
@@ -148,7 +190,8 @@ public final class AdvisorController extends PanelController {
         gestureTop = top;
         restoreNeeded = true;
         pendingGesture = token;
-        CaptureService.earlier(
+        scroll(
+            true,
             top,
             success -> {
               if (pendingGesture == token) pendingGesture = -1;
@@ -251,8 +294,7 @@ public final class AdvisorController extends PanelController {
       return;
     }
     restoreNeeded = false;
-    CaptureService.later(
-        gestureTop, success -> root.postOnAnimation(() -> root.postOnAnimation(done)));
+    scroll(false, gestureTop, success -> root.postOnAnimation(() -> root.postOnAnimation(done)));
   }
 
   private void fail(String error) {

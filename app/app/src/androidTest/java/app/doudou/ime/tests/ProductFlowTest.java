@@ -179,6 +179,22 @@ public final class ProductFlowTest {
     SystemClock.sleep(120);
   }
 
+  private int awaitGenerationAfterInputViewHides() {
+    long until = SystemClock.uptimeMillis() + 15000;
+    int hiddenTransitions = 0;
+    boolean wasVisible = true;
+    while (SystemClock.uptimeMillis() < until) {
+      boolean visible = false;
+      for (AccessibilityWindowInfo window : ui.getWindows())
+        if (window.getType() == AccessibilityWindowInfo.TYPE_INPUT_METHOD) visible = true;
+      if (!visible && wasVisible) hiddenTransitions++;
+      wasVisible = visible;
+      if (node("想想怎么回…") != null) return hiddenTransitions;
+      SystemClock.sleep(30);
+    }
+    throw new AssertionError("The captured chat never returned to the advisor panel");
+  }
+
   private void shot(String name) throws Exception {
     SystemClock.sleep(180);
     Bitmap image = ui.takeScreenshot();
@@ -341,8 +357,142 @@ public final class ProductFlowTest {
 
   @Test
   public void captureRestoresBeforeGenerating() throws Exception {
-    click("帮我回");await("想想怎么回…",15000);
-    try{latestMessageVisible();}finally{click("取消生成并返回键盘");}
+    click("帮我回");
+    await("想想怎么回…", 15000);
+    try {
+      latestMessageVisible();
+    } finally {
+      click("取消生成并返回键盘");
+    }
+  }
+
+  @Test
+  public void hostHidingKeyboardOnCaptureScrollRestoresAdvisorAndDraft() throws Exception {
+    java.util.concurrent.atomic.AtomicInteger hides =
+        new java.util.concurrent.atomic.AtomicInteger();
+    ins.runOnMainSync(
+        () -> {
+          editor.setText("翻屏前的草稿");
+          editor.setSelection(editor.length());
+          chat(activity.getWindow().getDecorView())
+              .setOnTouchListener(
+                  (view, event) -> {
+                    if (event.getActionMasked() == MotionEvent.ACTION_DOWN
+                        && hides.getAndIncrement() == 0)
+                      ((InputMethodManager) app.getSystemService(Context.INPUT_METHOD_SERVICE))
+                          .hideSoftInputFromWindow(editor.getWindowToken(), 0);
+                    return false;
+                  });
+          editor.requestFocus();
+        });
+    ins.waitForIdleSync();
+    SystemClock.sleep(350);
+    click("帮我回");
+    assertTrue(
+        "The IME window really disappeared before recovering",
+        awaitGenerationAfterInputViewHides() > 0);
+    assertTrue("The host really hid the IME during our automatic gesture", hides.get() > 0);
+    latestMessageVisible();
+    assertEquals("翻屏前的草稿", value());
+    shot("advisor-host-hide-restored");
+    click("取消生成并返回键盘");
+    await("q", 4000);
+    assertEquals("翻屏前的草稿", value());
+  }
+
+  @Test
+  public void bothCaptureAndReturnGesturesCanHideTheKeyboard() throws Exception {
+    java.util.concurrent.atomic.AtomicInteger hides =
+        new java.util.concurrent.atomic.AtomicInteger();
+    ins.runOnMainSync(
+        () ->
+            chat(activity.getWindow().getDecorView())
+                .setOnTouchListener(
+                    (view, event) -> {
+                      if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                        hides.incrementAndGet();
+                        ((InputMethodManager) app.getSystemService(Context.INPUT_METHOD_SERVICE))
+                            .hideSoftInputFromWindow(editor.getWindowToken(), 0);
+                      }
+                      return false;
+                    }));
+    click("帮我回");
+    assertEquals(
+        "Two actual IME visibility losses were recovered", 2, awaitGenerationAfterInputViewHides());
+    assertEquals("Both the earlier-page and return gesture ran", 2, hides.get());
+    latestMessageVisible();
+    click("取消生成并返回键盘");
+    await("q", 4000);
+  }
+
+  @Test
+  public void leavingHostDuringCaptureDoesNotReopenTheKeyboard() throws Exception {
+    java.util.concurrent.atomic.AtomicBoolean touched =
+        new java.util.concurrent.atomic.AtomicBoolean();
+    ins.runOnMainSync(
+        () ->
+            chat(activity.getWindow().getDecorView())
+                .setOnTouchListener(
+                    (view, event) -> {
+                      if (event.getActionMasked() == MotionEvent.ACTION_DOWN) touched.set(true);
+                      return false;
+                    }));
+    click("帮我回");
+    long until = SystemClock.uptimeMillis() + 6000;
+    while (!touched.get() && SystemClock.uptimeMillis() < until) SystemClock.sleep(20);
+    assertTrue("Leave after the owned gesture really started", touched.get());
+    assertTrue(
+        ui.performGlobalAction(
+            android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME));
+    SystemClock.sleep(3000);
+    for (AccessibilityWindowInfo window : ui.getWindows())
+      assertNotEquals(
+          "Home must not receive the old chat's IME",
+          AccessibilityWindowInfo.TYPE_INPUT_METHOD,
+          window.getType());
+    assertTrue("Abandoned capture makes no history", app.histories.list(50).isEmpty());
+  }
+
+  @Test
+  public void switchingEditorsDuringCaptureDoesNotRestoreTheOldPanel() throws Exception {
+    EditText[] other = {null};
+    java.util.concurrent.atomic.AtomicBoolean switched =
+        new java.util.concurrent.atomic.AtomicBoolean();
+    ins.runOnMainSync(
+        () -> {
+          editor.setText("旧输入框的草稿");
+          other[0] = new EditText(activity);
+          other[0].setId(View.generateViewId());
+          other[0].setText("新输入框的草稿");
+          other[0].setFocusable(false);
+          ((LinearLayout) editor.getParent())
+              .addView(other[0], new LinearLayout.LayoutParams(120, 80));
+          chat(activity.getWindow().getDecorView())
+              .setOnTouchListener(
+                  (view, event) -> {
+                    if (event.getActionMasked() == MotionEvent.ACTION_DOWN
+                        && switched.compareAndSet(false, true)) {
+                      other[0].setFocusableInTouchMode(true);
+                      other[0].requestFocus();
+                      ((InputMethodManager) app.getSystemService(Context.INPUT_METHOD_SERVICE))
+                          .showSoftInput(other[0], InputMethodManager.SHOW_IMPLICIT);
+                    }
+                    return false;
+                  });
+          editor.requestFocus();
+        });
+    ins.waitForIdleSync();
+    SystemClock.sleep(350);
+    click("帮我回");
+    long until = SystemClock.uptimeMillis() + 6000;
+    while (!switched.get() && SystemClock.uptimeMillis() < until) SystemClock.sleep(20);
+    assertTrue("The host changed its editor during our gesture", switched.get());
+    await("q", 5000);
+    SystemClock.sleep(2500);
+    assertNull(node("想想怎么回…"));
+    assertEquals("旧输入框的草稿", value());
+    ins.runOnMainSync(() -> assertEquals("新输入框的草稿", other[0].getText().toString()));
+    assertTrue(app.histories.list(50).isEmpty());
   }
 
   @Test

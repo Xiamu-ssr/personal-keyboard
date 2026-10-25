@@ -2,7 +2,7 @@ schemaVersion: 6
 meta:
   title: 豆豆输入法
   subtitle: 域与实体固定，数据在其间流动
-  version: 0.8.0-alpha.1
+  version: 0.8.1-alpha.1
   reviewedAt: 2026-10-24
   status: App / Cloud 0.8 · 口述与录音笔 · 六格帮我回
 domains:
@@ -747,7 +747,7 @@ businesses:
         channel: phone-app
         direction: ba
         title: 选中的回复
-        body: 键盘恢复高度，用户选择后填入；该回复同时成为填入稿与初始结果稿。
+        body: 翻屏临时收起后自动恢复原输入框；用户选择后填入。
         delay: 1700
         status:
           phone.chat: 选中稿可继续修改

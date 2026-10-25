@@ -1,199 +1,97 @@
 {
-  "reviewedAt": "2026-10-24T15:59:54.896914+00:00",
-  "version": "0.8.0-alpha.1",
+  "reviewedAt": "2026-10-25T02:45:59.640030+00:00",
+  "version": "0.8.1-alpha.1",
   "artifact": {
     "package": "app.doudou.ime",
-    "version": "0.8.0-alpha.1",
-    "sha256": "1314622f519c34f0c0c03f5465a05b1399c63ce5e6b2b27c305f1204fe61872e",
-    "bytes": 25386634,
+    "version": "0.8.1-alpha.1",
+    "sha256": "5e3899d88fd3affc0fdc8b27af32a2fdf57ce3de4e95677000152b81eb17435c",
+    "bytes": 25192750,
     "buildType": "debug",
     "production": false,
     "modelsBundled": false
   },
-  "status": "Invited development preview. Named visual and semantic fixes were independently scored resolved. Real Android 15 emulator and Cloud/Aliyun verification; no current physical-device or all-host acceptance claim.",
+  "status": "Invited development preview; fixes host-triggered IME hiding during automatic advisor scroll. Physical QQ and focused emulator checks passed; WeChat deliberately skipped at user request.",
+  "baselineReproduction": {
+    "status": "failed as expected",
+    "behavior": "Host hides IME on chat drag; old build cancels advisor and never returns"
+  },
   "checks": [
     {
-      "name": "Android JVM and native decoder",
+      "name": "first scroll hides IME",
       "status": "passed",
-      "jvmTests": 32,
-      "failures": 0,
-      "addressSanitizer": true,
-      "undefinedBehaviorSanitizer": true,
-      "lintErrors": 0,
-      "lintWarnings": 40
+      "source": "Android 15 isolated emulator"
     },
     {
-      "name": "Node and YAML graph checks",
+      "name": "both scrolls hide IME",
       "status": "passed",
-      "passed": 22,
-      "skippedPostgresInDefaultSuite": 2,
+      "source": "Android 15 isolated emulator"
+    },
+    {
+      "name": "leave host during scroll",
+      "status": "passed",
+      "source": "Android 15 isolated emulator"
+    },
+    {
+      "name": "change editor during scroll",
+      "status": "passed",
+      "source": "Android 15 isolated emulator"
+    },
+    {
+      "name": "cancel after scroll",
+      "status": "passed",
+      "source": "Android 15 isolated emulator"
+    },
+    {
+      "name": "background recording and durable rotation",
+      "status": "passed",
+      "source": "Android 15 isolated emulator"
+    },
+    {
+      "name": "JVM and native decoder",
+      "status": "passed",
+      "tests": 32,
       "failures": 0
     },
     {
-      "name": "Real PostgreSQL integration suite",
+      "name": "Android lint",
       "status": "passed",
-      "passed": 16,
-      "skipped": 0,
-      "scope": "Isolated PostgreSQL 17, not production data."
+      "errors": 0,
+      "warnings": 40
     },
     {
-      "name": "Android 15 regression suite",
-      "status": "passed-with-scoped-skips",
-      "listedTests": 34,
-      "passed": 31,
-      "assumptionSkipped": 3,
-      "scope": "0.8 implementation snapshot; explicit live tests and final changed UI paths were run separately."
-    },
-    {
-      "name": "Final APK quick speech and late editor changes",
+      "name": "Node and YAML graph",
       "status": "passed",
-      "realCloudAsr": true,
-      "syntheticGuestMicrophone": true,
-      "userEditPreserved": true
+      "tests": 22,
+      "defaultPostgresSkips": 2
     },
     {
-      "name": "Final APK advisor journey",
-      "status": "passed-for-owned-host",
-      "proof": {
-        "milliseconds": 63607,
-        "pages": 2,
-        "initialReplies": 6,
-        "slotVariants": 3,
-        "savedGroups": 3,
-        "restorationRequests": 0,
-        "latestMessageVisible": true,
-        "draftPreserved": true
-      },
-      "millisecondsMeaning": "Full multi-generation journey, not first response latency.",
-      "cancelDuringCaptureTest": true,
-      "automaticSend": false,
-      "thirdPartyHostRestorationClaimed": false
-    },
-    {
-      "name": "Final APK recorder ending",
+      "name": "OPPO PHW110 Android 15 / QQ 9.3.75 My Computer",
       "status": "passed",
-      "savedLabel": true,
-      "viewCurrentRecordingAction": true,
-      "returnToKeyboardAction": true,
-      "chatDraftUnchanged": true
+      "selfSampleOnly": true,
+      "capturedPages": 2,
+      "generatedReplies": 6,
+      "replyAppliedAndEditable": true,
+      "finalApkDraftAndCancelSmoke": true
     },
     {
-      "name": "Persistent audio and deferred transcription",
-      "status": "passed",
-      "scope": "0.8 recording implementation; subsequent changes limited to end-state UI labels and meter color.",
-      "persistedBytes": 468480,
-      "reconnectedToRealCloud": true,
-      "rotation": {
-        "bytes": 1527808,
-        "chunks": 2,
-        "draftPreserved": true,
-        "keyboardDismissed": true,
-        "reopenedSameId": true
-      },
-      "naturalSpeechAccuracyClaimed": false
-    },
-    {
-      "name": "Canonical learning and palette edit",
-      "status": "passed-with-recapture-limit",
-      "learnedHotwords": 2,
-      "learnedPeople": 1,
-      "learnedWorkStyles": 1,
-      "nativeCloudPaletteWriteAndSyncVerified": true,
-      "latestRecapture": "Repeated login reached the unchanged 10-per-15-minute account rate limit; final management screenshots use temporary owned local fixtures. Protection was retained; fixture account deleted after normal cooldown."
-    },
-    {
-      "name": "Final APK small screen and permissions",
-      "status": "passed",
-      "viewports": [
-        "~411dp / fontScale 1.0",
-        "360dp / fontScale 1.3"
-      ],
-      "completeSendAndPrivacyLabels": true,
-      "permanentlyDeniedMicrophoneSettingsRoute": true,
-      "fullExternalPermissionGrantJourneyClaimed": false
-    },
-    {
-      "name": "Visual fix verdicts",
-      "status": "resolved-at-named-fix-scope",
-      "skillReviewerDisposition": "ship",
-      "independentReviewer": "毒舌但客观的高审美内测员",
-      "namedVisualFixesResolved": 7,
-      "semanticUnknownIntentAndVariantCasesResolved": true,
-      "explicitVolitionCasesResolved": true,
-      "wholeProductApprovalClaimed": false,
-      "sourceProofSha256": "12265e6bcbc0bb7b31d5e0b521b0352932021be7ee1ee3797c4bbaa5f899a84b",
-      "designSystemDocumented": true
-    },
-    {
-      "name": "Cloud release",
-      "status": "healthy",
-      "version": "0.8.0-alpha.1",
-      "readiness": {
-        "account": true,
-        "asr": true,
-        "text": true,
-        "vision": true
-      },
-      "databaseVolumesPreserved": true,
-      "schemaMigration": 3,
-      "paidPurchases": false
-    },
-    {
-      "name": "Public native media",
-      "status": "verified-locally",
-      "screenshots": 9,
-      "recordings": 2,
-      "sourceApkSha256": "1314622f519c34f0c0c03f5465a05b1399c63ce5e6b2b27c305f1204fe61872e",
-      "sources": "spec/media.json",
-      "actualWaitsPreserved": true
-    },
-    {
-      "name": "Signing continuity",
-      "status": "passed",
-      "sameSignerAsPrevious": true,
-      "certificateSha256": "472eea0e40824d06fb2cb9c3d9bbfca7505a2971426e9f2c5ccedd4222834940",
-      "currentPhysicalPhoneUpgrade": false
-    },
-    {
-      "name": "Local cleanup",
-      "status": "passed",
-      "ownQaAccountDeleted": true,
-      "isolatedPostgresStopped": true,
-      "ownQaAccountsDeleted": 2,
-      "temporaryQaGrantDeletedWithAccount": true,
-      "qaDeviceCredentialsRemoved": true,
-      "emulatorStopped": true,
-      "portsCleared": {
-        "5554": true,
-        "5555": true,
-        "8554": true,
-        "55438": true
-      }
-    },
-    {
-      "name": "Current physical device and all-host acceptance",
-      "status": "not-claimed",
-      "reason": "This version was validated in the owned Android 15 emulator; third-party host and natural human speech coverage remain limited."
-    },
-    {
-      "name": "Final advisor protocol",
-      "status": "passed-for-observed-cases",
-      "schema": "Strict JSON Schema, six expressions or three variants; duplicate results fail without consuming the reservation.",
-      "reasoningBudget": 1024,
-      "factAndVolitionCases": [
-        6,
-        3,
-        6,
-        6
-      ],
-      "memoryBeforeAndAfterCases": {
-        "version": 0,
-        "hotwords": 0,
-        "styles": 0,
-        "people": 0,
-        "readAfterFinalCases": true
-      },
-      "scope": "Final explicit-intent branch retested after preserving choice versus inability. Native recording uses the unchanged unspecified-intent branch. These samples do not guarantee future model factual accuracy."
+      "name": "Independent bounded code review",
+      "status": "no confirmed new P0/P1/P2",
+      "scope": "Capture controller and IME lifecycle; no broad all-host claim"
     }
+  ],
+  "demonstrationSource": {
+    "version": "0.8.0-alpha.1",
+    "sha256": "1314622f519c34f0c0c03f5465a05b1399c63ce5e6b2b27c305f1204fe61872e",
+    "note": "Unchanged screenshots and recordings retain their original provenance. They are not evidence that this patch was captured in all pictured flows."
+  },
+  "cloud": {
+    "deployedVersion": "0.8.0-alpha.1",
+    "changedInThisPatch": false,
+    "databaseMigration": false
+  },
+  "limits": [
+    "QQ self-chat and isolated Android 15 host behaviors only; no general claim for all chat editors.",
+    "Physical final APK confirmed restored advisor and retained draft; successful two-page six-reply flow also verified on the same fix before version bump.",
+    "No fresh ASR accuracy or all-host keyboard acceptance in this patch."
   ]
 }

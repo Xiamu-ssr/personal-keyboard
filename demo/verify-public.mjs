@@ -37,10 +37,11 @@ const media = JSON.parse(
   await fs.readFile(path.join(root, "spec/media.json"), "utf8"),
 );
 if (
-  media.version !== manifest.version ||
-  media.sourceApkSha256 !== manifest.files["doudou-keyboard.apk"].sha256
+  media.version !== manifest.demonstrationSource?.version ||
+  media.sourceApkSha256 !== manifest.demonstrationSource?.apkSha256 ||
+  !/^[a-f0-9]{64}$/.test(media.sourceApkSha256)
 )
-  throw Error("Recording APK version mismatch");
+  throw Error("Demonstration source APK version mismatch");
 if (
   Object.keys(media.files).sort().join(",") !==
   "advisor-tour.mp4,keyboard-tour.mp4"

@@ -182,14 +182,20 @@ public final class KeyboardService extends InputMethodService
     super.onStartInputView(info, restarting);
     MemoryRefresh.start(app);
     // Hiding cancels dictation. Reopening the same editor must not retain a disabled key surface.
-    if (root != null) typing();
+    if (root != null && !advisorController.retainsInputView()) typing();
     rememberClipboard(false);
   }
 
   @Override
   public void onFinishInputView(boolean finishing) {
     observeHistory();
-    cancelJobs();
+    if (advisorController.retainDuringGesture(finishing)) {
+      // A chat can hide the IME on touch-down without ending the editor session.
+      // Dictation still stops; the capture gesture owns its temporary visibility change.
+      voice.cancel();
+      localEditor = null;
+      finishLocal = null;
+    } else cancelJobs();
     super.onFinishInputView(finishing);
   }
 
@@ -224,6 +230,7 @@ public final class KeyboardService extends InputMethodService
   public void onDestroy() {
     if (clipboard != null) clipboard.removePrimaryClipChangedListener(clipListener);
     cancelJobs();
+    generation++;
     main.removeCallbacksAndMessages(null);
     super.onDestroy();
   }
@@ -852,6 +859,14 @@ public final class KeyboardService extends InputMethodService
 
   public int bottomInset() {
     return bottomInset;
+  }
+
+  public boolean inputViewVisible() {
+    return isInputViewShown() && root != null && root.isShown();
+  }
+
+  public void showInputView() {
+    requestShowSelf(0);
   }
 
   public LinearLayout openPanel(String next, int height) {

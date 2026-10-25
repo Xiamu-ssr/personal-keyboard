@@ -19,6 +19,10 @@ public interface EditorHost {
 
   int bottomInset();
 
+  boolean inputViewVisible();
+
+  void showInputView();
+
   boolean privateMode();
 
   LinearLayout openPanel(String mode, int heightDp);

@@ -8,8 +8,8 @@ android {
         applicationId 'app.doudou.ime'
         minSdk 30
         targetSdk 35
-        versionCode 12
-        versionName '0.8.0-alpha.1'
+        versionCode 13
+        versionName '0.8.1-alpha.1'
         buildConfigField 'String', 'API_BASE_URL', '"https://106.14.88.147/keyboard-api"'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         ndk { abiFilters 'arm64-v8a', 'x86_64' }
