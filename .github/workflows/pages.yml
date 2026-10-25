@@ -24,9 +24,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=$(node -p 'require("./package.json").version')
-          gh release download "v${version}" --repo "$GITHUB_REPOSITORY" --dir spec/demo --clobber --pattern doudou-keyboard.apk --pattern '*.png' --pattern '*.mp4'
-          node demo/verify-public.mjs
+          gh release download "v${version}" --repo "$GITHUB_REPOSITORY" --dir spec/demo --clobber --pattern doudou-keyboard.apk
       - run: npm run check
+      - name: Verify APK and repository media
+        run: node demo/verify-public.mjs
       - name: Select public artifacts only
         run: |
           mkdir -p .runtime/pages/demo

@@ -8,8 +8,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "spec:build": "node spec/build.mjs",
-    "spec:serve": "node demo/server.mjs",
+    "media:stage": "node demo/stage-public-media.mjs",
+    "spec:build": "npm run media:stage && node spec/build.mjs",
+    "spec:serve": "npm run spec:build && node demo/server.mjs",
     "demo:setup": "node demo/setup.mjs",
     "demo:build": "node app/build.mjs",
     "test": "node --test tests/*.test.mjs cloud/test/*.test.mjs",

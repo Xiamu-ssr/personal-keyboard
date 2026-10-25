@@ -1,52 +1,103 @@
-# 豆豆输入法
+<p align="center">
+  <img src="app/branding/logo.png" alt="豆豆输入法" width="88" />
+</p>
 
-<img src="app/branding/logo.png" alt="豆豆输入法：对话声纹" width="96" />
+<h1 align="center">豆豆输入法</h1>
 
-Android 输入法：离线拼音、个性语音、原地军师，以及热词、文风和人物记忆。键盘和管理页是同一个App，与豆豆Agent独立安装。
+<p align="center">语音输入，也帮你想好怎么回。</p>
 
-当前 **0.9.1-alpha.1 · 开发预览版**。App / PostgreSQL Cloud / 后台已有实现；邀请注册、账号密码与恢复码；企业百炼模型已接入，付费购买未开放。不会用演示回复冒充在线能力。
+<p align="center">
+  <a href="https://github.com/Xiamu-ssr/personal-keyboard/releases/download/v0.9.1-alpha.1/doudou-keyboard.apk"><strong>下载 Android APK</strong></a>
+  &nbsp; · &nbsp;
+  <a href="https://github.com/Xiamu-ssr/personal-keyboard/releases/tag/v0.9.1-alpha.1">版本说明</a>
+  &nbsp; · &nbsp;
+  <a href="https://xiamu-ssr.github.io/personal-keyboard/">产品与架构</a>
+</p>
 
-- [产品 SPEC](https://xiamu-ssr.github.io/personal-keyboard/) · [ECS镜像](https://106.14.73.99/keyboard-spec/)：基础域卡片和语音 / 军师 / 记忆更新 / 翻译四张域图。
-- [下载 APK](https://xiamu-ssr.github.io/personal-keyboard/demo/doudou-keyboard.apk)：Android11+，arm64 / x86_64，debug签名；无供应商密钥。
-- [Cloud后台](https://106.14.88.147/keyboard-api/admin/)：独立认证，用户 / 邀请码 / 权益 / 套餐 / 任务 / 审计。
-- [规格源](spec/spec.yaml) · [原生验证摘要](spec/verification.json)。
+<p align="center">0.9.1-alpha.1 · Android 11+ · 亮色 / 暗色</p>
 
-0.9.1 在同一行加入输入／录音／帮我回／翻译四栏切换。翻译保留独立草稿，只有明确点填入才写进输入框；切模式和收起键盘不会结束录音。调色盘的有序属性改用集中式竖向刻度滑杆；表情使用完整离线原生面板，支持分类、长按变体和最近使用。账户统一 Credit，账单和后台保留计价版本。
+当前为邀请内测版。在线功能需账号登录，新账号赠送 3,000 Credit；暂未开放充值。本地拼音无需登录。
 
-0.9 把六格调色盘升级为「名称＋九项表达属性」，提供暧昧、粉红泡泡、撒娇、冷讽等参考搭配；应用搭配保留用户名称。新增覆盖 App、键盘与语音面板的亮色、暗色皮肤，默认沿用暗色。每份截图与视频分别记录来源 APK 版本和摘要。
+## 一眼看看
 
-0.8.1 修复自动翻屏时宿主收起键盘导致「帮我回」丢失的问题；切换输入框或离开宿主会停止原任务。
+<table>
+  <tr>
+    <th align="center">输入</th>
+    <th align="center">帮我回</th>
+    <th align="center">表达调色盘</th>
+  </tr>
+  <tr>
+    <td align="center"><a href="spec/media/screenshots/typing.png"><img src="spec/media/screenshots/typing.png" alt="深色键盘：输入、录音、帮我回、翻译四栏切换" width="240" /></a></td>
+    <td align="center"><a href="spec/media/screenshots/advisor.png"><img src="spec/media/screenshots/advisor.png" alt="帮我回：按不同表达给出建议，可换说法和回看旧答案" width="240" /></a></td>
+    <td align="center"><a href="spec/media/screenshots/palette.png"><img src="spec/media/screenshots/palette.png" alt="亮色调色盘：调节篇幅、直接程度、亲近感等表达属性" width="240" /></a></td>
+  </tr>
+</table>
 
-0.8 把快捷口述与独立录音笔分开，加入六格调色盘、自动两屏「帮我回」、单格换说法和旧组回看；重做首页与「我的」，补充现代拼音词库、表情与符号。个人记忆可靠更新自动生效，实际冲突放在对应资料旁核对。
+以上为 0.9.1 原生 APK 截图，点击可查看原图。[全部截图](spec/media/screenshots/) · [使用录屏（0.8.0）](spec/media/recordings/)
 
-## 三个目录
+## 四个工作区
 
-`app/` 是原生工程，内部 `app/app/` 为 Gradle应用模块；`cloud/` 是账号、账本、模型代理、任务和管理后台；`spec/` 是产品和架构对齐工件。
+| 工作区 | 可以做什么 |
+| --- | --- |
+| **输入** | 离线拼音、表情和符号；按住空格说话，松手填入。 |
+| **录音** | 独立录音笔，边录边转写。收起键盘继续录，断网或额度不足仍保留原音。 |
+| **帮我回** | 读取当前聊天截图，结合人物与文风给出六种回复；可换一组、换说法、回看旧答案。 |
+| **翻译** | 独立原文与译文，支持九种语言；确认填入后才写进聊天框。 |
 
-- 拼音：AOSP / libgooglepinyin离线整句、32K简拼、40万现代词条、个人词频与快捷码。候选和动作共用一行。
-- 语音：AudioRecord → Cloud → Qwen Message；长按空格说话，录音时收起字母；松手填入、左侧撤回、右侧换行，滑回底部恢复正常结束。点击录音开启独立录音笔，持久音频与实时文字不占聊天框；断网或额度不足保住原音，可继续转写。
-- 军师：点「帮我回」自动截图并生成六格表达，单格可再生三条；点回复填入、长按修改，换组可回看，不代发消息。
-- 个性化：历史与截图在手机，热词、场景文风与人物主本在 Cloud；只分批历史，每次推理携带完整旧记忆，校验后按版本提交。
-- 翻译：自动识别原文，支持中、英、日、韩、法、德、西、俄、葡；原文和译文留在本地工具草稿，可复制或明确填入，不参与本人文风学习。
-- 账户：邀请码注册＋账号密码，恢复码找回；新账号一次性3,000 Credit。转写、整理、军师和翻译统一按实际模型用量结算，失败释放预留，原请求恢复不重复扣分。
-- 同步：个人记忆与缓存为基础账户能力，完整文字与截图的加密云备份按付费权益开放；录音原音仅在本机。不宣称端到端加密。
+六个调色盘槽位都可命名、调节表达属性。热词、场景文风和人物资料随账号同步；历史、截图和录音原件留在手机。
 
-App暂时内置 `https://106.14.88.147/keyboard-api`，使用正常系统证书验证。供应商密钥只配置在Cloud，预览版BYOK / 系统ASR路径已移除。「帮我回」经明确授权自动翻看较早一屏，最多两张一起推理，再尝试恢复聊天位置；滚不动或截图受保护时不承诺两屏。
+<details>
+<summary><strong>更多界面</strong></summary>
 
-## 积分
+<table>
+  <tr>
+    <th align="center">首页</th>
+    <th align="center">录音笔</th>
+    <th align="center">翻译</th>
+  </tr>
+  <tr>
+    <td align="center"><a href="spec/media/screenshots/home.png"><img src="spec/media/screenshots/home.png" alt="首页：练习场景、调色盘、文风与人物" width="240" /></a></td>
+    <td align="center"><a href="spec/media/screenshots/recorder.png"><img src="spec/media/screenshots/recorder.png" alt="录音笔工作区" width="240" /></a></td>
+    <td align="center"><a href="spec/media/screenshots/translation.png"><img src="spec/media/screenshots/translation.png" alt="翻译工作区" width="240" /></a></td>
+  </tr>
+</table>
 
-1 Credit=0.001元。当前按[阿里云北京公开标准价](https://help.aliyun.com/zh/model-studio/model-pricing)上浮75%，不以赠额、促销或缓存折扣充当标准价。以下单位为每1,000 Token，输入与输出分别计价；不按“点一次”收固定费用。
+截图与录屏集中在 [spec/media/](spec/media/)。每份材料的来源版本与校验值分别记录在 [截图清单](spec/release.json) 和 [录屏清单](spec/media.json)；旧录屏保留其真实版本。
 
-| 能力 | 输入 Credit | 输出 Credit |
+</details>
+
+<details>
+<summary><strong>积分与在线服务</strong></summary>
+
+转写、语音整理、帮我回和翻译共用 Credit，按实际模型用量结算。1 Credit = 0.001 元；失败不扣、取消释放预留，同一请求重试不重复扣分。查看历史、旧答案和个人记忆不扣分。
+
+当前费率采用阿里云北京公开标准价上浮 75%。每 1,000 Token 的输入与输出分别计价：
+
+| 模型 | 输入 Credit | 输出 Credit |
 | --- | ---: | ---: |
 | Qwen Message 语音识别 | 10.5 | 7.875 |
-| Qwen3.8-Flash 帮我回、整理、翻译 | 1.4 | 4.725 |
+| Qwen3.8-Flash 帮我回 / 整理 / 翻译 | 1.4 | 4.725 |
 
-任务提交时冻结计价版本，预留上限后按实际用量退余；失败、取消不扣分。旧剩余每字符换0.2 Credit、每军师次数换100 Credit，仅迁移一次并保留财务归档。查看录音、历史、旧答案和个人记忆不扣分，自动记忆学习作为当前服务成本，不额外扣分。套餐与模型价格分开配置，后台发布新价格有版本与审计。
+每个任务冻结计价版本，预留后按用量退余；账单可查看用量与费率。自动记忆学习计入服务成本，不另扣分。套餐和费率分别在 [plans.json](cloud/config/plans.json)、[credits.json](cloud/config/credits.json) 管理。
 
-## 构建
+个人记忆同步属于基础账户能力；完整文字与截图的云备份按权益开放，录音原音仅在本机。
 
-需要 Node22+、Python3、JDK17、Android SDK35、NDK27.0.12077973、CMake3.22.1。`ANDROID_SDK_ROOT` 指向SDK。
+</details>
+
+<details>
+<summary><strong>开发、架构与部署</strong></summary>
+
+| 目录 | 职责 |
+| --- | --- |
+| [app/](app/) | 原生 Android App 与输入法，Gradle 应用模块位于 `app/app/`。 |
+| [cloud/](cloud/) | 账号、Credit 账本、模型代理、个人记忆、任务与管理后台。 |
+| [spec/](spec/) | YAML 架构与业务图、提示词、验证清单，以及公开展示素材。 |
+
+模型请求统一经过 Cloud，供应商密钥只保存在服务端。Cloud 使用独立 API、PostgreSQL 两个容器及持久卷，经 HTTPS 反向代理对外服务。[Cloud 运行说明](cloud/README.md)
+
+**本地构建**
+
+需要 Node 22+、Python 3、JDK 17、Android SDK 35、NDK 27.0.12077973、CMake 3.22.1。设置 `ANDROID_SDK_ROOT` 后运行：
 
 ```sh
 npm ci
@@ -56,16 +107,25 @@ npm run android:sanitize
 npm run check
 ```
 
-APK输出 `spec/demo/doudou-keyboard.apk`，摘要见 `artifact.json`。安装后启用并选择输入法；麦克风和主动截屏分别授权。云能力需登录，本地键盘无需登录。
+APK 输出至 `spec/demo/doudou-keyboard.apk`，版本与摘要见 [artifact.json](spec/demo/artifact.json)。沿用发布签名方可覆盖安装。
 
-## SPEC 与部署
+**查看 SPEC**
 
-`npm run spec:serve` 后打开 `http://127.0.0.1:8560`。大域内有子能力，域之间一来一回，数据卡片按时间自动上翻，可滚动查看旧记录。卡片是明确标识的模拟数据。域、实体、传输约定与提示词均来自 `spec/spec.yaml`；简短详情在点击节点后展开，没有 Markdown 文档层。
+```sh
+npm ci
+npm run spec:serve
+```
 
-公开页面只提供真实APK截图、录屏和下载，不启动或连接个人Mac / ADB；旧在线Android桥接代码已移除。GitHub Pages与ECS发布同一份验收APK并校验摘要。
+打开 `http://127.0.0.1:8560`。媒体自动从 `spec/media/` 校验并复制到展示目录，无需 Android SDK；本地 APK 下载需先构建或从 Release 下载。公开页提供截图、录屏和 APK，不连接个人设备。
 
-ECS 静态路由见 [Nginx 配置](spec/deploy/nginx-location.inc)，媒体使用明确白名单；旧在线演示路径固定返回 410。
+[规格源](spec/spec.yaml) · [验证摘要](spec/verification.json) · [ECS 镜像](https://106.14.73.99/keyboard-spec/) · [Cloud 后台](https://106.14.88.147/keyboard-api/admin/)
 
-Cloud通过独立API / PostgreSQL容器部署，宿主仅监听loopback8089，再经HTTPS反代。[运行说明](cloud/README.md)。
+**发布约定**
 
-现代词库派生自 [万象词库数据](https://github.com/amzxyz/rime-wanxiang-data)，CC BY 4.0，固定版本与重建方法见 [词库来源](app/lexicon/source.json)。六种表达是可编辑的产品预设，不是心理学人格诊断。
+Release 附件只保留 `doudou-keyboard.apk` 与 `SHA256SUMS`。截图在 `spec/media/screenshots/`，录屏在 `spec/media/recordings/`，可在 README 或 Release 正文引用。Pages 从仓库取媒体、从 Release 取 APK；展示前校验全部文件的来源和摘要。
+
+</details>
+
+---
+
+离线拼音基于 AOSP / libgooglepinyin。现代词库派生自 [万象词库](https://github.com/amzxyz/rime-wanxiang-data)，采用 CC BY 4.0；固定版本与重建方法见 [词库来源](app/lexicon/source.json)。
