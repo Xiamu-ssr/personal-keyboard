@@ -181,9 +181,9 @@ export function validateWorld(spec) {
   }
   need(!w.edges, "No internal workflow wiring");
   need(
-    spec.businesses.length === 3 &&
-      spec.businesses.map((v) => v.id).join(",") === "voice,advisor,learning",
-    "Voice, advisor and memory business views required",
+    spec.businesses.length === 4 &&
+      spec.businesses.map((v) => v.id).join(",") === "voice,advisor,learning,translation",
+    "Voice, advisor, memory and translation business views required",
   );
   for (const view of spec.businesses) {
     const seen = new Set();

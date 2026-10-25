@@ -36,7 +36,7 @@ export async function createCloudServer({
   asrSocket,
   memoryModel = new MemoryModel(cfg),
 } = {}) {
-  await db.migrate(cfg.plans);
+  await db.migrate(cfg.plans, cfg.pricing);
   await migratePalettes(db, cfg);
   await models.init();
   await memoryModel.init();
@@ -71,7 +71,7 @@ export async function createCloudServer({
         await db.query("SELECT 1");
         return json(res, {
           status: "ok",
-          version: "0.9.0-alpha.1",
+          version: "0.9.1-alpha.1",
           readiness: {
             account: true,
             asr: cfg.asrReady,
@@ -91,6 +91,8 @@ export async function createCloudServer({
           metering: cfg.plans.metering,
           purchaseEnabled: false,
         });
+      if (method === 'GET' && route === '/v1/credit-pricing')
+        return json(res, await ledger.pricing.get());
       if (method === "POST" && ["/v1/auth/register", "/v1/auth/login", "/v1/auth/recover"].includes(route)) {
         const action = route.split('/').at(-1);
         return json(res, await accounts[action](await jsonBody(req, 4096), ip(req)), action === 'register' ? 201 : 200);
@@ -159,6 +161,11 @@ export async function createCloudServer({
             `keyboard_admin=; HttpOnly; Secure; SameSite=Strict; Max-Age=0; Path=${cfg.pathPrefix || "/"}`,
           );
           return json(res, { ok: true });
+        }
+        if (method === 'GET' && route === '/admin/api/credit-pricing') return json(res, await ledger.pricing.get());
+        if (method === 'POST' && route === '/admin/api/credit-pricing') {
+          const body = await jsonBody(req, 16384);
+          return json(res, await ledger.pricing.save(actor, body.expectedVersion, body.definition));
         }
         if (method === "GET" && route === "/admin/api/overview")
           return json(res, await admin.overview());
@@ -270,16 +277,15 @@ export async function createCloudServer({
           return json(res, await jobs.get(user, match[1]));
         if (match && method === "POST" && match[2])
           return json(res, await jobs.cancel(user, match[1]));
-        if (method === "GET" && route === "/v1/jobs")
-          return json(
-            res,
-            (
-              await db.query(
-                "SELECT id,kind,status,consumed_asr,consumed_advisor,error_code,created_at FROM jobs WHERE user_id=$1 ORDER BY created_at DESC LIMIT 30",
-                [user.id],
-              )
-            ).rows,
-          );
+        if (method === 'GET' && route === '/v1/jobs') return json(res, { jobs:
+          (await db.query("SELECT id,kind,status,consumed_credits,billing_snapshot,provider_usage,created_at FROM jobs WHERE user_id=$1 AND billing_snapshot ? 'version' ORDER BY created_at DESC LIMIT 50", [user.id])).rows
+            .map(row => ({ id: row.id, kind: row.kind, status: row.status, credits: Number(row.consumed_credits) / 1000,
+              pricingVersion: Number(row.billing_snapshot.version || 0), createdAt: row.created_at,
+              billing: { inputTokens: row.provider_usage?.prompt_tokens ?? row.provider_usage?.input_tokens ?? null,
+                outputTokens: row.provider_usage?.completion_tokens ?? row.provider_usage?.output_tokens ?? null,
+                inputCreditsPerThousand: row.billing_snapshot.rate.inputMicroCnyPerMillion * row.billing_snapshot.markupBasisPoints / 10000000000,
+                outputCreditsPerThousand: row.billing_snapshot.rate.outputMicroCnyPerMillion * row.billing_snapshot.markupBasisPoints / 10000000000 }
+            })) });
         if (method === "POST" && route === "/v1/sync/key")
           return json(res, await sync.key(user));
         if (method === "GET" && route === "/v1/sync")

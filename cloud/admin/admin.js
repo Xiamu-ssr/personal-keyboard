@@ -128,11 +128,10 @@ async function load() {
       c.innerHTML =
         "<h1>用户与权益</h1>" +
         table(
-          ["账号", "转写剩余", "军师剩余", "状态", "注册", "操作"],
+          ["账号", "Credit 剩余", "状态", "注册", "操作"],
           data.map((u) => [
             esc(u.handle),
-            esc(u.asr_remaining),
-            esc(u.advisor_remaining),
+            esc(u.credits_remaining),
             esc(u.status),
             date(u.created_at),
             '<button data-grant="' +
@@ -171,16 +170,39 @@ async function load() {
         $('save').textContent = '生成';
       };
     }
+    if (view === 'credit-pricing') {
+      const policy = data.definition;
+      c.innerHTML = '<h1>Credit 积分计价</h1><p>1 Credit = 0.001 元。新任务使用当前版本，已开始的任务保留原价。</p>'
+        + '<form id="pricing-form"><label>加价百分比<input id="credit-markup" type="number" min="0" max="900" step="0.01" value="' + esc(policy.markupBasisPoints / 100 - 100) + '"></label>'
+        + policy.models.map((model,i) => '<fieldset><legend>' + esc(model.name) + ' · ' + esc(model.id) + '</legend>'
+          + '<label>输入元／百万 Token<input id="price-input-' + i + '" type="number" min="0" step="0.000001" value="' + esc(model.inputMicroCnyPerMillion / 1000000) + '"></label>'
+          + '<label>输出元／百万 Token<input id="price-output-' + i + '" type="number" min="0" step="0.000001" value="' + esc(model.outputMicroCnyPerMillion / 1000000) + '"></label></fieldset>').join('')
+        + '<button id="publish-pricing">发布版本 ' + esc(data.version + 1) + '</button></form>';
+      $('pricing-form').onsubmit = async event => {
+        event.preventDefault(); const button = $('publish-pricing'); button.disabled = true;
+        try {
+          const definition = structuredClone(policy);
+          definition.markupBasisPoints = Math.round((100 + Number($('credit-markup').value)) * 100);
+          definition.verifiedOn = new Date().toISOString().slice(0,10);
+          definition.models.forEach((model,i) => {
+            model.inputMicroCnyPerMillion = Math.round(Number($('price-input-' + i).value) * 1000000);
+            model.outputMicroCnyPerMillion = Math.round(Number($('price-output-' + i).value) * 1000000);
+          });
+          await api('credit-pricing', { expectedVersion: data.version, definition });
+          await load();
+        } catch(e) { error(e); button.disabled = false; }
+      };
+    }
     if (view === "jobs")
       c.innerHTML =
         "<h1>任务记录</h1>" +
         table(
-          ["用户", "类型", "状态", "字符 / 次数", "模型", "错误码", "时间"],
+          ["用户", "类型", "状态", "Credit / 成本元", "模型", "错误码", "时间"],
           data.map((j) => [
             esc(j.handle),
             esc(j.kind),
             esc(j.status),
-            esc(j.consumed_asr + " / " + j.consumed_advisor),
+            esc(j.credits + " / " + j.cost_cny),
             esc(j.provider_model || "—"),
             esc(j.error_code || "—"),
             date(j.created_at),
@@ -211,10 +233,8 @@ async function load() {
               " · " +
               esc(p.status) +
               "</small><p>" +
-              esc(p.definition.limits?.asr_characters ?? "待定") +
-              " 字符 / " +
-              esc(p.definition.limits?.advisor_generations ?? "待定") +
-              ' 次军师</p><button data-plan="' +
+              esc(p.definition.limits?.credits ?? "—") +
+              ' Credit</p><button data-plan="' +
               esc(p.id) +
               '">' +
               (p.status === "draft" ? "编辑" : "查看") +
@@ -240,7 +260,7 @@ async function load() {
           name: "付费套餐",
           version: 2,
           grantMode: "verified_purchase",
-          limits: { asr_characters: 100000, advisor_generations: 200 },
+          limits: { credits: 30000 },
           features: { cloud_sync: true },
           validDays: 30,
           price: { amountMinor: 0, currency: "CNY" },
@@ -302,15 +322,14 @@ $("content").onclick = async (e) => {
     if (b.dataset.grant)
       edit(
         "调整权益",
-        '<label>转写字符<input id="grant-asr" type="number" min="0" value="0"></label><label>军师次数<input id="grant-advisor" type="number" min="0" value="0"></label><label>云同步<select id="grant-sync"><option value="false">不包含</option><option value="true">包含</option></select></label><label>原因<input id="grant-reason" maxlength="300" placeholder="填写可追溯的调整原因"></label>',
+        '<label>Credit 积分<input id="grant-credits" type="number" min="0" step="0.001" value="0"></label><label>云同步<select id="grant-sync"><option value="false">不包含</option><option value="true">包含</option></select></label><label>原因<input id="grant-reason" maxlength="300" placeholder="填写可追溯的调整原因"></label>',
         () =>
           api("grants", {
             userId: b.dataset.grant,
             reason: $("grant-reason").value,
             plan: {
               limits: {
-                asr_characters: Number($("grant-asr").value),
-                advisor_generations: Number($("grant-advisor").value),
+                credits: Number($("grant-credits").value),
               },
               features: { cloud_sync: $("grant-sync").value === "true" },
             },

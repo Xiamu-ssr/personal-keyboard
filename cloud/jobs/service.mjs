@@ -13,7 +13,7 @@ export class Jobs {
   }
   async submit(user, request) {
     requireValue(
-      ["rewrite", "advisor"].includes(request.kind),
+      ["rewrite", "advisor", "translation"].includes(request.kind),
       "INVALID_KIND",
       "未知模型任务",
     );
@@ -24,16 +24,13 @@ export class Jobs {
       503,
     );
     const input = modelInput(request.kind, request.input);
-    const { job, created } = await this.ledger.reserve(
-      user.id,
-      request.requestId,
-      request.kind,
-      input,
-      {
-        hasImages: input.imageDigests?.length > 0,
-        sourceJob: request.sourceJob || null,
-      },
-    );
+    const options = { hasImages: input.imageDigests?.length > 0, sourceJob: request.sourceJob || null };
+    const existing = await this.ledger.existing(user.id, request.requestId, request.kind, input, options);
+    if (existing) return this.ledger.view(existing);
+    const prepared = await this.models.prepare(request.kind, await this.taskInput(user.id, request.kind, input));
+    const quote = { model: prepared.model, inputTokens: prepared.tokens + (input.imageDigests?.length || 0) * 4096, outputTokens: prepared.outputLimit };
+    const { job, created } = await this.ledger.reserve(user.id, request.requestId, request.kind, input,
+      { ...options, quote, execution: prepared });
     if (created && input.imageDigests?.length)
       this.images.set(job.id, request.input.images);
     if (created) this.pump();
@@ -108,9 +105,8 @@ export class Jobs {
         "IMAGE_EXPIRED",
         "图片已释放，请重新读屏",
       );
-      const { result, provider } = await this.models.run(
-        job.kind,
-        await this.taskInput(job.user_id, job.kind, input),
+      const { result, provider } = await this.models.execute(
+        input,
         images,
         controller.signal,
       );
@@ -135,6 +131,7 @@ export class Jobs {
     }
   }
   async taskInput(user, kind, input) {
+    if (kind === 'translation') return input;
     const prepared = await this.memory.forTask(user, kind, input);
     if (kind === 'advisor') prepared.slots = requestedSlots(await this.palettes.get(user), input.slotId);
     return prepared;

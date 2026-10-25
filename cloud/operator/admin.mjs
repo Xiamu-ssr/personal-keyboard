@@ -5,6 +5,7 @@ import {
   hash,
   passwordMatches,
 } from "../security.mjs";
+import { milliCredits } from '../billing/credits.mjs';
 import { isUuid } from "../billing/ledger.mjs";
 import { requireValue } from "../http/errors.mjs";
 export function validatePlan(p) {
@@ -23,14 +24,9 @@ export function validatePlan(p) {
     "INVALID_PLAN",
     "发放模式不正确",
   );
-  for (const k of ["asr_characters", "advisor_generations"])
-    requireValue(
-      Number.isSafeInteger(p.limits?.[k]) &&
-        p.limits[k] >= 0 &&
-        p.limits[k] <= 100000000,
-      "INVALID_PLAN",
-      "额度须为整数",
-    );
+  milliCredits(p.limits?.credits);
+  requireValue(Object.keys(p.limits).every(key => key === 'credits'), 'INVALID_PLAN', '套餐只使用统一Credit积分');
+  requireValue(p.limits.credits <= 100000000, 'INVALID_PLAN', '积分额度过大');
   requireValue(
     Number.isSafeInteger(p.price?.amountMinor) &&
       p.price.amountMinor >= 0 &&
@@ -120,7 +116,7 @@ export class Admin {
   }
   async overview() {
     const result = await this.db.query(
-      "SELECT kind,status,count(*)::integer count,sum(consumed_asr)::integer asr,sum(consumed_advisor)::integer advisor FROM jobs WHERE created_at>now()-interval '1 day' GROUP BY kind,status",
+      "SELECT kind,status,count(*)::integer count,sum(consumed_credits)::numeric/1000 credits,sum(cost_micro_cny)::numeric/1000000 cost_cny FROM jobs WHERE created_at>now()-interval '1 day' GROUP BY kind,status",
     );
     const count = (
       await this.db.query(
@@ -145,14 +141,14 @@ export class Admin {
   async users() {
     return (
       await this.db.query(
-        `SELECT u.id,u.handle,u.status,u.created_at,COALESCE(sum(g.asr_limit-g.asr_used) FILTER(WHERE NOT g.revoked AND (g.expires_at IS NULL OR g.expires_at>now())),0)::bigint asr_remaining,COALESCE(sum(g.advisor_limit-g.advisor_used) FILTER(WHERE NOT g.revoked AND (g.expires_at IS NULL OR g.expires_at>now())),0)::integer advisor_remaining FROM users u LEFT JOIN grants g ON g.user_id=u.id GROUP BY u.id ORDER BY u.created_at DESC LIMIT 200`,
+        `SELECT u.id,u.handle,u.status,u.created_at,COALESCE(sum(g.credit_limit-g.credit_used) FILTER(WHERE NOT g.revoked AND (g.expires_at IS NULL OR g.expires_at>now())),0)::numeric/1000 credits_remaining FROM users u LEFT JOIN grants g ON g.user_id=u.id GROUP BY u.id ORDER BY u.created_at DESC LIMIT 200`,
       )
     ).rows;
   }
   async jobs() {
     return (
       await this.db.query(
-        "SELECT j.id,u.handle,j.kind,j.status,j.consumed_asr,j.consumed_advisor,j.error_code,j.provider_model,j.provider_usage,j.created_at FROM jobs j JOIN users u ON u.id=j.user_id ORDER BY j.created_at DESC LIMIT 150",
+        "SELECT j.id,u.handle,j.kind,j.status,j.consumed_credits::numeric/1000 AS credits,j.cost_micro_cny::numeric/1000000 AS cost_cny,j.billing_snapshot,j.error_code,j.provider_model,j.provider_usage,j.created_at FROM jobs j JOIN users u ON u.id=j.user_id ORDER BY j.created_at DESC LIMIT 150",
       )
     ).rows;
   }

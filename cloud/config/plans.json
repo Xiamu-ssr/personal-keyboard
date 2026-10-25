@@ -1,30 +1,39 @@
 {
-  "schemaVersion": 1,
-  "activeWelcomePlan": "welcome-v1",
+  "schemaVersion": 2,
+  "activeWelcomePlan": "welcome-credits-v1",
   "metering": {
-    "asr_characters": "ASR 最终成功文本经 NFC 规范化后的非空白 Unicode 码点数；中间结果不累计，个人改写不重复扣字符。",
-    "advisor_generations": "每次成功生成一组结果扣 1 次；更多是新任务，重试同一任务不重复扣。",
-    "failures": "失败、取消以及未形成成功最终结果的预留均释放；已结算任务按原结果恢复。"
+    "credits": "统一 Credit 积分；1 Credit 对应 0.001 元。按供应商标准价加成75%，以实际输入和输出 Token 结算，最小0.001 Credit。",
+    "failures": "失败、取消释放预留；成功原请求重试不重复扣。",
+    "reservation": "执行前预留，完成后退回差额；每个任务冻结计价版本，调整只影响新任务。"
   },
   "plans": [
     {
-      "id": "welcome-v1",
+      "id": "welcome-credits-v1",
       "name": "免费账户",
       "version": 1,
       "status": "published",
       "grantMode": "once_per_account",
-      "limits": { "asr_characters": 10000, "advisor_generations": 20 },
-      "features": { "cloud_sync": false },
-      "price": { "amountMinor": 0, "currency": "CNY" }
+      "limits": {
+        "credits": 3000
+      },
+      "features": {
+        "cloud_sync": false
+      },
+      "price": {
+        "amountMinor": 0,
+        "currency": "CNY"
+      }
     },
     {
-      "id": "paid-v1-draft",
+      "id": "paid-credits-v1-draft",
       "name": "付费套餐",
       "version": 1,
       "status": "draft",
       "grantMode": "verified_purchase",
       "limits": null,
-      "features": { "cloud_sync": true },
+      "features": {
+        "cloud_sync": true
+      },
       "price": null
     }
   ]

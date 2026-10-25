@@ -119,8 +119,8 @@ public final class AdvisorController extends PanelController {
 
   public void start(boolean ignored) {
     if (advisor.valid(advisor.token(), host.generation())
-        && advisor.stage == AdvisorSession.Stage.RESULTS
-        && !replies.choices().isEmpty()) {
+        && (advisor.stage == AdvisorSession.Stage.RESULTS || advisor.stage == AdvisorSession.Stage.GENERATING
+            || (advisor.stage == AdvisorSession.Stage.ERROR && advisor.pages() > 0))) {
       snapshot();
       panel();
       return;
@@ -303,42 +303,14 @@ public final class AdvisorController extends PanelController {
       return;
     }
     advisor.fail(error);
-    panel();
+    if (host.mode().equals("advisor") || host.mode().equals("capturing")) panel();
   }
 
   private void panel() {
     if (!advisor.valid(advisor.token(), host.generation())) return;
     reset("advisor", 340);
     sheet();
-    LinearLayout heading = Ui.row(this);
-    View leave =
-        advisor.stage == AdvisorSession.Stage.GENERATING
-            ? Icons.button(this, R.drawable.ic_close, "取消生成并返回键盘", this::leave)
-            : Ui.icon(this, "返回", this::leave);
-    heading.addView(leave, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-    TextView title = Ui.text(this, "帮我回", 18, Ui.ink());
-    title.setTypeface(null, android.graphics.Typeface.BOLD);
-    LinearLayout names = Ui.row(this);
-    names.addView(title);
-    if (advisor.stage == AdvisorSession.Stage.RESULTS && !replies.choices().isEmpty()) {
-      Ui.gap(this, names, 0);
-      TextView collection =
-          Ui.text(
-              this,
-              replies.choices().size() == 6 ? "六种表达" : replies.choices().get(0).name + " · 3 条",
-              13,
-              Ui.sub());
-      Ui.pad(this, collection, 12, 0);
-      collection.setSingleLine(true);
-      collection.setEllipsize(android.text.TextUtils.TruncateAt.END);
-      names.addView(collection, new LinearLayout.LayoutParams(0, -2, 1));
-    }
-    heading.addView(names, new LinearLayout.LayoutParams(0, -2, 1));
-    View options = Ui.icon(this, "更多", () -> {});
-    options.setOnClickListener(v -> options(v));
-    if (advisor.stage != AdvisorSession.Stage.GENERATING)
-      heading.addView(options, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-    root.addView(heading);
+    root.addView(host.workspaceBar(WorkspaceBar.Mode.ADVISOR), new LinearLayout.LayoutParams(-1, Ui.dp(this, 48)));
     if (advisor.stage == AdvisorSession.Stage.GENERATING) {
       LinearLayout progress = Ui.col(this);
       progress.setGravity(Gravity.CENTER);
@@ -413,6 +385,10 @@ public final class AdvisorController extends PanelController {
     }
     LinearLayout footer = Ui.row(this);
     Ui.pad(this, footer, 8, 4);
+    View options = Ui.icon(this, "更多", () -> {});
+    options.setContentDescription("回复选项");
+    options.setOnClickListener(v -> options(v));
+    footer.addView(options, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
     View back =
         Icons.button(
             this,
@@ -554,7 +530,7 @@ public final class AdvisorController extends PanelController {
                     }
                     replies.accept(choices, output.getJSONArray("messages").toString());
                     advisor.stage = AdvisorSession.Stage.RESULTS;
-                    panel();
+                    if (host.mode().equals("advisor")) panel();
                   } catch (Exception e) {
                     fail("回复未完整保存，请重试");
                   }

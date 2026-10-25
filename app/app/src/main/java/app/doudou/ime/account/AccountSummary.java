@@ -45,9 +45,7 @@ public final class AccountSummary {
     if (app.cloud.loggedIn() && ent != null) {
       Ui.gap(c, card, 24);
       LinearLayout usage = Ui.row(c);
-      metric(c, usage, ent.optJSONObject("asr"), "转写字符可用");
-      ViewSeparator.add(c, usage);
-      metric(c, usage, ent.optJSONObject("advisor"), "军师次数可用");
+      metric(c, usage, ent.optJSONObject("credits"), "Credit 积分可用");
       card.addView(usage);
     }
     return card;
@@ -58,7 +56,7 @@ public final class AccountSummary {
     String number =
         item == null
             ? "—"
-            : String.format(java.util.Locale.CHINA, "%,d", item.optLong("available"));
+            : new java.text.DecimalFormat("#,##0.###").format(item.optDouble("available"));
     TextView value = Ui.text(c, number, 26, Ui.ink());
     value.setTypeface(null, Typeface.BOLD);
     value.setSingleLine(true);
@@ -70,13 +68,4 @@ public final class AccountSummary {
     row.addView(column, new LinearLayout.LayoutParams(0, -2, 1));
   }
 
-  private static final class ViewSeparator {
-    static void add(Context c, LinearLayout row) {
-      android.view.View line = new android.view.View(c);
-      line.setBackgroundColor(Ui.line());
-      LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.dp(c, 1), Ui.dp(c, 36));
-      lp.setMargins(Ui.dp(c, 12), 0, Ui.dp(c, 20), 0);
-      row.addView(line, lp);
-    }
-  }
 }

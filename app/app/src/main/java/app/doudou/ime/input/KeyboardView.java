@@ -83,7 +83,8 @@ public final class KeyboardView extends LinearLayout {
       boolean symbols,
       boolean privacy,
       boolean nested,
-      Actions a) {
+      Actions a,
+      View workspace) {
     super(c);
     this.english = english;
     actions = a;
@@ -96,54 +97,7 @@ public final class KeyboardView extends LinearLayout {
     LinearLayout bar = Ui.row(c);
     bar.setPadding(Ui.dp(c, 4), 0, Ui.dp(c, 4), 0);
     idle = Ui.row(c);
-    if (!nested) {
-      View more = Icons.button(c, R.drawable.ic_grid_view, "更多", a::more);
-      more.setTooltipText("表情、剪贴板与键盘工具");
-      idle.addView(more, new LayoutParams(Ui.dp(c, 48), Ui.dp(c, 48)));
-    }
-    if (privacy) {
-      TextView privateLabel = Ui.text(c, "隐私输入", 13, Ui.sub());
-      privateLabel.setContentDescription("隐私输入已开启");
-      idle.addView(privateLabel);
-    }
-    if (!nested && !privacy) {
-      TextView record =
-          Ui.button(
-              c,
-              app.doudou.ime.recording.RecordingService.current == null ? "点击录音" : "● 录音中",
-              a::recorder);
-      record.setTextColor(Ui.sub());
-      record.setBackground(Ui.pressable(c, Ui.surface(), 24));
-      android.graphics.drawable.Drawable mic = c.getDrawable(R.drawable.ic_mic);
-      mic.setTint(Ui.sub());
-      mic.setBounds(0, 0, Ui.dp(c, 20), Ui.dp(c, 20));
-      record.setCompoundDrawables(mic, null, null, null);
-      record.setCompoundDrawablePadding(Ui.dp(c, 6));
-      idle.addView(record, new LayoutParams(-2, Ui.dp(c, 40)));
-    }
-    idle.addView(new Space(c), new LayoutParams(0, 1, 1));
-    if (!nested && !privacy) {
-      FrameLayout advisor = new FrameLayout(c);
-      advisor.setContentDescription("帮我回");
-      advisor.setFocusable(true);
-      advisor.setOnClickListener(v -> a.advisor());
-      advisor.setTooltipText("看聊天，帮你回");
-      TextView pill = Ui.text(c, "帮我回", 14, Ui.ink());
-      pill.setGravity(Gravity.CENTER);
-      pill.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-      android.graphics.drawable.GradientDrawable surface = Ui.bg(c, Ui.specialKey(), 17);
-      surface.setStroke(Ui.dp(c, 1), Ui.outline());
-      pill.setBackground(surface);
-      advisor.addView(pill, new FrameLayout.LayoutParams(-1, Ui.dp(c, 34), Gravity.CENTER));
-      LayoutParams advisorSize = new LayoutParams(Ui.dp(c, 72), Ui.dp(c, 48));
-      advisorSize.setMargins(Ui.dp(c, 4), 0, Ui.dp(c, 2), 0);
-      idle.addView(advisor, advisorSize);
-    }
-    if (!nested) {
-      View hide = Ui.icon(c, "收起", a::hide);
-      hide.setContentDescription("收起键盘");
-      idle.addView(hide, new LayoutParams(Ui.dp(c, 48), Ui.dp(c, 48)));
-    }
+    if (workspace != null) idle.addView(workspace, new LayoutParams(-1, -1));
     bar.addView(idle, new LayoutParams(-1, -1));
     candidateRow = Ui.row(c);
     candidateScroll = new HorizontalScrollView(c);

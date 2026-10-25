@@ -35,6 +35,10 @@ public final class RecordingService extends Service {
     return status;
   }
 
+  public boolean belongsToCurrentAccount() {
+    return store != null && store.accountMatches();
+  }
+
   public String text() {
     return store == null ? "" : store.text(true);
   }

@@ -9,12 +9,6 @@ import java.util.*;
 /** Discoverable local symbol and emoji collections; no network and no unsupported modes. */
 public final class KeyboardExtras {
   private final EditorHost host;
-  private static final String[] EMOJI = {
-    "😀 😄 😂 🤣 😊 🥹 🙂 🙃 😉 😍 🥰 😘 😎 🤔 🫡 🤗 🤭 😅 🥲 😭 😮 😳 😴 🙄 😤 😡 🥺 😱 😇 🤩",
-    "👍 👎 👏 🙌 🤝 🙏 💪 🤞 ✌️ 👌 🫶 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 💔 💯 🔥 ✨ 🎉",
-    "☀️ 🌙 ⭐ 🌈 🌸 🍀 🍎 🍊 🍉 ☕ 🍻 🥂 🍰 🎂 🍜 🍲 🧋 🥟 🐶 🐱 🐼 🐥 🐸 🦊",
-    "✅ ❌ ❓ ❗ 💬 📞 💡 📌 📅 ⏰ 🎁 🎈 🧧 💰 🏠 🚗 🚄 ✈️ 🏃 🎵 🎬 📚 💻 📱"
-  };
   private static final String[] SYMBOLS = {
     "， 。 ？ ！ 、 ： ； … — · ～ （ ） 【 】 《 》 「 」 『 』 〈 〉 \" ' / \\ _ @ # & * + - = % ¥ $ € £",
     "1 2 3 4 5 6 7 8 9 0 ① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩ Ⅰ Ⅱ Ⅲ Ⅳ Ⅴ",
@@ -27,29 +21,29 @@ public final class KeyboardExtras {
   }
 
   public void emoji() {
-    show(true, 0);
+    new EmojiPanel(host).show();
   }
 
   public void symbols() {
-    show(false, 0);
+    showSymbols(0);
   }
 
-  private void show(boolean emoji, int selected) {
+  private void showSymbols(int selected) {
     host.cancelVoice();
     host.commitComposing();
     Context c = host.context();
-    LinearLayout root = host.openPanel(emoji ? "emoji" : "symbols", KeyboardView.HEIGHT_DP);
+    LinearLayout root = host.openPanel("symbols", KeyboardView.HEIGHT_DP);
     root.setBackgroundColor(Ui.keyboard());
     LinearLayout header = Ui.row(c);
     header.addView(
         Ui.button(c, "ABC", host::letters),
         new LinearLayout.LayoutParams(Ui.dp(c, 56), Ui.dp(c, 48)));
-    String[] names =
-        emoji ? new String[] {"笑脸", "心意", "生活", "符号"} : new String[] {"常用", "数字", "数学", "更多"};
+    String[] names = {"常用", "数字", "数学", "更多"};
     for (int i = 0; i < names.length; i++) {
       final int page = i;
-      TextView tab = Ui.button(c, names[i], () -> show(emoji, page));
+      TextView tab = Ui.button(c, names[i], () -> showSymbols(page));
       tab.setTextSize(13);
+      tab.setPadding(0, 0, 0, 0);
       tab.setTextColor(i == selected ? Ui.accent() : Ui.sub());
       tab.setBackground(Ui.pressable(c, android.graphics.Color.TRANSPARENT, 12));
       header.addView(tab, new LinearLayout.LayoutParams(0, Ui.dp(c, 48), 1));
@@ -62,12 +56,12 @@ public final class KeyboardExtras {
     Ui.pad(c, content, 4, 4);
     scroll.addView(content);
     root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-    String[] values = (emoji ? EMOJI : SYMBOLS)[selected].split(" ");
+    String[] values = SYMBOLS[selected].split(" ");
     LinearLayout row = null;
     for (int i = 0; i < values.length; i++) {
       if (i % 6 == 0) {
         row = Ui.row(c);
-        content.addView(row, new LinearLayout.LayoutParams(-1, Ui.dp(c, 52)));
+        content.addView(row, new LinearLayout.LayoutParams(-1, Ui.dp(c, 56)));
       }
       String value = values[i];
       TextView key =
@@ -76,10 +70,11 @@ public final class KeyboardExtras {
               value,
               () -> {
                 host.insert(value);
-                if (!host.privateMode() && emoji)
-                  host.services().prefs().edit().putString("recentEmoji", value).apply();
+
               });
-      key.setTextSize(emoji ? 25 : 21);
+      key.setTextSize(21);
+      key.setPadding(0, 0, 0, 0);
+      key.setEllipsize(null);
       key.setBackground(Ui.pressable(c, Ui.surface(), 8));
       LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, -1, 1);
       size.setMargins(Ui.dp(c, 3), Ui.dp(c, 3), Ui.dp(c, 3), Ui.dp(c, 3));

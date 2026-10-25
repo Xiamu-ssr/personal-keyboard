@@ -27,6 +27,8 @@ public final class KeyboardApp extends Application {
   public void onCreate() {
     super.onCreate();
     instance = this;
+    androidx.emoji2.text.EmojiCompat.init(new androidx.emoji2.bundled.BundledEmojiCompatConfig(this)
+        .setReplaceAll(true).setUseAfterUpdatableSystemFonts(true));
     Skin.load(this);
     setTheme(Skin.theme());
     cloud = new app.doudou.ime.cloud.CloudClient(this);

@@ -92,7 +92,7 @@ public final class KeyboardLayoutTest {
                     public void expand() {}
 
                     public void haptic(View v) {}
-                  });
+                  }, null);
           FrameLayout root = new FrameLayout(activity);
           int h =
               Math.round(

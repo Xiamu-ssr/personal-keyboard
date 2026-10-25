@@ -13,18 +13,18 @@ const source = YAML.parse(
   await fs.readFile(new URL("../spec/spec.yaml", import.meta.url), "utf8"),
 );
 
-test("three business views share entities, never duplicate processing steps as nodes", () => {
+test("four business views share entities, never duplicate processing steps as nodes", () => {
   assert.deepEqual(validateWorld(source), {
     domains: 5,
-    businesses: 3,
-    nodes: 12,
+    businesses: 4,
+    nodes: 13,
     channels: 3,
     lanes: 6,
-    prompts: 3,
+    prompts: 4,
   });
   assert.deepEqual(
     source.domains.find((d) => d.id === "app").nodes.map((n) => n.title),
-    ["历史", "记忆缓存"],
+    ["历史", "记忆缓存", "翻译草稿"],
   );
   assert.deepEqual(
     source.domains.find((d) => d.id === "cloud").nodes.map((n) => n.title),

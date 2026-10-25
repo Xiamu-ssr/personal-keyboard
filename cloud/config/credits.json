@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "unit": "Credit",
+  "creditMicroCny": 1000,
+  "markupBasisPoints": 17500,
+  "priceBasis": "阿里云北京公开标准价，不含赠额、促销与缓存折扣",
+  "verifiedOn": "2026-10-25",
+  "source": "https://help.aliyun.com/zh/model-studio/model-pricing",
+  "models": [
+    { "id": "qwen-audio-3.1-asr-flash-message", "name": "语音转写", "inputMicroCnyPerMillion": 6000000, "outputMicroCnyPerMillion": 4500000 },
+    { "id": "qwen3.8-flash", "name": "军师、整理与翻译", "inputMicroCnyPerMillion": 800000, "outputMicroCnyPerMillion": 2700000 }
+  ],
+  "legacyConversion": { "milliCreditsPerAsrCharacter": 200, "milliCreditsPerAdvisorGeneration": 100000 }
+}

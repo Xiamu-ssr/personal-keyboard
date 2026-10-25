@@ -8,8 +8,6 @@ import android.widget.*;
 import app.doudou.ime.app.KeyboardApp;
 import app.doudou.ime.design.ThemedActivity;
 import app.doudou.ime.design.Ui;
-import app.doudou.ime.design.Icons;
-import app.doudou.ime.R;
 import java.util.*;
 import org.json.*;
 
@@ -26,13 +24,9 @@ public final class PaletteActivity extends ThemedActivity {
   private TextView save;
   private ScrollView scroll;
   private int restoreScroll;
-  private final Set<String> expanded = new HashSet<>(Collections.singleton("rhetoric"));
 
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
-    if (state != null && state.containsKey("expanded")) {
-      expanded.clear(); expanded.addAll(state.getStringArrayList("expanded"));
-    }
     app = (KeyboardApp) getApplication(); store = new PaletteStore(app);
     account = app.cloud.userId(); index = getIntent().getIntExtra("slot", 0);
     if (!app.cloud.loggedIn() || index < 0 || index >= 6) { finish(); return; }
@@ -91,7 +85,6 @@ public final class PaletteActivity extends ThemedActivity {
     if (isFinishing()) return;
     shell();
     try {
-      body.addView(Ui.text(this, "名称", 14, Ui.sub())); Ui.gap(this, body, 8);
       name = Ui.edit(this, "给这格取个名字", draft.getString("name"));
       name.setSingleLine(true); name.setTextSize(22);
       name.setFilters(new android.text.InputFilter[] {new android.text.InputFilter.LengthFilter(16)});
@@ -112,7 +105,21 @@ public final class PaletteActivity extends ThemedActivity {
       LinearLayout.LayoutParams next = new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1); next.leftMargin = Ui.dp(this, 8);
       actions.addView(inherit, next); body.addView(actions);
       JSONArray fields = PaletteDefinition.fields(this);
-      for (String id : new String[] {"length", "directness", "warmth", "rhetoric", "emoji", "emotion", "formality", "audience", "structure"})
+      Ui.gap(this, body, 18);
+      LinearLayout bank = Ui.col(this); Ui.pad(this, bank, 10, 14);
+      bank.setBackground(Ui.bg(this, Ui.panel(), 16)); body.addView(bank);
+      String[] graduated = {"length", "directness", "warmth", "emoji", "emotion", "formality", "audience"};
+      int columns = getResources().getConfiguration().fontScale > 1.15f ? 3 : 4;
+      for (int start = 0; start < graduated.length; start += columns) {
+        LinearLayout row = Ui.row(this); row.setGravity(Gravity.TOP); bank.addView(row);
+        for (int j = start; j < Math.min(start + columns, graduated.length); j++)
+          for (int i = 0; i < fields.length(); i++)
+            if (graduated[j].equals(fields.getJSONObject(i).getString("id"))) graduatedField(fields.getJSONObject(i), row);
+        for (int j = Math.min(start + columns, graduated.length); j < start + columns; j++)
+          row.addView(new Space(this), new LinearLayout.LayoutParams(0, 1, 1));
+        if (start + columns < graduated.length) Ui.gap(this, bank, 20);
+      }
+      for (String id : new String[] {"rhetoric", "structure"})
         for (int i = 0; i < fields.length(); i++) if (id.equals(fields.getJSONObject(i).getString("id"))) field(fields.getJSONObject(i));
       Ui.gap(this, body, 12);
       body.setFocusableInTouchMode(true); body.requestFocus();
@@ -135,25 +142,20 @@ public final class PaletteActivity extends ThemedActivity {
     LinearLayout header = Ui.row(this); header.setGravity(Gravity.CENTER_VERTICAL);
     header.setMinimumHeight(Ui.dp(this, 56)); header.setFocusable(true);
     header.setContentDescription(title + "设置");
-    header.setBackground(Ui.pressable(this, android.graphics.Color.TRANSPARENT, 12));
     TextView label = Ui.text(this, title + (multi ? " · 可组合" : ""), 16, Ui.ink()); label.setTypeface(null, Typeface.BOLD);
     TextView summary = Ui.text(this, "", 14, Ui.sub()); summary.setGravity(Gravity.END);
     summary.setSingleLine(true); summary.setEllipsize(android.text.TextUtils.TruncateAt.END);
-    ImageView arrow = Icons.image(this, R.drawable.ic_expand_more, Ui.sub());
     header.addView(label, new LinearLayout.LayoutParams(-2, -2));
     LinearLayout.LayoutParams summarySize = new LinearLayout.LayoutParams(0, -2, 1); summarySize.leftMargin = Ui.dp(this, 10);
     header.addView(summary, summarySize);
-    LinearLayout.LayoutParams arrowSize = new LinearLayout.LayoutParams(Ui.dp(this, 20), Ui.dp(this, 20)); arrowSize.leftMargin = Ui.dp(this, 6);
-    header.addView(arrow, arrowSize); body.addView(header);
+    body.addView(header);
     LinearLayout choices = Ui.col(this); body.addView(choices);
     Runnable describe = () -> {
       try {
         String current = selectedNames(f);
-        summary.setText(current); header.setStateDescription(current + (expanded.contains(id) ? "，已展开" : "，已收起"));
-        arrow.setRotation(expanded.contains(id) ? 180 : 0); choices.setVisibility(expanded.contains(id) ? View.VISIBLE : View.GONE);
+        summary.setText(current); header.setStateDescription(current);
       } catch (Exception ignored) { }
     };
-    header.setOnClickListener(v -> { if (expanded.contains(id)) expanded.remove(id); else expanded.add(id); describe.run(); });
     JSONArray options = new JSONArray(f.getJSONArray("options").toString());
     if (multi) {
       JSONArray extended = new JSONArray(); extended.put(new JSONObject().put("id", "inherit").put("name", "随本人"));
@@ -162,7 +164,7 @@ public final class PaletteActivity extends ThemedActivity {
     }
     final JSONArray values = options;
     int width = getResources().getConfiguration().screenWidthDp - 40;
-    int columns = getResources().getConfiguration().fontScale > 1.15f || width < 320 ? 2 : 4;
+    int columns = getResources().getConfiguration().fontScale > 1.15f || width < 320 ? 2 : 3;
     List<ToggleButton> buttons = new ArrayList<>();
     for (int start = 0; start < options.length(); start += columns) {
       LinearLayout row = Ui.row(this); row.setGravity(Gravity.TOP);
@@ -207,6 +209,62 @@ public final class PaletteActivity extends ThemedActivity {
       choices.addView(row); if (start + columns < options.length()) Ui.gap(this, choices, 8);
     }
     Ui.gap(this, choices, 6); paintOptions(f, values, buttons); describe.run();
+  }
+
+  /** Ordered preferences are actual discrete controls. Categories remain categories. */
+  private void graduatedField(JSONObject f, LinearLayout row) throws JSONException {
+    String id = f.getString("id"), title = f.getString("name");
+    JSONArray all = f.getJSONArray("options"), levels = new JSONArray();
+    for (int i = 0; i < all.length(); i++) if (!all.getJSONObject(i).getString("id").equals("inherit")) levels.put(all.getJSONObject(i));
+    LinearLayout column = Ui.col(this); column.setGravity(Gravity.CENTER_HORIZONTAL);
+    Ui.pad(this, column, 3, 0); row.addView(column, new LinearLayout.LayoutParams(0, -2, 1));
+    String shortTitle = id.equals("formality") ? "正式" : id.equals("directness") ? "直接"
+        : id.equals("warmth") ? "亲近" : id.equals("emotion") ? "情绪" : id.equals("audience") ? "话题" : title;
+    TextView label = Ui.text(this, shortTitle, 14, Ui.ink()); label.setGravity(Gravity.CENTER);
+    label.setTypeface(null, Typeface.BOLD); column.addView(label, new LinearLayout.LayoutParams(-1, Ui.dp(this, 28)));
+    Ui.gap(this, column, 8);
+    PreferenceSlider slider = new PreferenceSlider(this); slider.setMax(levels.length() - 1);
+    String[] levelNames = new String[levels.length()];
+    for(int i=0;i<levels.length();i++)levelNames[i]=levels.getJSONObject(i).getString("name");
+    slider.setLevels(levelNames);
+    slider.setTag("palette:" + id); slider.setContentDescription(title + "调节");
+    slider.setPadding(0, 0, 0, 0);
+    column.addView(slider, new LinearLayout.LayoutParams(-1, Ui.dp(this, 144)));
+    TextView inherit = Ui.text(this, "", 12, Ui.sub()); inherit.setGravity(Gravity.CENTER);
+    inherit.setMaxLines(2);
+    column.addView(inherit, new LinearLayout.LayoutParams(-1, Ui.dp(this, 48)));
+    Runnable paint = () -> {
+      try {
+        String value = draft.getJSONObject("attributes").getString(id);
+        boolean inherited = value.equals("inherit"); int position = levels.length() / 2;
+        for (int i = 0; i < levels.length(); i++) if (value.equals(levels.getJSONObject(i).getString("id"))) position = i;
+        inherit.setText(inherited ? "随本人" : "恢复跟随");
+        inherit.setContentDescription(title + (inherited ? "：随本人" : "：恢复随本人"));
+        inherit.setClickable(!inherited); inherit.setFocusable(!inherited);
+        inherit.setStateDescription(inherited ? "随本人" : null);
+        inherit.setTextColor(inherited ? Ui.sub() : Ui.appAccent());
+        inherit.setBackground(inherited ? null : Ui.pressable(this, android.graphics.Color.TRANSPARENT, 12));
+        slider.inherited(inherited); slider.setProgress(position);
+        String description = inherited ? "随本人" : levels.getJSONObject(position).getString("name");
+        slider.setStateDescription(description);
+      } catch (Exception ignored) { }
+    };
+    slider.setExplicitSelection(() -> {
+      if (busy) return;
+      try {
+        String selected = levels.getJSONObject(slider.getProgress()).getString("id");
+        if (!draft.getJSONObject("attributes").getString(id).equals(selected)) {
+          draft.getJSONObject("attributes").put(id, selected);
+          dirty = true; saveState(); paint.run();
+        }
+      } catch (Exception ignored) { }
+    });
+    inherit.setOnClickListener(v -> {
+      if (busy) return;
+      try { draft.getJSONObject("attributes").put(id, "inherit"); dirty = true; saveState(); paint.run(); }
+      catch (Exception ignored) { }
+    });
+    paint.run();
   }
 
   private String selectedNames(JSONObject field) throws JSONException {
@@ -306,7 +364,6 @@ public final class PaletteActivity extends ThemedActivity {
   }
 
   @Override protected void onSaveInstanceState(Bundle state) {
-    state.putStringArrayList("expanded", new ArrayList<>(expanded));
     if (snapshot != null && draft != null) {
       state.putString("snapshot", snapshot.toString()); state.putString("draft", draft.toString());
       state.putString("account", account); state.putBoolean("dirty", dirty);

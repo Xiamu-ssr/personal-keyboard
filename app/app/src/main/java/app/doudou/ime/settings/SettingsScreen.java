@@ -167,7 +167,7 @@ public final class SettingsScreen extends Screen {
         "开源许可",
         () -> {
           StringBuilder notices = new StringBuilder();
-          for (String file : new String[] {"aosp-notice.txt", "wanxiang-notice.txt"})
+          for (String file : new String[] {"aosp-notice.txt", "wanxiang-notice.txt", "licenses/androidx-emoji.txt", "licenses/noto-emoji.txt"})
             try (InputStream in = activity.getAssets().open(file)) {
               ByteArrayOutputStream out = new ByteArrayOutputStream();
               byte[] b = new byte[4096];

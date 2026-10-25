@@ -6,6 +6,7 @@ import android.content.*;
 import android.content.ClipboardManager;
 import android.graphics.*;
 import android.inputmethodservice.InputMethodService;
+import app.doudou.ime.input.Graphemes;
 import android.os.*;
 import android.text.*;
 import android.view.*;
@@ -14,6 +15,9 @@ import android.widget.*;
 import app.doudou.ime.design.Ui;
 import app.doudou.ime.input.KeyboardExtras;
 import app.doudou.ime.input.KeyboardView;
+import app.doudou.ime.input.WorkspaceBar;
+import app.doudou.ime.recording.RecordingPanel;
+import app.doudou.ime.translation.TranslationController;
 import app.doudou.ime.input.engine.PinyinEngine;
 import app.doudou.ime.input.learning.EditTracker;
 import app.doudou.ime.memory.MemoryRefresh;
@@ -35,6 +39,8 @@ public final class KeyboardService extends InputMethodService
   private app.doudou.ime.voice.VoiceController voice;
   private app.doudou.ime.advisor.AdvisorController advisorController;
   private app.doudou.ime.input.KeyboardMenu keyboardMenu;
+  private RecordingPanel recordingPanel;
+  private TranslationController translation;
   private ClipboardManager clipboard;
   private final ClipboardManager.OnPrimaryClipChangedListener clipListener =
       () -> rememberClipboard(true);
@@ -74,6 +80,8 @@ public final class KeyboardService extends InputMethodService
     voice = new app.doudou.ime.voice.VoiceController(this);
     advisorController = new app.doudou.ime.advisor.AdvisorController(this);
     keyboardMenu = new app.doudou.ime.input.KeyboardMenu(this);
+    recordingPanel = new RecordingPanel(this);
+    translation = new TranslationController(this);
     clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
     clipboard.addPrimaryClipChangedListener(clipListener);
   }
@@ -215,6 +223,10 @@ public final class KeyboardService extends InputMethodService
   @Override
   public boolean onKeyDown(int keyCode, KeyEvent event) {
     if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
+      if (localEditor != null) {
+        finishLocalEdit();
+        return true;
+      }
       if (voice != null && voice.active()) {
         voice.leave();
         return true;
@@ -231,6 +243,10 @@ public final class KeyboardService extends InputMethodService
         typing();
         return true;
       }
+      if (mode.equals("translation")) {
+        typing();
+        return true;
+      }
       if (mode.equals("advisor") || mode.equals("capturing")) {
         advisorController.leave();
         return true;
@@ -243,6 +259,7 @@ public final class KeyboardService extends InputMethodService
   public void onDestroy() {
     if (clipboard != null) clipboard.removePrimaryClipChangedListener(clipListener);
     cancelJobs();
+    if (translation != null) translation.cancel();
     generation++;
     main.removeCallbacksAndMessages(null);
     super.onDestroy();
@@ -292,6 +309,28 @@ public final class KeyboardService extends InputMethodService
       v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
   }
 
+  public View workspaceBar(WorkspaceBar.Mode selected) {
+    return new WorkspaceBar(this, selected, privateMode(), new WorkspaceBar.Actions() {
+      public void select(WorkspaceBar.Mode next) {
+        if (next == WorkspaceBar.Mode.RECORDING) recordingPanel.show();
+        else if (next == WorkspaceBar.Mode.ADVISOR) startAdvisor(false);
+        else if (next == WorkspaceBar.Mode.TRANSLATION)
+          translation.show(mode.equals("recorder") ? recordingPanel.text() : null);
+        else typing();
+      }
+      public void tools() { keyboardMenu.show(); }
+      public void hide() { requestHideSelf(0); }
+    });
+  }
+
+  private void finishLocalEdit() {
+    commitComposing();
+    Runnable done = finishLocal;
+    localEditor = null;
+    finishLocal = null;
+    if (done != null) done.run();
+  }
+
   public void letters() {
     symbols = false;
     typing();
@@ -309,13 +348,7 @@ public final class KeyboardService extends InputMethodService
     if (localEditor != null) {
       panelHeading(
           "修改后返回",
-          () -> {
-            commitComposing();
-            Runnable done = finishLocal;
-            localEditor = null;
-            finishLocal = null;
-            if (done != null) done.run();
-          });
+          this::finishLocalEdit);
       if (localEditor.getParent() != null)
         ((ViewGroup) localEditor.getParent()).removeView(localEditor);
       root.addView(localEditor, new LinearLayout.LayoutParams(-1, Ui.dp(this, 66)));
@@ -390,8 +423,7 @@ public final class KeyboardService extends InputMethodService
               }
 
               public void recorder() {
-                if (localEditor == null)
-                  new app.doudou.ime.recording.RecordingPanel(KeyboardService.this).show();
+                if (localEditor == null) recordingPanel.show();
               }
 
               public void hide() {
@@ -433,7 +465,7 @@ public final class KeyboardService extends InputMethodService
               public void haptic(View key) {
                 KeyboardService.this.haptic(key);
               }
-            });
+            }, localEditor == null ? workspaceBar(WorkspaceBar.Mode.INPUT) : null);
     root.addView(keyboard, new LinearLayout.LayoutParams(-1, 0, 1));
     if (composing.length() > 0) refreshCandidates();
     if (voice.active()) voice.render();
@@ -602,7 +634,13 @@ public final class KeyboardService extends InputMethodService
     } else {
       CharSequence selected = ic.getSelectedText(0);
       if (selected != null && selected.length() > 0) ic.commitText("", 1);
-      else ic.deleteSurroundingTextInCodePoints(1, 0);
+      else {
+        CharSequence before = ic.getTextBeforeCursor(1024, 0);
+        if (before == null) {
+          ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL));
+          ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL));
+        } else if (before.length() > 0) ic.deleteSurroundingText(Graphemes.lastLength(before), 0);
+      }
     }
   }
 
@@ -660,6 +698,9 @@ public final class KeyboardService extends InputMethodService
     String now = full();
     int[] s = selection();
     if (text.isEmpty()) return false;
+    observeHistory();
+    historyEdits.clear();
+    trackedHistory = "";
     insertionSerial++;
     edits.clear();
     if (now != null && s != null)
@@ -786,7 +827,7 @@ public final class KeyboardService extends InputMethodService
     ic.setSelection(pos, pos);
   }
 
-  public void editLocal(String title, String value, java.util.function.Consumer<String> callback) {
+  public EditText editLocal(String title, String value, java.util.function.Consumer<String> callback) {
     commitComposing();
     EditText field = Ui.edit(this, title, value);
     field.setShowSoftInputOnFocus(false);
@@ -798,32 +839,44 @@ public final class KeyboardService extends InputMethodService
     typing();
     field.requestFocus();
     field.setSelection(field.getText().length());
+    return field;
   }
 
-  public boolean protectedInsert(String value) {
+  private boolean snapshotUnchanged() {
     String current = full();
     int[] s = selection();
-    boolean changed =
-        initialDraft == null
-            || current == null
-            || s == null
-            || !initialDraft.equals(current)
-            || s[0] != initialStart
-            || s[1] != initialEnd;
-    if (changed) {
-      message("你已修改输入框", "为保护新草稿，没有自动填入。可以复制这条建议后自行粘贴。", "", null);
+    return initialDraft != null && current != null && s != null && initialDraft.equals(current)
+        && s[0] == initialStart && s[1] == initialEnd;
+  }
+
+  private boolean protectDraft(String value) {
+      message("已保留新草稿", "", "", null);
       root.addView(
           Ui.button(
               this,
-              "复制建议",
+              "复制内容",
               () -> {
                 ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
-                    .setPrimaryClip(ClipData.newPlainText("军师建议", value));
+                    .setPrimaryClip(ClipData.newPlainText("文字", value));
                 Ui.toast(this, "已复制");
               }));
       return false;
-    }
+  }
+
+  public boolean protectedInsert(String value) {
+    if (!snapshotUnchanged()) return protectDraft(value);
     return insert(value);
+  }
+
+  public boolean protectedReplace(String original, String value) {
+    if (!snapshotUnchanged() || !original.equals(full())) return protectDraft(value);
+    InputConnection ic = input();
+    if (ic == null) return false;
+    ic.beginBatchEdit();
+    try {
+      if (!ic.setSelection(0, original.length())) return protectDraft(value);
+      return insert(value);
+    } finally { ic.endBatchEdit(); }
   }
 
   public void trackHistory(String id) {

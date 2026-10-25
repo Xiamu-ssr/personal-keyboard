@@ -29,6 +29,8 @@ public interface EditorHost {
 
   void typing();
 
+  android.view.View workspaceBar(WorkspaceBar.Mode mode);
+
   void letters();
 
   void commitComposing();
@@ -38,6 +40,7 @@ public interface EditorHost {
   boolean insert(String text);
 
   boolean protectedInsert(String text);
+  boolean protectedReplace(String original, String text);
 
   boolean previewVoice(String text);
 
@@ -49,7 +52,7 @@ public interface EditorHost {
 
   void restoreVoice();
 
-  void editLocal(String title, String value, Consumer<String> done);
+  android.widget.EditText editLocal(String title, String value, Consumer<String> done);
 
   void settings(String page);
 

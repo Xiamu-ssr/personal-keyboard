@@ -63,7 +63,7 @@ public final class AccountScreen extends Screen {
           section(
               title,
               mode.equals("register")
-                  ? "受邀试用，首次注册赠送 10,000 字符和 20 次军师。"
+                  ? "受邀注册，赠送 Credit 积分。"
                   : mode.equals("recover") ? "用恢复码设置新密码，旧设备将退出登录。" : "登录后，语音、军师和个人记忆随你使用。");
       Ui.gap(activity, card, 18);
       EditText name = field(card, "账号 · 3—32 位字母或数字", false);
@@ -150,6 +150,7 @@ public final class AccountScreen extends Screen {
                     }));
     refresh.setEnabled(!busy);
     add(refresh);
+    add(Ui.button(activity, "积分账单", () -> activity.startActivity(new Intent(activity, CreditUsageActivity.class))));
     LinearLayout sync =
         section(
             "历史云备份",

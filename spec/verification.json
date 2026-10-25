@@ -1,27 +1,28 @@
 {
-  "reviewedAt": "2026-10-25T06:15:45.525615+00:00",
-  "version": "0.9.0-alpha.1",
+  "reviewedAt": "2026-10-25T11:29:56.140834+00:00",
+  "version": "0.9.1-alpha.1",
   "artifact": {
     "package": "app.doudou.ime",
-    "version": "0.9.0-alpha.1",
-    "sha256": "dcc5bd92b138a95975d610261dbad9ace61285b8cee80816e29d5549e60a47b6",
-    "bytes": 25420118,
+    "version": "0.9.1-alpha.1",
+    "sha256": "04fd556f4ae4ec5688309754b0b6171770d5bd41160919f92c90f137c1c7b35c",
+    "bytes": 42598725,
     "buildType": "debug",
     "production": false,
     "modelsBundled": false
   },
-  "status": "Invited development preview: composable expression slots and light/dark skins. Final bounded native and provider protocol acceptance passed; no all-combination or all-host accuracy claim.",
+  "status": "Invited development preview: four workspaces, discrete expression faders, light/dark skins and unified Credit. Bounded native and real-provider acceptance; no all-host or all-input guarantee.",
   "checks": [
     {
-      "name": "Node / graph / contract tests",
-      "passed": 26,
-      "skipped": 2,
-      "source": "npm test"
+      "name": "Node / graph / shared contracts / Credit arithmetic",
+      "passed": 30,
+      "skipped": 5,
+      "source": "npm run check; database gates run separately"
     },
     {
-      "name": "PostgreSQL API, encryption, CAS and legacy palette migration",
-      "passed": 1,
-      "source": "isolated PostgreSQL integration"
+      "name": "PostgreSQL migration, frozen prices, concurrency, settlement, API, encrypted sync and CAS",
+      "passed": 4,
+      "skipped": 0,
+      "source": "isolated PostgreSQL with KEYBOARD_DATABASE_TEST=1"
     },
     {
       "name": "Android JVM and lint",
@@ -29,74 +30,55 @@
       "source": "Gradle"
     },
     {
-      "name": "Native guest palette migration, theme switching, practice draft retention",
-      "passed": 3,
-      "skipped": 1,
-      "source": "Android 15 isolated emulator"
+      "name": "Four-tab touch targets, translation protection, persistent recording, six-reply workspace, complete emoji deletion, voice cancel, Credit bill and palette Cloud save",
+      "passed": 16,
+      "source": "Android 15 emulator; real public Cloud and own practice fixtures"
     },
     {
-      "name": "Named multi-attribute preset plus manual Emoji choice, Cloud save, reopen, preserve custom name",
+      "name": "360dp / fontScale 1.3 palette: vertical touch drag, native range action, save and reopen",
+      "passed": 1,
+      "source": "Android 15 emulator; original display settings restored"
+    },
+    {
+      "name": "Physical OPPO: all six live workspace acceptance tests",
+      "passed": 6,
+      "source": "full final run on owned practice; real screenshot advisor, translation, persistent recording, Credit bill, complex emoji and held-space cancellation"
+    },
+    {
+      "name": "Deployed public API: real ASR, translations, six replies, three same-slot variants and idempotent recovery",
       "status": "passed",
-      "source": "Android 15 emulator standard and 360dp/fontScale1.3"
+      "source": "real Aliyun calls with owned audio/image/text fixtures"
     },
     {
-      "name": "Final provider reply protocol, six replies and three same-slot variants",
-      "passed": 10,
-      "failed": 0,
-      "source": "real Aliyun Qwen3.8-Flash with owned text-image fixtures"
-    },
-    {
-      "name": "Old OPPO APK upgrade",
-      "status": "installed",
-      "source": "ADB package manager; matching signing certificate; device remained locked, no UI acceptance claimed"
-    },
-    {
-      "name": "Deployed HTTPS API: six replies, three same-slot variants and idempotent retries",
+      "name": "APK signing certificate and native media provenance",
       "status": "passed",
-      "successfulGenerations": 2,
-      "advisorDebits": 2,
-      "additionalRetryDebits": 0
+      "source": "apksigner and demo/verify-public.mjs; final APK and fourteen screenshots match release.json"
     }
   ],
   "cloud": {
-    "deployedVersion": "0.9.0-alpha.1",
-    "databaseMigration": "Encrypted legacy palette documents migrated to schemaVersion 2; user names and IDs preserved; no parallel expression format."
-  },
-  "providerExperiments": {
-    "scenes": [
-      "flirt",
-      "pink-bubbles",
-      "partner-request",
-      "ironic-critique",
-      "comfort",
-      "progress",
-      "decline",
-      "technical-explanation"
-    ],
-    "preFinalWireBatch": {
-      "requests": 18,
-      "decoded": 17,
-      "note": "One long explanation was incomplete and blocked. Final wire format eliminates redundant generated IDs; final 10-request batch passed."
-    },
-    "finalWireBatch": {
-      "requests": 10,
-      "decoded": 10,
-      "tokenUsage": {
-        "prompt_tokens": 41258,
-        "completion_tokens": 9880,
-        "total_tokens": 51138
-      }
-    },
-    "scope": "Own controlled fixtures, not private user chats. Style and factual fidelity remain model-dependent."
+    "deployedVersion": "0.9.1-alpha.1",
+    "databaseMigration": "One-way Credit migration with a complete pre-migration backup. Existing users, grants, encrypted personal memory and palettes preserved. Legacy financial records archived.",
+    "usersPreserved": 15,
+    "existingGrantsConverted": 17,
+    "singleCurrency": "Credit",
+    "markupBasisPoints": 17500,
+    "creditMicroCny": 1000,
+    "automaticMemoryLearning": "included in service costs"
   },
   "limits": [
-    "Physical old OPPO remained locked; this version is not claimed as physically accepted.",
-    "No fresh ASR accuracy or all-host keyboard acceptance in this iteration.",
-    "Preserved videos are from 0.8.0; each screenshot has its own APK provenance in release.json."
+    "An earlier advisor call met an upstream MODEL_NETWORK timeout and charged zero Credit. The final OPPO run passed all six cases; provider availability remains external.",
+    "No new all-chat-app or broad ASR accuracy study in this iteration.",
+    "Two preserved videos and the memory/people UI fixtures retain 0.8.0 provenance; twelve screenshots are from this APK.",
+    "Development preview; purchases are not enabled."
   ],
   "independentReview": {
-    "nativeVisual": "No new visual P1/P2 in the reviewed current screens.",
-    "groundingRegression": "Latest 24 replies did not reproduce the two reviewed P1 categories; bounded sample, not an all-input guarantee.",
-    "remaining": "One P2 metaphor can make refusal less direct; generative wording remains variable."
+    "status": "Earlier inheritance and Credit findings fixed. Final narrow review closed both last P2 findings: visible level names and named workspaces. No remaining P1/P2 in that reviewed scope.",
+    "remainingP3": [
+      "Reply-card insertion affordance",
+      "Source-text edit affordance",
+      "Slot identity while scrolling",
+      "Recording empty state"
+    ],
+    "scope": "Independent read-only native screenshots and developer-run logs; not all-host or whole-product acceptance."
   }
 }

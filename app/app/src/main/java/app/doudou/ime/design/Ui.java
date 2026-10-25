@@ -43,7 +43,7 @@ public final class Ui {
   }
 
   public static TextView text(Context c, String s, int size, int color) {
-    TextView t = new TextView(c);
+    TextView t = new androidx.emoji2.widget.EmojiTextView(c);
     t.setText(s);
     t.setTextSize(size);
     t.setTextColor(color);
@@ -94,7 +94,7 @@ public final class Ui {
   }
 
   public static EditText edit(Context c, String hint, String value) {
-    EditText e = new EditText(c);
+    EditText e = new androidx.emoji2.widget.EmojiEditText(c);
     e.setHint(hint);
     e.setText(value);
     e.setTextColor(ink());

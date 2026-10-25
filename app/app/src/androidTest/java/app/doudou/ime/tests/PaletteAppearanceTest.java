@@ -275,9 +275,15 @@ public final class PaletteAppearanceTest {
       click("暧昧");
       assertEquals("Choosing a reference must preserve the custom slot name",
           "夜聊验收", await("表达名称").getText().toString());
-      click("Emoji设置");
-      click("Emoji：不用"); // A manual change beyond choosing a template (template uses 'few').
-      assertTrue(reveal("Emoji：不用").isChecked());
+      click("Emoji：恢复随本人");
+      rangeState("Emoji调节", "随本人");
+      setRange("Emoji调节", 1); // Choosing the unchanged midpoint still makes it explicit.
+      rangeState("Emoji调节", "少量");
+      dragRangeToTop("Emoji调节");
+      rangeState("Emoji调节", "丰富");
+      assertTrue("A manual choice exposes an explicit restore action", reveal("Emoji：恢复随本人").isClickable());
+      setRange("Emoji调节", 0); // Native range action: template uses 'few', choose 'none'.
+      rangeState("Emoji调节", "不用");
       shot("live-editor-before-save");
       attemptedSave = true; // Set before the click: a timeout can still follow a committed save.
       click("保存");
@@ -295,10 +301,8 @@ public final class PaletteAppearanceTest {
       assertEquals("夜聊验收", await("表达名称").getText().toString());
       assertFalse("Reopened saved slot must start unchanged", await("保存").isEnabled());
       assertTrue(reveal("表达手法：暧昧试探").isChecked());
-      click("Emoji设置");
-      assertTrue(reveal("Emoji：不用").isChecked());
-      assertFalse(reveal("Emoji：少量").isChecked());
-      assertFalse("Expanding an attribute must not enable Save", await("保存").isEnabled());
+      rangeState("Emoji调节", "不用");
+      assertFalse("Reading an attribute must not enable Save", await("保存").isEnabled());
       shot("live-editor-reopened");
     } finally {
       finishOwned();
@@ -309,6 +313,41 @@ public final class PaletteAppearanceTest {
         jsonEquals("QA slot restored", first, store.sync().getJSONArray("slots").getJSONObject(0));
       }
     }
+  }
+
+  private void rangeState(String title, String expected) {
+    long end = SystemClock.uptimeMillis() + TIMEOUT;
+    String last = "";
+    while (SystemClock.uptimeMillis() < end) {
+      AccessibilityNodeInfo control = reveal(title); control.refresh();
+      last = String.valueOf(control.getStateDescription());
+      if (expected.equals(last)) return;
+      SystemClock.sleep(80);
+    }
+    assertEquals("Native range must expose its actual settled value", expected, last);
+  }
+
+  private void dragRangeToTop(String title) {
+    AccessibilityNodeInfo control = reveal(title);
+    android.graphics.Rect bounds = new android.graphics.Rect(); control.getBoundsInScreen(bounds);
+    assertTrue("Fader has a full finger-width touch area", bounds.width() >= app.getResources().getDisplayMetrics().density * 48);
+    long time = SystemClock.uptimeMillis();
+    float x = bounds.exactCenterX(), start = bounds.bottom - bounds.height() * .15f, end = bounds.top + bounds.height() * .15f;
+    for (int i = 0; i <= 8; i++) {
+      int action = i == 0 ? android.view.MotionEvent.ACTION_DOWN : i == 8 ? android.view.MotionEvent.ACTION_UP : android.view.MotionEvent.ACTION_MOVE;
+      android.view.MotionEvent event = android.view.MotionEvent.obtain(time, time + i * 30, action, x, start + (end - start) * i / 8, 0);
+      try { assertTrue("Native vertical drag delivered", ui.injectInputEvent(event, true)); }
+      finally { event.recycle(); }
+    }
+  }
+
+  private void setRange(String title, float value) throws Exception {
+    AccessibilityNodeInfo control = reveal(title);
+    assertNotNull("Native graduated preference", control.getRangeInfo());
+    Bundle args = new Bundle(); args.putFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE, value);
+    assertTrue("Native range adjustment", control.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId(), args));
+    ui.waitForIdle(100, TIMEOUT);
+    ins.waitForIdleSync();
   }
 
   private MainActivity changeSkin(MainActivity old, boolean light) throws Exception {
@@ -572,15 +611,21 @@ public final class PaletteAppearanceTest {
   }
 
   private AccessibilityNodeInfo reveal(String label) {
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < 24; i++) {
       AccessibilityNodeInfo found = node(label, false);
-      if (found != null) return found;
+      if (found != null) {
+        found.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.getId());
+        ins.waitForIdleSync(); SystemClock.sleep(120);
+        AccessibilityNodeInfo refreshed = node(label, false); if (refreshed != null) return refreshed;
+      }
       boolean moved = false;
       for (AccessibilityWindowInfo window : ui.getWindows()) {
         if (window.getType() != AccessibilityWindowInfo.TYPE_APPLICATION) continue;
         AccessibilityNodeInfo root = window.getRoot();
-        if (root != null && app.getPackageName().contentEquals(root.getPackageName() == null ? "" : root.getPackageName())) moved |= scroll(root);
+        if (root != null && app.getPackageName().contentEquals(root.getPackageName() == null ? "" : root.getPackageName()))
+          moved |= scroll(root, i < 12 ? AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD : AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
       }
+      if (!moved && i < 12) { i = 11; continue; }
       if (!moved) break;
       ins.waitForIdleSync();
       SystemClock.sleep(150);
@@ -588,11 +633,11 @@ public final class PaletteAppearanceTest {
     return await(label);
   }
 
-  private boolean scroll(AccessibilityNodeInfo node) {
-    if (node.isScrollable() && node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) return true;
+  private boolean scroll(AccessibilityNodeInfo node, int action) {
+    if (node.isScrollable() && String.valueOf(node.getClassName()).endsWith("ScrollView") && node.performAction(action)) return true;
     for (int i = 0; i < node.getChildCount(); i++) {
       AccessibilityNodeInfo child = node.getChild(i);
-      if (child != null && scroll(child)) return true;
+      if (child != null && scroll(child, action)) return true;
     }
     return false;
   }

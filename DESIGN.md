@@ -366,3 +366,13 @@ App 底部四个入口等权重，单个外部区域高 58dp，容器左右 12dp
 - **Don't** 将声纹渐变用于普通键盘按钮、卡片或新的全屏品牌底色。
 - **Don't** 把字符箭头、eyebrow helper、局部硬编码、dp Canvas 文字或较小点击布局立为未来界面的惯例。
 - **Don't** 用视觉 token 文档、UI fixture 或 sidecar 浏览器样本宣称 F1 模型语义、真实学习或真机体验已验收。
+
+## 0.9.1 workspace and controls
+
+The same 48dp toolbar holds menu, Input/Recording/Help reply/Translation segments, and collapse. Each segment is a real 48dp radio target; only the visual pill is inset. No extra header row. Input/voice geometry stays unchanged. Translation uses an independent editable local draft and an explicit primary Replace/Fill action after success, with secondary Copy/Retranslate actions, with cyan-blue progress. Recorder stays alive while switching tools or hiding the keyboard; a cyan dot in its tab preserves recording awareness.
+
+Ordered palette dimensions share a compact bank of vertical native range controls with three visible detents, tactile circular thumbs and per-field inheritance; rhetoric and structure remain categorical controls. All controls are exposed directly rather than nine accordion rows. Use the shared App blue only for selected/active states. Emoji uses the official AndroidX offline picker with bundled rendering, real categories, variants and account-scoped recents.
+
+Account shows one Credit balance. The bill shows completed usage, localized dates and a separate on-demand pricing sheet. Tariffs belong in that sheet, never in the everyday typing surface.
+
+Four-tab labels stay visible; only the selected item expands its icon and pill. Native radio semantics, full accessible names and tooltips remain. Each fader displays all three actual level names beside its detents. Existing typing keys and voice gesture geometry are preserved.

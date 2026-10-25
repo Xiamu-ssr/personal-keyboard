@@ -10,24 +10,54 @@ import app.doudou.ime.input.*;
 /** Recording stays in the keyboard footprint, with no text-editor side effects. */
 public final class RecordingPanel {
   private final EditorHost host;
+  private int renderSerial;
+  private String recordId = "", account = "";
   private final Handler main = new Handler(Looper.getMainLooper());
 
   public RecordingPanel(EditorHost h) {
     host = h;
   }
 
+  public String text() {
+    RecordingService service = RecordingService.current;
+    if (service != null && service.belongsToCurrentAccount()) return service.text();
+    if (recordId.isEmpty()) return "";
+    try {
+      RecordingStore store = new RecordingStore(host.context(), recordId);
+      return store.accountMatches() ? store.text(true) : "";
+    } catch (Exception e) { return ""; }
+  }
+
+  private String duration(long bytes) {
+    long seconds = bytes / 32000;
+    return String.format(java.util.Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60);
+  }
+
+  private long savedBytes() {
+    if (recordId.isEmpty()) return 0;
+    try {
+      RecordingStore store = new RecordingStore(host.context(), recordId);
+      return store.accountMatches() ? store.size() : 0;
+    } catch (Exception e) { return 0; }
+  }
+
   public void show() {
     Context c = host.context();
+    String currentAccount = host.services().cloud.userId();
+    if (!currentAccount.equals(account)) { account = currentAccount; recordId = ""; }
     if (host.privateMode()) return;
+    if (RecordingService.current != null && !RecordingService.current.belongsToCurrentAccount()) {
+      host.message("另一账号的录音仍在进行", "请先结束这段录音", "返回键盘", host::typing);
+      return;
+    }
     if (c.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
         != android.content.pm.PackageManager.PERMISSION_GRANTED) {
       host.message("允许录音", "", "允许麦克风", () -> host.settings("settings"));
       return;
     }
     host.cancelVoice();
-    host.cancelAdvisor();
     host.commitComposing();
-    if (RecordingService.current == null)
+    if (RecordingService.current == null && recordId.isEmpty())
       try {
         c.startForegroundService(new Intent(c, RecordingService.class));
       } catch (Exception e) {
@@ -43,23 +73,20 @@ public final class RecordingPanel {
       }
     LinearLayout root = host.openPanel("recorder", KeyboardView.HEIGHT_DP);
     root.setBackgroundColor(Ui.keyboard());
+    root.addView(host.workspaceBar(WorkspaceBar.Mode.RECORDING), new LinearLayout.LayoutParams(-1, Ui.dp(c, 48)));
     LinearLayout heading = Ui.row(c);
-    heading.addView(
-        Ui.icon(c, "返回", host::typing), new LinearLayout.LayoutParams(Ui.dp(c, 48), Ui.dp(c, 48)));
-    TextView title = Ui.text(c, "录音笔", 17, Ui.ink());
-    heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-    TextView clock = Ui.text(c, "00:00", 14, Ui.accent());
-    heading.addView(clock);
-    final String[] recordId = {""};
+    TextView clock = Ui.text(c, duration(savedBytes()), 14, Ui.accent());
+    clock.setContentDescription("录音时长");
+    heading.addView(clock, new LinearLayout.LayoutParams(0, -2, 1));
     TextView open =
         Ui.button(
             c,
             "查看录音",
             () -> {
-              if (!recordId[0].isEmpty())
+              if (!recordId.isEmpty())
                 c.startActivity(
                     new Intent(c, RecordingActivity.class)
-                        .putExtra("id", recordId[0])
+                        .putExtra("id", recordId)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             });
     open.setVisibility(View.GONE);
@@ -70,7 +97,8 @@ public final class RecordingPanel {
     LinearLayout content = Ui.col(c);
     Ui.pad(c, content, 18, 12);
     scroll.addView(content);
-    TextView text = Ui.text(c, "", 17, Ui.ink());
+    TextView text = Ui.text(c, text(), 17, Ui.ink());
+    text.setTextIsSelectable(true);
     text.setLineSpacing(Ui.dp(c, 5), 1);
     content.addView(text);
     root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
@@ -86,21 +114,25 @@ public final class RecordingPanel {
             "结束",
             () -> {
               if (RecordingService.current != null) RecordingService.current.finish();
+              else { recordId = ""; show(); }
             });
     stop.setMinWidth(Ui.dp(c, 88));
     footer.addView(stop, new LinearLayout.LayoutParams(-2, Ui.dp(c, 48)));
     root.addView(footer);
     long generation = host.generation();
+    final int serial = ++renderSerial;
     String[] last = {""};
+    boolean[] saved = {false};
     Runnable tick =
         new Runnable() {
           public void run() {
-            if (!root.isAttachedToWindow()
+            if (serial != renderSerial || !root.isAttachedToWindow()
                 || !host.mode().equals("recorder")
                 || host.generation() != generation) return;
             RecordingService service = RecordingService.current;
             if (service != null) {
-              recordId[0] = service.id();
+              saved[0] = false;
+              recordId = service.id();
               open.setVisibility(service.active() ? View.GONE : View.VISIBLE);
               waveform.level(service.active() ? service.level() : 0);
               String value = service.text();
@@ -109,20 +141,22 @@ public final class RecordingPanel {
                 last[0] = value;
                 scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
               }
-              long seconds = service.bytes() / 32000;
-              clock.setText(
-                  String.format(java.util.Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60));
+              clock.setText(duration(service.bytes()));
               status.setText(service.status());
               if (!service.active()) {
-                stop.setText("返回键盘");
-                stop.setOnClickListener(v -> host.typing());
+                stop.setText("保存中…");
+                stop.setEnabled(false);
               }
             } else {
+              if (!saved[0]) { clock.setText(duration(savedBytes())); saved[0] = true; }
               waveform.level(0);
-              open.setVisibility(recordId[0].isEmpty() ? View.GONE : View.VISIBLE);
-              status.setText("已保存");
-              stop.setText("返回键盘");
-              stop.setOnClickListener(v -> host.typing());
+              open.setVisibility(recordId.isEmpty() ? View.GONE : View.VISIBLE);
+              status.setText(recordId.isEmpty() ? "准备录音" : "已保存");
+              String value = text();
+              if (!value.equals(last[0])) { text.setText(value); last[0] = value; }
+              stop.setText(recordId.isEmpty() ? "开始录音" : "新录音");
+              stop.setEnabled(true);
+              stop.setOnClickListener(v -> { recordId = ""; show(); });
             }
             main.postDelayed(this, 400);
           }

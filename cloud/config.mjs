@@ -11,7 +11,9 @@ export async function configuration(env = process.env) {
       "utf8",
     ),
   );
+  const pricing = JSON.parse(await fs.readFile(new URL('./config/credits.json', import.meta.url), 'utf8'));
   const cfg = {
+    pricing,
     host: env.HOST || "127.0.0.1",
     port: Number(env.PORT || 8080),
     databaseUrl: env.DATABASE_URL,

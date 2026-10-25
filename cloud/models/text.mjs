@@ -1,3 +1,4 @@
+import { translationInput, translationResult } from '../translation/contract.mjs';
 import { memoryCounter } from '../memory/counter.mjs';
 import fs from 'node:fs/promises';
 import { requireValue, ServiceError } from '../http/errors.mjs';
@@ -13,6 +14,7 @@ const strings = (values, max = 20, length = 200) => {
   return values.map(v => bounded(v, length));
 };
 export function modelInput(kind, raw) {
+  if (kind === 'translation') return translationInput(raw);
   requireValue(raw && typeof raw === 'object' && !Array.isArray(raw), 'INVALID_INPUT', '缺少任务内容');
   const allowed = kind === 'rewrite' ? ['transcript', 'recentContext', 'conversationRef'] : ['images', 'conversationRef', 'recentContext', 'intent', 'slotId', 'previousReplies', 'platform'];
   requireValue(Object.keys(raw).every(key => allowed.includes(key)), 'INVALID_INPUT', '个人记忆由云端读取，请勿重复上传');
@@ -36,6 +38,7 @@ export function validateModelResult(kind, text, input) {
   let value;
   try { value = JSON.parse(text.trim()); }
   catch { throw new ServiceError('MODEL_FORMAT', '模型结果格式不正确，预留已释放', 502); }
+  if (kind === 'translation') return translationResult(value, input);
   if (kind === 'rewrite') {
     requireValue(typeof value.text === 'string' && value.text.trim() && value.text.length <= 6000, 'MODEL_FORMAT', '整理结果无效', 502);
     return { text: value.text.trim(), changed: value.text !== input.transcript, uncertainSpans: strings(value.uncertainSpans || []) };
@@ -83,19 +86,19 @@ export function advisorDirective(input, template) {
 export class TextModels {
   constructor(cfg, fetcher = fetch) { this.cfg = cfg; this.fetcher = fetcher; this.prompts = new Map(); }
   async init() {
-    for (const [kind, file] of Object.entries({ advisor: 'reply', rewrite: 'rewrite' })) {
+    for (const [kind, file] of Object.entries({ advisor: 'reply', rewrite: 'rewrite', translation: 'translation' })) {
       const text = await fs.readFile(new URL('../prompts/' + file + '.md', import.meta.url), 'utf8');
       const request = kind === 'advisor' ? JSON.parse(await fs.readFile(new URL('../prompts/reply-request.json', import.meta.url), 'utf8')) : null;
       this.prompts.set(kind, { text, request, revision: digest(text + (request ? JSON.stringify(request) : '')).slice(0, 12) });
     }
   }
-  async run(kind, input, images, signal) {
+  async prepare(kind, input) {
     requireValue(this.cfg.textReady, 'MODEL_NOT_READY', '云端文字模型尚未配置', 503);
     const visual = kind === 'advisor';
-    requireValue(!visual || (images?.length && this.cfg.visionReady), 'VISION_NOT_READY', '军师图文模型尚未配置', 503);
+    requireValue(!visual || (input.imageDigests?.length && this.cfg.visionReady), 'VISION_NOT_READY', '军师图文模型尚未配置', 503);
     const prompt = this.prompts.get(kind), model = visual ? this.cfg.visionModel : this.cfg.textModel;
     const directive = visual ? advisorDirective(input, prompt.request) : '';
-    const user = visual ? [{ type: 'text', text: JSON.stringify(input) }, ...images.map(url => ({ type: 'image_url', image_url: { url } })), { type: 'text', text: directive }] : JSON.stringify(input);
+
     const systemText = prompt.text + '\n请严格只输出 JSON 对象。';
     const responseFormat = visual ? advisorResponseFormat(input) : { type: 'json_object' };
     // The verified text counter receives a conservative representation including the
@@ -104,14 +107,21 @@ export class TextModels {
     const tokens = (await memoryCounter.count(textRequest)).tokens;
     // Visual reasoning, its schema/protocol and output share a conservative 16K
     // allowance. This does not change the exact memory-learning input protocol.
-    requireValue(tokens + (visual ? images.length * 4096 : 0) + (visual ? 16384 : 8192) <= this.cfg.memoryContextTokens && tokens <= this.cfg.memoryMaxInputTokens, 'MEMORY_CAPACITY', '个人资料已超出模型容量，请精简后重试', 409);
+    requireValue(tokens + (visual ? input.imageDigests.length * 4096 : 0) + (visual ? 16384 : 8192) <= this.cfg.memoryContextTokens && tokens <= this.cfg.memoryMaxInputTokens, 'MEMORY_CAPACITY', '个人资料已超出模型容量，请精简后重试', 409);
+    const outputLimit = visual ? 16384 : kind === 'translation' ? 8192 : 1600;
+    return { kind, input, model, directive, systemText, responseFormat, tokens, outputLimit, promptRevision: prompt.revision };
+  }
+  async execute(prepared, images, signal) {
+    const { kind, input, model, directive, systemText, responseFormat, outputLimit, promptRevision } = prepared;
+    const visual = kind === 'advisor';
+    const user = visual ? [{ type: 'text', text: JSON.stringify(input) }, ...images.map(url => ({ type: 'image_url', image_url: { url } })), { type: 'text', text: directive }] : JSON.stringify(input);
     let response;
     try {
       response = await this.fetcher(this.cfg.textBase.replace(/\/$/, '') + '/chat/completions', {
         method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(65000)]),
         headers: { Authorization: 'Bearer ' + this.cfg.modelKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: systemText }, { role: 'user', content: user }],
-          max_completion_tokens: visual ? 16384 : 1600, temperature: visual ? 0.3 : 0.2, response_format: responseFormat, enable_thinking: visual,
+          max_completion_tokens: outputLimit, temperature: visual ? 0.3 : 0.2, response_format: responseFormat, enable_thinking: visual,
           ...(visual ? { thinking_budget: 4096 } : {}) }),
       });
     } catch {
@@ -129,6 +139,6 @@ export class TextModels {
     catch { throw new ServiceError('MODEL_FORMAT', '模型返回格式不正确', 502); }
     requireValue(output.choices?.[0]?.finish_reason === 'stop', 'MODEL_TRUNCATED', '模型结果没有完整返回，请重试', 502);
     return { result: validateModelResult(kind, output.choices?.[0]?.message?.content || '', input),
-      provider: { model, usage: { ...output.usage, promptRevision: prompt.revision } } };
+      provider: { model, usage: { ...output.usage, promptRevision } } };
   }
 }

@@ -48,7 +48,8 @@ test(
     const models = {
       prompts: new Map([["advisor", { revision: "fixture" }]]),
       async init() {},
-      async run(kind, input, images, signal) {
+      async prepare(kind, input) { return { kind, input, model: cfg.textModel, tokens: 1000, outputLimit: 100 }; },
+      async execute({ kind, input }, images, signal) {
         await new Promise((r) => setTimeout(r, 25));
         if (input.intent === "fail") throw Error("fixture failure");
         this.lastInput = input;
@@ -60,7 +61,7 @@ test(
                   replies: input.slots.map((slot,i)=>({slotId:slot.id,style:slot.name,text:'fixture-'+i})),
                 }
               : { text: "fixture-polish" },
-          provider: { model: "fixture-text", usage: { input_tokens: 10 } },
+          provider: { model: cfg.textModel, usage: { input_tokens: 1000, output_tokens: 100 } },
         };
       },
     };
@@ -81,6 +82,7 @@ test(
             JSON.stringify({
               header: { event: "result-generated" },
               payload: {
+                usage: { input_tokens: 100, output_tokens: 10 },
                 output: {
                   sentence: {
                     sentence_id: 1,
@@ -109,7 +111,7 @@ test(
       await app.db.query(
         "TRUNCATE users,plans,invitations,auth_attempts,sessions,jobs,job_allocations,grants,audits,admin_sessions,admin_attempts,sync_keys,sync_manifests,orders,payment_nonces CASCADE",
       );
-      await app.db.migrate(cfg.plans);
+      await app.db.migrate(cfg.plans, cfg.pricing);
       const request = async (route, body, token, method) => {
         const r = await fetch(base + route, {
           method: method || (body ? "POST" : "GET"),
@@ -158,8 +160,16 @@ test(
       const uid = auth.user.id,
         token = auth.accessToken,
         initial = (await request("/v1/account", null, token)).value;
-      assert.equal(initial.entitlements.asr.available, 10000);
-      assert.equal(initial.entitlements.advisor.available, 20);
+      assert.equal(initial.entitlements.credits.available, 3000);
+      assert(!("asr" in initial.entitlements) && !("advisor" in initial.entitlements));
+      const prices = (await request('/v1/credit-pricing')).value;
+      assert.equal(prices.version, 1);
+      assert.equal(prices.definition.unit, 'Credit');
+      assert.equal(prices.definition.markupBasisPoints, 17500);
+      assert.equal((await request('/v1/jobs', null, token)).value.jobs.length, 0);
+      const options = { quote: { model: cfg.textModel, inputTokens: 1000, outputTokens: 100 } };
+      const asrOptions = { quote: { model: cfg.asrModel, inputTokens: 1000, outputTokens: 100 } };
+      const asrProvider = { model: cfg.asrModel, usage: { input_tokens: 100, output_tokens: 10 } };
       const palette=(await request('/v1/advisor/palette',null,token)).value;
       assert.equal(palette.slots.length,6);assert.equal(palette.version,0);
       const paletteWrite={requestId:uuid(),baseVersion:0,slots:palette.slots.map((s,i)=>({...s,name:i===0?'我的自然':s.name}))};
@@ -183,11 +193,11 @@ test(
       app.jobs.stopped = true;
       cfg.maxTextQueue = 1;
       try {
-        const queuedId = uuid(), queued = await app.ledger.reserve(uid, queuedId, 'advisor', { intent: 'capacity' });
-        await assert.rejects(app.ledger.reserve(uid, uuid(), 'advisor', { intent: 'capacity' }), error => error.code === 'SERVICE_BUSY');
-        assert.equal((await app.ledger.reserve(uid, queuedId, 'advisor', { intent: 'capacity' })).created, false, 'capacity must not break idempotent retries');
+        const queuedId = uuid(), queued = await app.ledger.reserve(uid, queuedId, 'advisor', { intent: 'capacity' }, options);
+        await assert.rejects(app.ledger.reserve(uid, uuid(), 'advisor', { intent: 'capacity' }, options), error => error.code === 'SERVICE_BUSY');
+        assert.equal((await app.ledger.reserve(uid, queuedId, 'advisor', { intent: 'capacity' }, options)).created, false, 'capacity must not break idempotent retries');
         await app.ledger.finish(queued.job.id, 'cancelled', null);
-        assert.equal((await app.ledger.balance(uid)).advisor.available, 20);
+        assert.equal((await app.ledger.balance(uid)).credits.available, 3000);
       } finally {
         app.jobs.stopped = false;
         cfg.maxTextQueue = 16;
@@ -196,26 +206,26 @@ test(
         input = { context: "", polish: true };
       const reservations = await Promise.all(
         Array.from({ length: 8 }, () =>
-          app.ledger.reserve(uid, id, "asr", input),
+          app.ledger.reserve(uid, id, "asr", input, asrOptions),
         ),
       );
       assert.equal(reservations.filter((x) => x.created).length, 1);
       const job = reservations[0].job;
       await Promise.all(
         Array.from({ length: 8 }, () =>
-          app.ledger.finish(job.id, "succeeded", { text: "你 好 👩" }),
+          app.ledger.finish(job.id, "succeeded", { text: "你 好 👩" }, asrProvider),
         ),
       );
-      assert.equal((await app.ledger.balance(uid)).asr.used, 3);
+      assert.equal((await app.ledger.balance(uid)).credits.used, 1.129);
       await assert.rejects(
-        app.ledger.reserve(uid, id, "asr", { ...input, context: "changed" }),
+        app.ledger.reserve(uid, id, "asr", { ...input, context: "changed" }, asrOptions),
         /同一请求/,
       );
       const r1 = await app.ledger.reserve(uid, uuid(), "advisor", {
           context: "x",
-        }),
-        r2 = await app.ledger.reserve(uid, uuid(), "advisor", { context: "x" });
-      assert.equal((await app.ledger.balance(uid)).advisor.reserved, 2);
+        }, options),
+        r2 = await app.ledger.reserve(uid, uuid(), "advisor", { context: "x" }, options);
+      assert.equal((await app.ledger.balance(uid)).credits.reserved, 3.746);
       await app.ledger.finish(
         r1.job.id,
         "failed",
@@ -224,7 +234,7 @@ test(
         { code: "TEST", message: "fixture" },
       );
       await app.ledger.finish(r2.job.id, "cancelled");
-      assert.equal((await app.ledger.balance(uid)).advisor.available, 20);
+      assert.equal((await app.ledger.balance(uid)).credits.available, 2998.871);
       // Canonical memory is free, CAS-protected, and applied on the server.
       const wordId = uuid(), personId = uuid(), factId = uuid(), styleId = uuid();
       const manual = { requestId: uuid(), baseVersion: 0, operations: [
@@ -285,7 +295,14 @@ test(
       assert.equal((await app.db.query("SELECT count(*) n FROM memory_history WHERE history_id=$1 AND state='queued'", [history.id])).rows[0].n, '0');
       memoryModel.tooLarge = false;
       assert.equal((await request("/v1/jobs", req, token)).value.id, done.id);
-      assert.equal((await app.ledger.balance(uid)).advisor.used, 1);
+      assert.equal((await app.ledger.balance(uid)).credits.used, 3.002);
+      const bill = (await request('/v1/jobs', null, token)).value.jobs;
+      assert(bill.some(j => j.id === done.id && j.credits > 0 && j.pricingVersion === 1));
+      const billDetail = bill.find(j => j.id === done.id).billing;
+      assert(Number.isSafeInteger(billDetail.inputTokens) && Number.isSafeInteger(billDetail.outputTokens));
+      assert.equal(billDetail.inputCreditsPerThousand, 1.4);
+      assert.equal(billDetail.outputCreditsPerThousand, 4.725);
+      assert(bill.every(j => !('input' in j) && !('result' in j) && !('provider_usage' in j)));
       const asrRequestId=uuid();
       const ws = new WebSocket(base.replace("http:", "ws:") + "/v1/asr", {
         headers: { Authorization: "Bearer " + token },
@@ -349,7 +366,7 @@ test(
         userId: uid,
         reason: "integration test",
         plan: {
-          limits: { asr_characters: 0, advisor_generations: 0 },
+          limits: { credits: 0 },
           features: { cloud_sync: true },
         },
       });
@@ -424,7 +441,7 @@ test(
       assert(!audit.includes(privateCode) && !audit.includes(password) && !audit.includes(rotatedCode));
       for (let n = 0; n < 10; n++) assert.equal((await request('/v1/auth/login', { handle: 'locked-user', password })).status, 401);
       assert.equal((await request('/v1/auth/login', { handle: 'locked-user', password })).status, 429);
-      const late = await app.ledger.reserve(uid, uuid(), 'advisor', { intent: 'late' });
+      const late = await app.ledger.reserve(uid, uuid(), 'advisor', { intent: 'late' }, options);
       assert.equal((await request('/v1/account/delete', { confirm: true }, auth.accessToken)).status, 200);
       for (const table of ['personal_memory', 'memory_history', 'memory_receipts', 'memory_work']) assert.equal((await app.db.query('SELECT count(*) n FROM ' + table + ' WHERE user_id=$1', [uid])).rows[0].n, '0');
       assert.equal((await request('/v1/account', null, auth.accessToken)).status, 401);

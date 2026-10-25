@@ -234,7 +234,7 @@ public final class MemoryStore extends SQLiteOpenHelper {
     db.beginTransaction();
     try {
       for (String prefix :
-          new String[] {"cache.body:", "cache.version:", "memory.status:", "palette:"})
+          new String[] {"cache.body:", "cache.version:", "memory.status:", "palette:", "translation:", "emoji.recent:"})
         db.delete("meta", "key=?", new String[] {prefix + account});
       db.delete("items", null, null);
       db.delete("meta", "key LIKE 'word.code:%'", null);

@@ -38,6 +38,8 @@ export function connectAsr(
     finishing = false,
     terminal = false,
     bytes = 0,
+    maximumSeconds = cfg.maxAsrSeconds,
+    limited = false,
     configured = false,
     owns = false;
   let ping;
@@ -107,8 +109,8 @@ export function connectAsr(
     if (binary) {
       if (!started || finishing) return;
       bytes += data.length;
-      if (data.length > 6400 || bytes > cfg.maxAsrSeconds * 32000)
-        return fail("AUDIO_LIMIT", "每段语音最多90秒");
+      if (data.length > 6400) return fail("AUDIO_LIMIT", "音频分片过大");
+      if (bytes > maximumSeconds * 32000) { limited = true; finish(); return; }
       if (provider.bufferedAmount > 256000)
         return fail("ASR_BACKPRESSURE", "网络较慢，请重试短一些的语音");
       provider.send(data);
@@ -138,12 +140,12 @@ export function connectAsr(
     void (async () => {
       requireValue(cfg.asrReady, "ASR_NOT_READY", "云端实时语音尚未配置", 503);
       const input = asrInput(msg);
-      const reserved = await ledger.reserve(
-        user.id,
-        msg.requestId,
-        "asr",
-        input,
-      );
+      const hotwords = (await memory.snapshot(user.id)).memory.hotwords;
+      const words = [...hotwords].sort((a,b) => Number(input.context.includes(b.text)) - Number(input.context.includes(a.text))
+        || Number(b.confidence || 0) - Number(a.confidence || 0)).slice(0, 2000).map(w => w.text);
+      const quote = { model: cfg.asrModel, asr: { maxSeconds: cfg.maxAsrSeconds,
+        baseTokens: 256 + Buffer.byteLength(JSON.stringify({ context: input.context, words })) } };
+      const reserved = await ledger.reserve(user.id, msg.requestId, 'asr', input, { quote });
       job = reserved.job;
       owns = reserved.created;
       if (terminal) {
@@ -164,12 +166,12 @@ export function connectAsr(
         client.close();
         return;
       }
-      const hotwords=(await memory.snapshot(user.id)).memory.hotwords;
-      const words=[...hotwords].sort((a,b)=>Number(input.context.includes(b.text))-Number(input.context.includes(a.text)) || Number(b.confidence||0)-Number(a.confidence||0)).slice(0,2000).map(w=>w.text);
+      maximumSeconds = job.billing_snapshot.maxAsrSeconds;
       send({
         type: "accepted",
         jobId: job.id,
-        maximumCharacters: job.reserved_asr,
+        maximumCharacters: cfg.maxAsrCharacters,
+        maximumSeconds,
       });
       provider = makeSocket(
         `wss://${cfg.workspace}.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference`,
@@ -226,7 +228,7 @@ export function connectAsr(
         if (event === "task-started") {
           started = true;
           send({ type: "ready", jobId: job.id });
-          timer(finish, cfg.maxAsrSeconds * 1000);
+          timer(() => { limited = true; finish(); }, maximumSeconds * 1000);
         }
         if (event === "task-failed")
           fail("ASR_PROVIDER_ERROR", "语音供应商拒绝了本次任务，预留已释放");
@@ -242,21 +244,16 @@ export function connectAsr(
             );
             partial = "";
           } else partial = sentence.text;
-          send({ type: "partial", text: limitText(text(), job.reserved_asr) });
-          if (billableCharacters(text()) >= job.reserved_asr) finish();
+          send({ type: "partial", text: text() });
+          if (billableCharacters(text()) >= cfg.maxAsrCharacters) { limited = true; finish(); }
         }
         if (event === "task-finished") {
-          const final = limitText(
-            [...finals.values()].join(""),
-            job.reserved_asr,
-          );
+          const final = [...finals.values()].join("").trim();
           if (!final)
             return fail("NO_SPEECH", "没有得到有效语音，请重新说一次");
           void end("succeeded", {
             text: final,
-            limited:
-              billableCharacters([...finals.values()].join("")) >
-              job.reserved_asr,
+            limited,
           });
         }
       });

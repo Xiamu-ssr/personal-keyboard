@@ -1,9 +1,10 @@
 plugins { id 'com.android.application' }
 
-def paletteAssets = layout.buildDirectory.dir('generated/palette-assets')
-tasks.register('generatePaletteContract', Copy) {
+def contractAssets = layout.buildDirectory.dir('generated/model-contract-assets')
+tasks.register('generateModelContracts', Copy) {
     from rootProject.file('../cloud/contracts/palette.json')
-    into paletteAssets
+    from rootProject.file('../cloud/contracts/translation.json')
+    into contractAssets
 }
 
 android {
@@ -14,8 +15,8 @@ android {
         applicationId 'app.doudou.ime'
         minSdk 30
         targetSdk 35
-        versionCode 14
-        versionName '0.9.0-alpha.1'
+        versionCode 15
+        versionName '0.9.1-alpha.1'
         buildConfigField 'String', 'API_BASE_URL', '"https://106.14.88.147/keyboard-api"'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         ndk { abiFilters 'arm64-v8a', 'x86_64' }
@@ -23,13 +24,18 @@ android {
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
     buildFeatures { buildConfig true }
-    sourceSets.main.assets.srcDir(paletteAssets)
+    sourceSets.main.assets.srcDir(contractAssets)
     buildTypes { release { minifyEnabled false } }
     externalNativeBuild { cmake { path file('src/main/cpp/CMakeLists.txt'); version '3.22.1' } }
     testOptions { unitTests.returnDefaultValues = true; unitTests.all { jvmArgs '-Djava.library.path=' + rootProject.file('../.runtime/native-host').absolutePath } }
 }
-tasks.named('preBuild').configure { dependsOn tasks.named('generatePaletteContract') }
+tasks.named('preBuild').configure { dependsOn tasks.named('generateModelContracts') }
 dependencies {
+    // WorkManager exposes ListenableFuture; the picker also brings Guava at runtime.
+    implementation 'com.google.guava:guava:33.4.8-android'
+    implementation 'androidx.emoji2:emoji2-bundled:1.7.0'
+    implementation 'androidx.emoji2:emoji2-views:1.7.0'
+    implementation 'androidx.emoji2:emoji2-emojipicker:1.7.0'
     implementation 'com.github.promeg:tinypinyin:2.0.3'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'androidx.work:work-runtime:2.9.1'

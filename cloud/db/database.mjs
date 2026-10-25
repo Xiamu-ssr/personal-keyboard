@@ -1,3 +1,4 @@
+import { migrateCredits } from '../billing/migrate.mjs';
 import pg from "pg";
 import fs from "node:fs/promises";
 import { uuid } from "../security.mjs";
@@ -30,12 +31,14 @@ export class Database {
       c.release();
     }
   }
-  async migrate(plans) {
+  async migrate(plans, pricing) {
     await this.transaction(async (c) => {
       await c.query("SELECT pg_advisory_xact_lock(42390021)");
       await c.query(
         await fs.readFile(new URL("./schema.sql", import.meta.url), "utf8"),
       );
+      await migrateCredits(c, pricing);
+      await c.query('INSERT INTO credit_pricing(singleton,version,definition) VALUES(1,$1,$2) ON CONFLICT DO NOTHING', [pricing.version, pricing]);
       const identity = (await c.query("SELECT 1 FROM schema_migrations WHERE version=3")).rowCount;
       if (!identity) {
         await c.query(await fs.readFile(new URL('./identity-migration.sql', import.meta.url), 'utf8'));
