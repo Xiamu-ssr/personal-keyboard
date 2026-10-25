@@ -14,6 +14,13 @@ public final class CreditUsageActivity extends ThemedActivity {
   private String account;
   private JSONObject pricing;
   private TextView rates;
+  @Override protected void onResume() {
+    super.onResume();
+    if (account != null && !account.equals(((KeyboardApp)getApplication()).cloud.userId())) {
+      if (body != null) body.removeAllViews();
+      finish();
+    }
+  }
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
     KeyboardApp app = (KeyboardApp)getApplication(); account = app.cloud.userId();
@@ -39,18 +46,24 @@ public final class CreditUsageActivity extends ThemedActivity {
     KeyboardApp app = (KeyboardApp)getApplication();
     app.network.execute(() -> {
       try {
-        JSONArray jobs = app.cloud.request(account, "/v1/jobs", "GET", null).getJSONArray("jobs");
+        JSONArray jobs = app.cloud.request(account, "/v1/credit-usage", "GET", null).getJSONArray("jobs");
         JSONObject tariff = app.cloud.request(account, "/v1/credit-pricing", "GET", null);
         runOnUiThread(() -> {
           if (isFinishing() || !account.equals(app.cloud.userId())) return;
           body.removeAllViews();
           pricing = tariff; rates.setEnabled(true);
+          examples(tariff.optJSONArray("examples"));
+          TextView recent = Ui.text(this, "最近消费", 19, Ui.ink());
+          recent.setTypeface(null, android.graphics.Typeface.BOLD);
+          Ui.pad(this, recent, 6, 18); body.addView(recent);
           int shown = 0;
           for (int i = 0; i < jobs.length(); i++) {
             JSONObject job = jobs.optJSONObject(i);
             if (job == null || !"succeeded".equals(job.optString("status"))) continue;
             String kind = job.optString("kind");
             String title = title(kind);
+            if (kind.equals("advisor") && job.optInt("replyCount") > 0)
+              title += job.optInt("replyCount") == 6 ? " · 六条" : " · 三条";
             String amount = new java.text.DecimalFormat("#,##0.###").format(job.optDouble("credits"));
             LinearLayout row = Ui.cell(this, "", title, when(job.optString("createdAt")),
                 "−" + amount + " Credit", () -> showBill(job));
@@ -61,12 +74,44 @@ public final class CreditUsageActivity extends ThemedActivity {
         });
       } catch (Exception e) {
         runOnUiThread(() -> {
-          if (isFinishing()) return;
+          if (isFinishing() || !account.equals(app.cloud.userId())) return;
           body.removeAllViews(); body.addView(Ui.text(this, "暂时无法加载账单", 17, Ui.ink()));
           Ui.gap(this, body, 16); body.addView(Ui.button(this, "重试", this::load));
         });
       }
     });
+  }
+
+  private void examples(JSONArray examples) {
+    if (examples == null || examples.length() == 0) return;
+    LinearLayout list = Ui.card(this); Ui.pad(this, list, 14, 10);
+    TextView title = Ui.text(this, "用量示例", 20, Ui.ink()); title.setTypeface(null, android.graphics.Typeface.BOLD);
+    Ui.pad(this, title, 0, 8); list.addView(title);
+    java.text.DecimalFormat format = new java.text.DecimalFormat("#,##0.###");
+    for (int i = 0; i < examples.length(); i++) {
+      JSONObject example = examples.optJSONObject(i); if (example == null) continue;
+      double amount = example.optDouble("credits");
+      String value = amount == 0 ? "0 Credit" : "约 " + format.format(amount) + " Credit";
+      LinearLayout row = Ui.row(this); row.setGravity(Gravity.CENTER_VERTICAL);
+      row.setMinimumHeight(Ui.dp(this, 52)); Ui.pad(this, row, 0, 10);
+      row.addView(Ui.text(this, example.optString("title"), 16, Ui.ink()), new LinearLayout.LayoutParams(0, -2, 1));
+      TextView price = Ui.text(this, value, 16, Ui.appAccent()); price.setTypeface(null, android.graphics.Typeface.BOLD);
+      row.addView(price); row.setFocusable(true);
+      row.setContentDescription(example.optString("title") + "用量示例：" + value);
+      row.setBackground(Ui.pressable(this, android.graphics.Color.TRANSPARENT, 8));
+      row.setOnClickListener(v -> {
+        String detail = "recording".equals(example.optString("id")) ? "仅保存、播放音频不扣积分；实时转写按实际用量扣分。"
+            : "按输入 " + example.optInt("input") + "、输出 " + example.optInt("output")
+              + " Token 演算。这是用量示例，不是固定收费或实测均价。";
+        new android.app.AlertDialog.Builder(this).setTitle(example.optString("title")).setMessage(detail)
+            .setPositiveButton("完成", null).show();
+      });
+      list.addView(row);
+      if (i + 1 < examples.length()) list.addView(Ui.divider(this));
+    }
+    Ui.gap(this, list, 10);
+    list.addView(Ui.text(this, "用量示例，实际随内容与上下文变化。1 Credit = 0.001 元。", 13, Ui.sub()));
+    body.addView(list);
   }
 
   private String title(String kind) {

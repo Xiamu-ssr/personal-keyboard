@@ -42,7 +42,7 @@ test(
       async generate(request) {
         modelCalls.push(structuredClone(request));
         const h = Array.isArray(request.history) ? request.history[0] : JSON.parse(request.history.text);
-        return { baseVersion: request.version, operations: h.resultText === '豆豆' && h.insertedText === '豆包' ? [{ kind: 'hotword', action: 'upsert', id: 'new:word', value: { text: '豆豆', variants: ['豆包'] }, sourceId: h.id, sourceRevision: h.revision, category: 'correction', confidence: 1 }] : [] };
+        return { baseVersion: request.version, operations: h.resultText === '豆豆' && h.insertedText === '豆包' ? [{ kind: 'hotword', action: 'upsert', id: 'new:word', value: { text: '豆豆', variants: ['豆包'] }, sourceId: h.id, sourceRevision: h.revision, category: 'correction', confidence: 1, termType: 'name', quote: h.resultText }] : [] };
       },
     };
     const models = {
@@ -166,6 +166,7 @@ test(
       assert.equal(prices.version, 1);
       assert.equal(prices.definition.unit, 'Credit');
       assert.equal(prices.definition.markupBasisPoints, 17500);
+      assert.equal(prices.examples.find(e => e.id === 'advisor').credits, 32.463);
       assert.equal((await request('/v1/jobs', null, token)).value.jobs.length, 0);
       const options = { quote: { model: cfg.textModel, inputTokens: 1000, outputTokens: 100 } };
       const asrOptions = { quote: { model: cfg.asrModel, inputTokens: 1000, outputTokens: 100 } };
@@ -283,6 +284,9 @@ test(
       assert.equal(modelCalls.length, 1); assert.equal(modelCalls[0].memory.people[0].id, personId);
       let learned = (await request('/v1/memory', null, token)).value;
       assert(learned.memory.hotwords.some(w => w.text === '豆豆'));
+      const incremental = (await request('/v1/memory?after=1', null, token)).value;
+      assert.deepEqual(incremental.origins, learned.memory.origins);
+      assert.deepEqual(incremental.protected, learned.memory.protected);
       assert.equal((await app.db.query('SELECT body_cipher FROM memory_history WHERE history_id=$1', [history.id])).rows[0].body_cipher, null);
       // A newer edit retracts old automatic learning and is processed from its own cursor.
       assert.equal((await request('/v1/memory/history', { events: [{ ...history, revision: 2, resultText: '豆包' }] }, token)).status, 202);
@@ -303,6 +307,9 @@ test(
       assert.equal(billDetail.inputCreditsPerThousand, 1.4);
       assert.equal(billDetail.outputCreditsPerThousand, 4.725);
       assert(bill.every(j => !('input' in j) && !('result' in j) && !('provider_usage' in j)));
+      const consumption = (await request('/v1/credit-usage', null, token)).value.jobs;
+      assert(consumption.length > 0 && consumption.every(j => j.status === 'succeeded'));
+      assert.equal((await request('/v1/credit-usage')).status, 401);
       const asrRequestId=uuid();
       const ws = new WebSocket(base.replace("http:", "ws:") + "/v1/asr", {
         headers: { Authorization: "Bearer " + token },

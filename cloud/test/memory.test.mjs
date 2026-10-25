@@ -7,7 +7,7 @@ import { MemoryModel, historyRequest, historyBatch } from '../memory/model.mjs';
 import { QwenCounter } from '../memory/counter.mjs';
 
 const history = () => ({ id: uuid(), revision: 2, type: 'voice', asrText: '豆包', insertedText: '豆包', resultText: '豆豆', conversationRef: '' });
-const wordOp = h => ({ kind: 'hotword', action: 'upsert', id: 'new:word', value: { text: '豆豆', variants: ['豆包'] }, sourceId: h.id, sourceRevision: h.revision, category: 'correction', confidence: 0.99 });
+const wordOp = h => ({ kind: 'hotword', action: 'upsert', id: 'new:word', value: { text: '豆豆', variants: ['豆包'] }, sourceId: h.id, sourceRevision: h.revision, category: 'correction', confidence: 0.99, termType: 'name', quote: h.resultText });
 const options = h => ({ history: h, origin: { historyId: h.id, revision: h.revision } });
 
 test('only explicit inserted-to-result corrections add reversible hotwords automatically', () => {
@@ -32,8 +32,8 @@ test('person facts retain manual protection; reliable anchored styles apply dire
     { kind: 'fact', action: 'upsert', personId, id: companyId, value: { key: '公司', value: '海岚', scope: '当前' } },
     { kind: 'fact', action: 'upsert', personId, id: nicknameId, value: { key: '称呼', value: '林同学', scope: '工作' } },
   ], { manual: true }).memory;
-  const h = history();
-  current = changeMemory(current, [{ kind: 'fact', action: 'upsert', personId, id: companyId, value: { key: '公司', value: '云杉', scope: '当前' }, sourceId: h.id, sourceRevision: h.revision, category: 'observation', confidence: 0.99 }], options(h)).memory;
+  const h = { ...history(), resultText: '小林现在在云杉上班。' };
+  current = changeMemory(current, [{ kind: 'fact', action: 'upsert', personId, id: companyId, value: { key: '公司', value: '云杉', scope: '当前' }, sourceId: h.id, sourceRevision: h.revision, category: 'observation', confidence: 0.99, quote: h.resultText }], options(h)).memory;
   assert.equal(current.people[0].facts[0].value, '海岚');
   const candidateId = current.candidates[0].id;
   current = resolveCandidate(current, candidateId, true);

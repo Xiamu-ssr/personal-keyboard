@@ -1,76 +1,73 @@
 {
-  "reviewedAt": "2026-10-25T14:12:53.296738+00:00",
-  "version": "0.9.2-alpha.1",
+  "reviewedAt": "2026-10-25T16:50:42.510378+00:00",
+  "version": "0.9.3-alpha.1",
   "artifact": {
     "package": "app.doudou.ime",
-    "version": "0.9.2-alpha.1",
-    "sha256": "a1bbab3ebcd2496a1073029d3835560695c0edb5488644dcedb9c68508ad94df",
-    "bytes": 42323173,
+    "version": "0.9.3-alpha.1",
+    "sha256": "88f3cd1b43a6bb1420e154eb63ad3668a7ea932ce09578941983ecae65018e4b",
+    "bytes": 42229581,
     "buildType": "debug",
     "production": false,
     "modelsBundled": false
   },
-  "status": "Invited development preview: direct language-tap replacement with a restorable original, one-tap persistent recording, and six editable expression presets.",
+  "status": "Invited preview: explicit recorder start, compact four-tab navigation, optional profile fields, transparent Credit workload examples and comment practice.",
   "checks": [
     {
-      "name": "Node, YAML graph, shared contracts, Credit arithmetic and upstream diagnostics",
-      "passed": 33,
+      "name": "Node contracts, graph and learning quality",
+      "passed": 39,
       "skipped": 6,
-      "source": "npm run check; PostgreSQL gates run separately"
+      "source": "npm run check; database gate separately"
     },
     {
-      "name": "PostgreSQL palette migration, identity, frozen prices, concurrent settlement, model jobs and encrypted sync",
+      "name": "PostgreSQL account, memory delta, CAS and financial integration",
       "status": "passed",
-      "source": "isolated PostgreSQL; migration and API integration gates"
+      "source": "Isolated local PostgreSQL"
     },
     {
       "name": "Android JVM and lint",
       "passed": 38,
-      "source": "Gradle, final candidate"
+      "source": "Final candidate"
     },
     {
-      "name": "Live Cloud translation, restorable cached original, six screenshot replies, recorder persistence/re-entry/cancel, voice cancel, emoji and Credit bill; local four-tab geometry and draft isolation",
-      "passed": 12,
-      "source": "Android 15 owned emulator, final APK; own practice content and ordinary QA account"
+      "name": "Native workspaces, explicit recorder start, background indication, source-preserving translations, comments, history upgrade and profile isolation",
+      "passed": 15,
+      "source": "Android 15 owned emulator, final APK, dedicated ordinary QA account and owned local fixtures"
     },
     {
-      "name": "Light skin translation replacement, multi-language original and restore",
-      "passed": 1,
-      "source": "same final APK; focused live-model native check"
-    },
-    {
-      "name": "Signing continuity and native media provenance",
+      "name": "Real learning-provider quality probe",
       "status": "passed",
-      "source": "apksigner and demo/verify-public.mjs; APK and fourteen screenshots match manifest"
+      "source": "qwen3.8-flash, synthetic correction, quantity, name mention and explicit relationship; no database writes"
+    },
+    {
+      "name": "Signing continuity and media provenance",
+      "status": "passed",
+      "source": "Stable signing certificate and manifest hash verification"
     }
   ],
   "cloud": {
-    "deployedVersion": "0.9.2-alpha.1",
+    "deployedVersion": "0.9.3-alpha.1",
     "models": {
       "asr": "qwen-audio-3.1-asr-flash-message",
       "textAndVision": "qwen3.8-flash"
     },
     "provider": "Alibaba Cloud Model Studio",
-    "advisorCalls": {
-      "initialOrWholeBatch": "one call, six replies",
-      "singleSlot": "one call, three variants",
-      "previousAnswers": "no call"
-    },
-    "databaseMigration": "Only untouched built-in palette slots refreshed; customized slots retained. Complete backup and user/grant/personal-memory preservation checks passed.",
-    "singleCurrency": "Credit",
-    "markupBasisPoints": 17500,
+    "accountGrantsMemoryPreserved": true,
+    "historyLocation": "device; temporary learning increments cleared after processing"
+  },
+  "pricing": {
+    "unit": "Credit",
     "creditMicroCny": 1000,
-    "automaticMemoryLearning": "included in service costs"
+    "markupBasisPoints": 17500,
+    "workloads": "Illustrative input/output Token workloads calculated from the current tariff, not fixed fees or measured averages."
   },
   "limits": [
-    "This iteration used an emulator; no new physical OPPO or all-chat-app acceptance.",
-    "One historical generic provider failure cannot be reconstructed from its old log; current real screenshot requests succeeded. New failures retain safe upstream error code and request ID.",
-    "No new broad ASR accuracy benchmark.",
-    "Two videos and the memory/people screenshots retain their 0.8.0 source provenance; twelve screenshots are from this APK.",
-    "Development preview; purchases are not enabled."
+    "No new physical OPPO acceptance: the connected device is locked.",
+    "The memory screenshot and two videos retain their original 0.8.0 provenance; fourteen screenshots are from this APK.",
+    "Existing personal memory was retained; new learning guards do not retroactively delete user records.",
+    "Development preview; purchases remain disabled."
   ],
   "independentReview": {
-    "status": "No blocking P1/P2 remains in the reviewed translation, original/cache isolation, recorder lifecycle and default-palette changes. Developer live gate passed afterward.",
-    "scope": "Independent read-only source and native-screenshot review; no claim of an all-host or whole-product audit."
+    "status": "Focused source findings closed; six real native screenshots reviewed with no release-blocking visual finding. Motion and native execution were verified separately by the developer gates.",
+    "scope": "Focused read-only source and native screenshot review, not an all-chat-app audit."
   }
 }

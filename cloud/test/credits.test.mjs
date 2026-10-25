@@ -4,8 +4,20 @@ import fs from 'node:fs/promises';
 import { credits, milliCredits, priceUsage, normalizeUsage, validatePricing } from '../billing/credits.mjs';
 import { modelInput, validateModelResult } from '../models/text.mjs';
 import { validatePlan } from '../operator/admin.mjs';
+import { usageExamples } from '../billing/examples.mjs';
 const policy = JSON.parse(await fs.readFile(new URL('../config/credits.json', import.meta.url), 'utf8'));
 const snapshot = index => ({ rate: policy.models[index], markupBasisPoints: policy.markupBasisPoints });
+
+test('displayed workload examples use the current tariff exactly once and omit unavailable models', () => {
+  const models = { asrModel: policy.models[0].id, textModel: policy.models[1].id, visionModel: policy.models[1].id };
+  const examples = usageExamples(policy, models);
+  assert.deepEqual(examples.map(e => [e.id, e.credits]), [
+    ['recording', 0], ['asr', 11.288], ['advisor', 32.463], ['variants', 19.25], ['translation', .609],
+  ]);
+  assert.equal(usageExamples(policy, {}).length, 1);
+  const changed = { ...policy, markupBasisPoints: 15000 };
+  assert.equal(usageExamples(changed, models).find(e => e.id === 'translation').credits, .522);
+});
 
 test('Credit uses exact thousandths and supplier standard input/output prices with 75 percent markup', () => {
   assert.equal(credits(milliCredits(10.001)), 10.001);

@@ -681,6 +681,11 @@ public final class KeyboardService extends InputMethodService
     return x.text.toString();
   }
 
+  public boolean practiceMode() {
+    EditorInfo info = getCurrentInputEditorInfo();
+    return getPackageName().equals(pkg) && info != null && "doudou:practice".equals(info.privateImeOptions);
+  }
+
   private int[] selection() {
     InputConnection ic = input();
     if (ic == null) return null;

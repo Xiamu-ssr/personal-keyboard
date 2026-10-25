@@ -67,6 +67,8 @@ public final class CloudMemory {
         memory.put(group, next);
       }
       memory.put("candidates", response.getJSONArray("candidates"));
+      memory.put("origins", response.getJSONObject("origins"));
+      memory.put("protected", response.getJSONArray("protected"));
     }
     sameAccount(account);
     long oldVersion = app.store.cacheVersion(account);
@@ -78,21 +80,30 @@ public final class CloudMemory {
     if (status != null) app.store.setMeta("memory.status:" + account, status.toString());
   }
 
-  public synchronized void mutate(long baseVersion, JSONArray operations) throws Exception {
-    change(new JSONObject().put("baseVersion", baseVersion).put("operations", operations));
+  public synchronized void expect(String account, long version) {
+    sameAccount(account);
+    if (app.store.cacheVersion(account) != version)
+      throw new IllegalStateException("资料已更新，请刷新后再修改");
   }
 
-  public synchronized void candidate(String id, boolean accept) throws Exception {
-    change(
+  public synchronized void mutate(String account, long baseVersion, JSONArray operations) throws Exception {
+    expect(account, baseVersion);
+    change(account, new JSONObject().put("baseVersion", baseVersion).put("operations", operations));
+  }
+
+  public synchronized void candidate(String account, long version, String id, boolean accept) throws Exception {
+    expect(account, version);
+    change(account,
         new JSONObject()
-            .put("baseVersion", app.store.cacheVersion(app.cloud.userId()))
+            .put("baseVersion", version)
             .put("candidateId", id)
             .put("accept", accept));
   }
 
-  private void change(JSONObject input) throws Exception {
+  private void change(String account, JSONObject input) throws Exception {
+    sameAccount(account);
     if (!app.cloud.loggedIn()) throw new IllegalStateException("登录后可修改云端个人记忆");
-    String account = app.cloud.userId(), key = "memory:" + account + ":" + digest(input.toString());
+    String key = "memory:" + account + ":" + digest(input.toString());
     input.put("requestId", app.cloud.requestId(key));
     JSONObject response = app.cloud.request(account, "/v1/memory", "POST", input);
     sameAccount(account);
@@ -107,7 +118,7 @@ public final class CloudMemory {
             ? "hotword"
             : kind.equals("memory")
                 ? (item != null && item.aux.startsWith("relation:") ? "relation" : "fact")
-                : kind;
+            : kind.equals("relationship") ? "relation" : kind;
     JSONObject value = new JSONObject();
     if (type.equals("hotword")) value.put("text", title.trim()).put("variants", new JSONArray());
     if (type.equals("style"))
@@ -119,7 +130,7 @@ public final class CloudMemory {
           .put("value", body.trim())
           .put("scope", item == null || item.aux.isEmpty() ? "当前" : item.aux);
     if (type.equals("relation"))
-      value.put("targetId", item.aux.substring("relation:".length())).put("type", body.trim());
+      value.put("targetId", item == null ? "self" : item.aux.substring("relation:".length())).put("type", body.trim());
     JSONObject op =
         new JSONObject()
             .put("kind", type)
@@ -158,7 +169,7 @@ public final class CloudMemory {
     return op;
   }
 
-  public synchronized void remove(MemoryStore.Item item) throws Exception {
+  public JSONObject deletion(MemoryStore.Item item) throws Exception {
     String type =
         item.kind.equals("word")
             ? "hotword"
@@ -169,7 +180,25 @@ public final class CloudMemory {
         new JSONObject().put("kind", type).put("action", "delete").put("id", item.globalId);
     if (type.equals("fact") || type.equals("relation"))
       op.put("personId", app.store.get(item.owner).globalId);
-    mutate(app.store.cacheVersion(app.cloud.userId()), new JSONArray().put(op));
+    return op;
+  }
+
+  public static final class Removal {
+    public final long version;
+    public final JSONObject restore;
+    private Removal(long version, JSONObject restore) { this.version = version; this.restore = restore; }
+  }
+
+  public synchronized Removal remove(String account, MemoryStore.Item item) throws Exception {
+    sameAccount(account); sync(); sameAccount(account);
+    MemoryStore.Item fresh = app.store.get(item.id);
+    if (fresh == null || fresh.deleted || !fresh.globalId.equals(item.globalId)
+        || !fresh.title.equals(item.title) || !fresh.body.equals(item.body) || !fresh.aux.equals(item.aux))
+      throw new IllegalStateException("资料已更新，请重新查看后再删除");
+    JSONObject restore = fresh.kind.equals("word") || fresh.kind.equals("style")
+        ? operation(fresh, fresh.kind, fresh.owner, fresh.title, fresh.body) : null;
+    mutate(account, app.store.cacheVersion(account), new JSONArray().put(deletion(fresh)));
+    return new Removal(app.store.cacheVersion(account), restore);
   }
 
   private JSONArray lines(String text) {
@@ -241,11 +270,11 @@ public final class CloudMemory {
             .put("value", value);
         ops.put(op);
         if (ops.length() == 40) {
-          mutate(app.store.cacheVersion(account), ops);
+          mutate(account, app.store.cacheVersion(account), ops);
           ops = new JSONArray();
         }
       }
-    if (ops.length() > 0) mutate(app.store.cacheVersion(account), ops);
+    if (ops.length() > 0) mutate(account, app.store.cacheVersion(account), ops);
     // v0.4 used the person body for notes; preserve it as an explicit fact, never aliases.
     ops = new JSONArray();
     for (int i = 0; i < old.length(); i++) {
@@ -271,11 +300,11 @@ public final class CloudMemory {
                       .put("value", item.getString("body"))
                       .put("scope", "导入")));
       if (ops.length() == 40) {
-        mutate(app.store.cacheVersion(account), ops);
+        mutate(account, app.store.cacheVersion(account), ops);
         ops = new JSONArray();
       }
     }
-    if (ops.length() > 0) mutate(app.store.cacheVersion(account), ops);
+    if (ops.length() > 0) mutate(account, app.store.cacheVersion(account), ops);
     app.store.setMeta("profile.migration", "");
   }
 }

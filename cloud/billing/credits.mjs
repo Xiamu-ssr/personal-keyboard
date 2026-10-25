@@ -55,6 +55,7 @@ export class CreditPricing {
     requireValue(rate, 'PRICE_NOT_CONFIGURED', '此模型尚未配置积分价格', 503);
     const snapshot = { version: Number(row.version), model: request.model, rate,
       markupBasisPoints: row.definition.markupBasisPoints, priceBasis: row.definition.priceBasis };
+    if ([3, 6].includes(request.replyCount)) snapshot.replyCount = request.replyCount;
     let input = request.inputTokens, output = request.outputTokens;
     if (request.asr) {
       let lo = 0, hi = request.asr.maxSeconds;

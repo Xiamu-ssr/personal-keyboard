@@ -29,6 +29,7 @@ public final class HistoryView {
       if (!query.isEmpty()
           && !value.toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) continue;
       String kind = e.type.equals("recording") ? "录音笔" : e.type.equals("advisor") ? "帮我回" : "语音";
+      if (e.practice) kind += "练习";
       String preview = value.isEmpty() ? (e.type.equals("recording") ? "录音" : "回复建议") : value;
       LinearLayout card = Ui.card(activity);
       TextView text = Ui.text(activity, preview, 17, Ui.ink());

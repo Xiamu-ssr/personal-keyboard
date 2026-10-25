@@ -25,7 +25,7 @@ export class PersonalMemory {
       const rows = (await c.query('SELECT body_cipher FROM memory_changes WHERE user_id=$1 AND version>$2 ORDER BY version LIMIT 201', [user.id, after])).rows;
       if (rows.length > 200) return { ...current, reset: true, status };
       const changes = rows.flatMap(r => this.decode(user.id, r.body_cipher));
-      return { version: current.version, reset: false, changes, candidates: current.memory.candidates, status };
+      return { version: current.version, reset: false, changes, candidates: current.memory.candidates, origins: current.memory.origins, protected: current.memory.protected, status };
     });
   }
   async ensureCapacity(memory, version) {

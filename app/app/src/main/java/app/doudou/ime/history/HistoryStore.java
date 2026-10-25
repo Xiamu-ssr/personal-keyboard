@@ -19,7 +19,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
     public JSONObject identity;
     public String audioRef;
     public int revision, uploaded;
-    public boolean deleted;
+    public boolean deleted, practice;
     public long created, updated;
 
     public JSONObject increment() throws JSONException {
@@ -33,6 +33,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
           .put("conversationRef", conversationRef)
           .put("messages", messages)
           .put("identity", identity)
+          .put("practice", practice)
           .put("deleted", deleted);
     }
 
@@ -52,7 +53,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
   }
 
   public HistoryStore(Context c, String name) {
-    super(c, name, null, 2);
+    super(c, name, null, 3);
     context = c.getApplicationContext();
     setWriteAheadLoggingEnabled(true);
   }
@@ -69,6 +70,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
     d.execSQL("ALTER TABLE history ADD COLUMN identity TEXT NOT NULL DEFAULT '{}'");
     d.execSQL("ALTER TABLE history ADD COLUMN reply_groups TEXT NOT NULL DEFAULT '[]'");
     d.execSQL("ALTER TABLE history ADD COLUMN audio_ref TEXT NOT NULL DEFAULT ''");
+    d.execSQL("ALTER TABLE history ADD COLUMN practice INTEGER NOT NULL DEFAULT 0");
     d.execSQL("CREATE INDEX history_pending ON history(account,uploaded,revision)");
     d.execSQL("CREATE TABLE meta(key TEXT PRIMARY KEY,value TEXT NOT NULL)");
   }
@@ -86,6 +88,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
           "UPDATE history SET deleted=1,revision=revision+1 WHERE type='advisor' AND messages='[]'"
               + " AND inserted_text='' AND result_text=''");
     }
+    if (old < 3) d.execSQL("ALTER TABLE history ADD COLUMN practice INTEGER NOT NULL DEFAULT 0");
   }
 
   private Entry read(Cursor c) {
@@ -111,6 +114,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
     e.created = c.getLong(11);
     e.updated = c.getLong(12);
     e.deleted = c.getInt(13) != 0;
+    e.practice = c.getInt(17) != 0;
     return e;
   }
 
@@ -122,6 +126,10 @@ public final class HistoryStore extends SQLiteOpenHelper {
   }
 
   public synchronized String create(String type, String asr) {
+    return create(type, asr, false);
+  }
+
+  public synchronized String create(String type, String asr, boolean practice) {
     if (!type.equals("voice") && !type.equals("advisor") && !type.equals("recording"))
       throw new IllegalArgumentException("未知历史类型");
     String id = UUID.randomUUID().toString();
@@ -130,6 +138,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
     v.put("id", id);
     v.put("type", type);
     v.put("asr_text", asr);
+    v.put("practice", practice ? 1 : 0);
     v.put("created", now);
     v.put("updated", now);
     v.put("account", KeyboardApp.instance == null ? "" : KeyboardApp.instance.cloud.userId());
@@ -202,6 +211,11 @@ public final class HistoryStore extends SQLiteOpenHelper {
   /** A successful answer and its screenshots become one visible history atomically. */
   public synchronized String saveAdvisor(
       String existing, JSONObject result, List<String> images, String account) throws Exception {
+    return saveAdvisor(existing, result, images, account, false);
+  }
+
+  public synchronized String saveAdvisor(
+      String existing, JSONObject result, List<String> images, String account, boolean practice) throws Exception {
     if (!existing.isEmpty()) {
       Entry entry = get(existing);
       if (entry == null || entry.deleted || !entry.account.equals(account))
@@ -236,6 +250,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
       row.put("id", id);
       row.put("type", "advisor");
       row.put("account", account);
+      row.put("practice", practice ? 1 : 0);
       row.put("created", now);
       row.put("updated", now);
       row.put("screenshots", refs.toString());
@@ -367,7 +382,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
     try (Cursor c =
         getReadableDatabase()
             .rawQuery(
-                "SELECT * FROM history WHERE account=? AND uploaded<revision AND (deleted=1 OR"
+                "SELECT * FROM history WHERE account=? AND practice=0 AND uploaded<revision AND (deleted=1 OR"
                     + " asr_text!='' OR result_text!='' OR messages!='[]') ORDER BY updated LIMIT"
                     + " 12",
                 new String[] {account})) {
@@ -394,7 +409,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
     JSONArray out = new JSONArray();
     int size = 0;
     for (Entry e : list(50)) {
-      if (e.resultText.isEmpty()
+      if (e.practice || e.resultText.isEmpty()
           || e.insertedText.isEmpty()
           || !e.type.equals("advisor")
           || (!e.identity.optString("application").equals(platform)
@@ -422,7 +437,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
     try (Cursor c =
         getReadableDatabase()
             .rawQuery(
-                "SELECT result_text FROM history WHERE deleted=0 AND conversation_ref=? AND"
+                "SELECT result_text FROM history WHERE deleted=0 AND practice=0 AND conversation_ref=? AND"
                     + " account=? AND inserted_text!='' AND result_text!='' ORDER BY updated DESC"
                     + " LIMIT 8",
                 new String[] {conversation, account})) {
@@ -547,6 +562,7 @@ public final class HistoryStore extends SQLiteOpenHelper {
         ContentValues v = new ContentValues();
         v.put("id", id);
         v.put("type", type);
+        v.put("practice", raw.optBoolean("practice") ? 1 : 0);
         v.put("asr_text", raw.optString("asrText"));
         v.put("inserted_text", raw.optString("insertedText"));
         v.put("result_text", raw.optString("resultText"));

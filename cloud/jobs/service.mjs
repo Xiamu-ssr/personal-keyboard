@@ -28,7 +28,8 @@ export class Jobs {
     const existing = await this.ledger.existing(user.id, request.requestId, request.kind, input, options);
     if (existing) return this.ledger.view(existing);
     const prepared = await this.models.prepare(request.kind, await this.taskInput(user.id, request.kind, input));
-    const quote = { model: prepared.model, inputTokens: prepared.tokens + (input.imageDigests?.length || 0) * 4096, outputTokens: prepared.outputLimit };
+    const quote = { model: prepared.model, inputTokens: prepared.tokens + (input.imageDigests?.length || 0) * 4096, outputTokens: prepared.outputLimit,
+      ...(request.kind === 'advisor' ? { replyCount: input.slotId ? 3 : 6 } : {}) };
     const { job, created } = await this.ledger.reserve(user.id, request.requestId, request.kind, input,
       { ...options, quote, execution: prepared });
     if (created && input.imageDigests?.length)

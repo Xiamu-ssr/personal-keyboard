@@ -109,19 +109,21 @@ public final class WorkspaceAcceptanceTest {
     assertEquals("A late translation never replaces a manual edit", manual, value());
   }
 
-  @Test public void recordingContinuesAcrossTranslationInputAndKeyboardHide() throws Exception {
+  @Test public void recordingNeedsExplicitStartAndContinuesAcrossWorkspaces() throws Exception {
     String baseline = value();
-    click("录音");
+    click("录音"); await("开始录音", 5000); SystemClock.sleep(700);
+    assertNull("Entering Recording never opens the microphone", RecordingService.current);
+    shot("recorder-idle"); click("开始录音");
     long deadline = SystemClock.uptimeMillis() + 8000;
     while (RecordingService.current == null && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(80);
     assertNotNull(RecordingService.current); ownedRecording = RecordingService.current.id();
     while (RecordingService.current.bytes() < 16000 && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
-    long first = RecordingService.current.bytes(); assertTrue("Audio persisted before tools are switched", first > 0);
+    long first = RecordingService.current.bytes(); assertTrue("Audio saved before switching", first > 0);
     click("翻译"); await("翻译成英语", 5000); SystemClock.sleep(600);
-    assertEquals("Recording remains visible while working elsewhere", "正在录音", await("录音", 3000).getStateDescription());
+    assertEquals("Cross-tab microphone indicator", "正在录音", await("录音", 3000).getStateDescription());
+    shot("recorder-background");
     assertEquals(ownedRecording, RecordingService.current.id()); assertTrue(RecordingService.current.active());
-    assertTrue("Microphone continues in the other workspace", RecordingService.current.bytes() > first);
-    assertEquals(baseline, value());
+    assertTrue(RecordingService.current.bytes() > first); assertEquals(baseline, value());
     click("输入"); await("空格", 5000); click("收起键盘");
     long hidden = RecordingService.current.bytes(); SystemClock.sleep(600);
     assertTrue(RecordingService.current.bytes() > hidden); assertEquals(baseline, value());
@@ -129,44 +131,46 @@ public final class WorkspaceAcceptanceTest {
     shot("recorder-live"); click("结束");
     deadline = SystemClock.uptimeMillis() + 25000;
     while (RecordingService.current != null && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
-    assertNull("Finish closes only this recording", RecordingService.current);
+    assertNull("Finish stops the microphone", RecordingService.current);
     RecordingStore saved = new RecordingStore(app, ownedRecording);
     JSONObject snapshot = saved.snapshot();
     assertTrue(snapshot.getJSONArray("chunks").length() > 0); assertFalse(snapshot.optBoolean("active", true));
-    assertTrue("Recorded audio remains available after service stop", saved.audio(0).length() > 0);
-    assertEquals(baseline, value()); await("新录音", 5000); shot("recorder-saved");
-    String duration=await("录音时长",3000).getText().toString(); assertNotEquals("00:00",duration);
-    click("翻译"); await("翻译成英语",5000); click("录音");
+    assertTrue("Audio survives service stop", saved.audio(0).length() > 0);
+    assertEquals(baseline, value()); await("开始录音", 5000); shot("recorder-saved");
+    assertNotEquals("00:00", await("录音时长", 3000).getText().toString());
+    click("翻译"); await("翻译成英语", 5000); click("录音");
+    await("开始录音", 5000); SystemClock.sleep(700);
+    assertNull("Returning to a saved take also stays idle", RecordingService.current);
+    click("开始录音");
     deadline = SystemClock.uptimeMillis() + 8000;
     while (RecordingService.current == null && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
-    assertNotNull("A saved recording must not block one-tap new recording", RecordingService.current);
-    assertNotEquals(ownedRecording, RecordingService.current.id());
+    assertNotNull(RecordingService.current); assertNotEquals(ownedRecording, RecordingService.current.id());
     ownedRecording = RecordingService.current.id();
-    assertTrue(RecordingService.current.active());
-    onMain(() -> RecordingService.current.finish());
-    click("录音");
     click("输入"); await("空格", 5000);
-    deadline = SystemClock.uptimeMillis() + 8000;
-    while (RecordingService.current != null && ownedRecording.equals(RecordingService.current.id())
-        && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
-    while (RecordingService.current == null && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
-    assertNotNull("Tapping selected Recording starts the next take after local audio is saved", RecordingService.current);
-    assertNotEquals(ownedRecording, RecordingService.current.id());
-    ownedRecording = RecordingService.current.id();
-    assertTrue(RecordingService.current.active());
-    long bytes = RecordingService.current.bytes(); SystemClock.sleep(1200);
-    assertTrue("The requested next take records even after immediately leaving the tab",
-        RecordingService.current.bytes() > bytes);
-    click("录音"); assertTrue("A resumed take can be ended", await("结束", 5000).isEnabled());
-    onMain(() -> {
-      RecordingService service = RecordingService.current;
-      service.finish(); service.startNextRecording(); service.finish();
-      ownedRecording = service.id();
-    });
+    assertTrue("Explicit new take continues after leaving", RecordingService.current.active());
+    click("录音"); await("结束", 5000); click("结束");
     deadline = SystemClock.uptimeMillis() + 25000;
     while (RecordingService.current != null && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
-    SystemClock.sleep(500);
-    assertNull("End also cancels a pending next take and cannot restart the microphone", RecordingService.current);
+    SystemClock.sleep(700);
+    assertNull("No pending automatic next take", RecordingService.current);
+  }
+
+  @Test public void commentPracticeUsesPostAndReplyTargetsAndResetsOnReentry() throws Exception {
+    onMain(activity::finish);
+    activity = ins.startActivitySync(new Intent(app, PracticeActivity.class).putExtra("scene", "comments").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    editor = field(activity.getWindow().getDecorView());
+    await("下班后的十五分钟厨房", 5000); shot("comment-post");
+    click("回复海盐的评论：看起来好香！番茄要先炒出汁。");
+    onMain(() -> assertEquals("回复 海盐", editor.getHint().toString()));
+    onMain(() -> editor.setText("明天试试，谢谢你的建议！"));
+    click("评论"); await("回复 海盐：明天试试，谢谢你的建议！", 5000);
+    assertEquals("", value());
+    onMain(activity::finish);
+    activity = ins.startActivitySync(new Intent(app, PracticeActivity.class).putExtra("scene", "comments").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    editor = field(activity.getWindow().getDecorView());
+    await("评论 8", 5000);
+    assertNull("Re-entered practice is disposable", node("回复 海盐：明天试试，谢谢你的建议！"));
+    assertEquals("doudou:practice", editor.getPrivateImeOptions());
   }
 
   @Test public void emojiPickerCommitsWholeEmojiAndDeleteRemovesOneCluster() throws Exception {

@@ -46,6 +46,9 @@ public final class AccountSummary {
       Ui.gap(c, card, 24);
       LinearLayout usage = Ui.row(c);
       metric(c, usage, ent.optJSONObject("credits"), "Credit 积分可用");
+      usage.setBackground(Ui.pressable(c, android.graphics.Color.TRANSPARENT, 12));
+      usage.setContentDescription("积分用量与价格"); usage.setFocusable(true);
+      usage.setOnClickListener(v -> c.startActivity(new android.content.Intent(c, CreditUsageActivity.class)));
       card.addView(usage);
     }
     return card;
@@ -65,6 +68,10 @@ public final class AccountSummary {
     column.addView(value);
     Ui.gap(c, column, 7);
     column.addView(Ui.text(c, label, 12, Ui.sub()));
+    if (item != null && item.optDouble("reserved") > 0) {
+      Ui.gap(c, column, 6);
+      column.addView(Ui.text(c, "进行中预留 " + new java.text.DecimalFormat("#,##0.###").format(item.optDouble("reserved")), 13, Ui.sub()));
+    }
     row.addView(column, new LinearLayout.LayoutParams(0, -2, 1));
   }
 

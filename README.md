@@ -7,14 +7,14 @@
 <p align="center">语音输入，也帮你想好怎么回。</p>
 
 <p align="center">
-  <a href="https://github.com/Xiamu-ssr/personal-keyboard/releases/download/v0.9.2-alpha.1/doudou-keyboard.apk"><strong>下载 Android APK</strong></a>
+  <a href="https://github.com/Xiamu-ssr/personal-keyboard/releases/download/v0.9.3-alpha.1/doudou-keyboard.apk"><strong>下载 Android APK</strong></a>
   &nbsp; · &nbsp;
-  <a href="https://github.com/Xiamu-ssr/personal-keyboard/releases/tag/v0.9.2-alpha.1">版本说明</a>
+  <a href="https://github.com/Xiamu-ssr/personal-keyboard/releases/tag/v0.9.3-alpha.1">版本说明</a>
   &nbsp; · &nbsp;
   <a href="https://xiamu-ssr.github.io/personal-keyboard/">产品与架构</a>
 </p>
 
-<p align="center">0.9.2-alpha.1 · Android 11+ · 亮色 / 暗色</p>
+<p align="center">0.9.3-alpha.1 · Android 11+ · 亮色 / 暗色</p>
 
 当前为邀请内测版。在线功能需账号登录，新账号赠送 3,000 Credit；暂未开放充值。本地拼音无需登录。
 
@@ -40,7 +40,7 @@
 | 工作区 | 可以做什么 |
 | --- | --- |
 | **输入** | 离线拼音、表情和符号；按住空格说话，松手填入。 |
-| **录音** | 点开即录，边录边转写。收起键盘继续录，断网或额度不足仍保留原音。 |
+| **录音** | 进入后点开始录音，切栏有动态提示。收起键盘继续录，断网或额度不足仍保留原音。 |
 | **帮我回** | 读取当前聊天截图，结合人物与文风给出六种回复；可换一组、换说法、回看旧答案。 |
 | **翻译** | 九种语言点选即替换输入框；原文暂存，随时还原，换语言不重复翻译译文。 |
 
@@ -63,6 +63,8 @@
 </table>
 
 截图与录屏集中在 [spec/media/](spec/media/)。每份材料的来源版本与校验值分别记录在 [截图清单](spec/release.json) 和 [录屏清单](spec/media.json)；旧录屏保留其真实版本。
+
+[评论练习](spec/media/screenshots/comments.png) · [人物资料](spec/media/screenshots/people.png) · [积分用量与价格](spec/media/screenshots/credits.png)
 
 </details>
 

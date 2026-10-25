@@ -69,11 +69,13 @@ public final class MemoryConflicts {
   }
 
   private void resolve(JSONObject candidate, boolean accept, Runnable next) {
+    String account = app.cloud.userId();
+    long version = app.store.cacheVersion(account);
     app.network.execute(
         () -> {
           try {
             app.personalization.sync();
-            app.personalization.candidate(candidate.getString("id"), accept);
+            app.personalization.candidate(account, version, candidate.getString("id"), accept);
             activity.runOnUiThread(next);
           } catch (Exception e) {
             activity.runOnUiThread(

@@ -8,6 +8,7 @@ export function historyEvent(raw) {
   requireValue(raw && isUuid(raw.id) && Number.isSafeInteger(raw.revision) && raw.revision > 0 && ['voice', 'advisor', 'recording'].includes(raw.type), 'HISTORY_FORMAT', '历史标识或修订无效');
   if (raw.deleted === true) return { id: raw.id, revision: raw.revision, type: raw.type, deleted: true, messages: [], asrText: '', insertedText: '', resultText: '', conversationRef: '' };
   const value = { id: raw.id, revision: raw.revision, type: raw.type,
+    practice: raw.practice === true,
     conversationRef: bounded(raw.conversationRef || '', 250),
     asrText: bounded(raw.asrText || '', 50000), insertedText: bounded(raw.insertedText || '', 50000), resultText: bounded(raw.resultText || '', 50000),
     identity: raw.identity && typeof raw.identity === 'object' ? { platform: bounded(raw.identity.platform || '', 120), nickname: bounded(raw.identity.nickname || '', 100), handle: bounded(raw.identity.handle || '', 150), personId: isUuid(raw.identity.personId) ? raw.identity.personId : '' } : {},

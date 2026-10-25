@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "fields": [
+    { "key": "name", "label": "昵称", "kind": "person", "aliases": [] },
+    { "key": "self", "label": "关系", "kind": "relation", "aliases": [] },
+    { "key": "性别", "label": "性别", "kind": "fact", "aliases": ["gender", "sex"] },
+    { "key": "年龄", "label": "年龄", "kind": "fact", "aliases": ["age"] },
+    { "key": "公司", "label": "公司", "kind": "fact", "aliases": ["company", "employer", "单位"] },
+    { "key": "职位", "label": "职位", "kind": "fact", "aliases": ["job", "job_title", "职业"] },
+    { "key": "工作经历", "label": "工作经历", "kind": "fact", "aliases": ["career", "work_history"] }
+  ]
+}

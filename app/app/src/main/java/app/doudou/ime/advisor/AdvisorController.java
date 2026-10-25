@@ -500,6 +500,7 @@ public final class AdvisorController extends PanelController {
     final String previousHistory = advisor.historyId;
     final List<String> captured = advisor.images();
     final String application = advisor.packageName, account = app.cloud.userId();
+    final boolean practice = host.practiceMode();
     app.worker.execute(
         () -> {
           try {
@@ -507,7 +508,7 @@ public final class AdvisorController extends PanelController {
               return;
             JSONObject identity = output.optJSONObject("identity");
             if (identity != null) identity.put("application", application);
-            String saved = app.histories.saveAdvisor(previousHistory, output, captured, account);
+            String saved = app.histories.saveAdvisor(previousHistory, output, captured, account, practice);
             main.post(
                 () -> {
                   if (!advisor.valid(token, host.generation()) || generation != host.generation())

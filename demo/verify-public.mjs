@@ -17,11 +17,11 @@ if (
   artifact.sha256 !== manifest.files["doudou-keyboard.apk"]?.sha256
 )
   throw Error("Public build version mismatch");
-if (Object.keys(manifest.files).length !== 15)
-  throw Error("Expected APK and fourteen native screenshots");
+if (Object.keys(manifest.files).length !== 16)
+  throw Error("Expected APK and fifteen native screenshots");
 for (const [name, expected] of Object.entries(manifest.files)) {
   if (
-    !/^(doudou-keyboard\.apk|(?:home|typing|tools|voice|memory|people|advisor|palette|palette-dark|translation|recorder|emoji|credits|pricing)\.png)$/.test(
+    !/^(doudou-keyboard\.apk|(?:home|typing|tools|voice|memory|people|advisor|palette|palette-dark|translation|recorder|emoji|credits|pricing|comments)\.png)$/.test(
       name,
     )
   )
@@ -58,5 +58,5 @@ for (const [name, expected] of Object.entries(media.files)) {
     throw Error("Recording digest mismatch: " + name);
 }
 console.log(
-  "Verified APK, fourteen native screenshots and two APK recordings against their manifests.",
+  "Verified APK, fifteen native screenshots and two APK recordings against their manifests.",
 );

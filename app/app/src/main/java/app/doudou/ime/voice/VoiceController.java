@@ -148,7 +148,7 @@ public final class VoiceController extends PanelController {
     sessionActive = holding = false;
     if (editing || host.finishVoice(value)) {
       if (!rawTranscript.trim().isEmpty()) {
-        if (historyId.isEmpty()) historyId = app.histories.create("voice", rawTranscript);
+        if (historyId.isEmpty()) historyId = app.histories.create("voice", rawTranscript, host.practiceMode());
         if (!editing || retained != null) {
           app.histories.inserted(historyId, editing ? retained : value, host.conversationRef());
           host.trackHistory(historyId);
@@ -198,7 +198,7 @@ public final class VoiceController extends PanelController {
             if (fin) {
               holding = working = false;
               rawTranscript = value;
-              if (!value.trim().isEmpty()) historyId = app.histories.create("voice", value);
+              if (!value.trim().isEmpty()) historyId = app.histories.create("voice", value, host.practiceMode());
               if (value.trim().isEmpty()) {
                 if (newlineAfter) insertTranscript();
                 else failed("没听清，再按住说一次");

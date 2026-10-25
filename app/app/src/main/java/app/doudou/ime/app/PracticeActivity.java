@@ -11,6 +11,8 @@ import app.doudou.ime.design.Ui;
 /** Two disposable local scenes. Sending here never contacts a real person or text model. */
 public final class PracticeActivity extends app.doudou.ime.design.ThemedActivity {
   private boolean comments;
+  private String replyTo = "";
+  private app.doudou.ime.practice.CommentScene commentScene;
   private LinearLayout messages;
   private ScrollView chat;
   private EditText editor;
@@ -22,6 +24,7 @@ public final class PracticeActivity extends app.doudou.ime.design.ThemedActivity
     comments = "comments".equals(getIntent().getStringExtra("scene"));
     if (state != null) {
       comments = state.getBoolean("comments", comments);
+      replyTo = state.getString("replyTo", "");
       java.util.ArrayList<String> previous = state.getStringArrayList("sent");
       if (previous != null) sent.addAll(previous);
     }
@@ -52,6 +55,7 @@ public final class PracticeActivity extends app.doudou.ime.design.ThemedActivity
             () -> {
               comments = !comments;
               sent.clear();
+              replyTo = "";
               render();
             });
     switchScene.setBackground(Ui.pressable(this, Ui.surface(), 18));
@@ -60,7 +64,7 @@ public final class PracticeActivity extends app.doudou.ime.design.ThemedActivity
     TextView demo = Ui.text(this, "本机练习", 12, Ui.sub());
     demo.setGravity(Gravity.CENTER);
     Ui.pad(this, demo, 0, 8);
-    root.addView(demo);
+    if (!comments) root.addView(demo);
     chat =
         new ScrollView(this) {
           private boolean atLatest = true;
@@ -78,37 +82,23 @@ public final class PracticeActivity extends app.doudou.ime.design.ThemedActivity
             // Keep the pre-layout anchor; child measurements may already describe the new viewport.
             boolean bottom = oldH == 0 || atLatest;
             super.onSizeChanged(w, h, oldW, oldH);
-            if (bottom) post(() -> fullScroll(View.FOCUS_DOWN));
+            if (!comments && bottom) post(() -> fullScroll(View.FOCUS_DOWN));
           }
         };
     chat.setFillViewport(true);
-    chat.setContentDescription("示例聊天记录");
+    chat.setContentDescription(comments ? "示例评论区" : "示例聊天记录");
     messages = Ui.col(this);
     chat.addView(messages);
     root.addView(chat, new LinearLayout.LayoutParams(-1, 0, 1));
     if (comments) {
-      LinearLayout post = Ui.card(this);
-      post.addView(Ui.text(this, "周末小厨房", 18, Ui.appAccent()));
-      Ui.gap(this, post, 12);
-      TextView story = Ui.text(this, "第一次做番茄鸡蛋面，没想到厨房比工位还忙。\n\n你们下班后最常做什么菜？", 20, Ui.ink());
-      story.setLineSpacing(Ui.dp(this, 7), 1);
-      post.addView(story);
-      messages.addView(post);
-      Ui.gap(this, messages, 18);
-      for (String s :
-          new String[] {
-            "海盐|看起来好香！番茄要先炒出汁。",
-            "小白|同款下班做饭人，我通常只剩洗锅的力气。",
-            "阿橙|我也爱做这个，再放一点葱花。",
-            "晚风|我的拿手菜是点外卖哈哈哈。",
-            "一颗土豆|求详细做法，鸡蛋是先炒还是后放呀？",
-            "周末小厨房|我先把鸡蛋炒好盛出来，最后再倒回去。",
-            "月亮|看完饿了，感觉可以连吃三碗。",
-            "小林|今晚也想试试，家里没有面条，用粉丝行吗？"
-          }) {
-        String[] v = s.split("\\|", 2);
-        bubble(v[0], v[1], false);
-      }
+      commentScene = new app.doudou.ime.practice.CommentScene(this, (name, anchor) -> {
+        replyTo = name;
+        editor.setHint("回复 " + name);
+        editor.requestFocus();
+        ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).showSoftInput(editor, InputMethodManager.SHOW_IMPLICIT);
+        anchor.postDelayed(() -> anchor.requestRectangleOnScreen(new android.graphics.Rect(0, 0, anchor.getWidth(), anchor.getHeight()), false), 300);
+      });
+      commentScene.populate(messages);
     } else {
       for (String s :
           new String[] {
@@ -132,9 +122,10 @@ public final class PracticeActivity extends app.doudou.ime.design.ThemedActivity
         bubble(v[0], v[1], v[0].equals("我"));
       }
     }
-    for (String value : sent) bubble("我", value, true);
+    for (String value : sent) { if (comments) commentScene.addOwn(messages, value); else bubble("我", value, true); }
     LinearLayout composer = Ui.row(this);
-    editor = Ui.edit(this, comments ? "说说你的看法…" : "消息", "");
+    editor = Ui.edit(this, comments ? (replyTo.isEmpty() ? "说说你的看法…" : "回复 " + replyTo) : "消息", "");
+    editor.setPrivateImeOptions("doudou:practice");
     editor.setId(View.generateViewId());
     editor.setMaxLines(4);
     editor.setInputType(
@@ -143,13 +134,16 @@ public final class PracticeActivity extends app.doudou.ime.design.ThemedActivity
     TextView send =
         Ui.primary(
             this,
-            "发送",
+            comments ? "评论" : "发送",
             () -> {
               String value = editor.getText().toString().trim();
               if (value.isEmpty()) return;
-              sent.add(value);
-              bubble("我", value, true);
+              String posted = comments && !replyTo.isEmpty() ? "回复 " + replyTo + "：" + value : value;
+              sent.add(posted);
+              if (comments) commentScene.addOwn(messages, posted); else bubble("我", value, true);
               editor.setText("");
+              replyTo = "";
+              editor.setHint(comments ? "说说你的看法…" : "消息");
               chat.post(() -> chat.fullScroll(View.FOCUS_DOWN));
             });
     send.setMinWidth(Ui.dp(this, 64));
@@ -159,17 +153,24 @@ public final class PracticeActivity extends app.doudou.ime.design.ThemedActivity
     root.addView(composer);
     Ui.gap(this, root, 6);
     Ui.content(this, root);
-    editor.requestFocus();
-    chat.post(() -> chat.fullScroll(View.FOCUS_DOWN));
-    editor.postDelayed(
+    if (comments) {
+      root.setFocusableInTouchMode(true); root.requestFocus();
+      ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(editor.getWindowToken(), 0);
+      chat.post(() -> chat.scrollTo(0, 0));
+    } else {
+      editor.requestFocus();
+      chat.post(() -> chat.fullScroll(View.FOCUS_DOWN));
+      editor.postDelayed(
         () ->
             ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
                 .showSoftInput(editor, InputMethodManager.SHOW_IMPLICIT),
         250);
+    }
   }
 
   @Override protected void onSaveInstanceState(Bundle state) {
     state.putBoolean("comments", comments); state.putStringArrayList("sent", sent);
+    state.putString("replyTo", replyTo);
     if (editor != null) {
       state.putString("draft", editor.getText().toString());
       state.putInt("selectionStart", editor.getSelectionStart());

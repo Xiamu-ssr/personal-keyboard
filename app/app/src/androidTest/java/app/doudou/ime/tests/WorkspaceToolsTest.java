@@ -153,7 +153,7 @@ public final class WorkspaceToolsTest {
 
           calls.selected.clear();
           assertTrue(tab.performClick());
-          boolean routes = mode != selected || mode == WorkspaceBar.Mode.RECORDING;
+          boolean routes = mode != selected;
           assertEquals(routes ? 1 : 0, calls.selected.size());
           if (routes) assertEquals(mode, calls.selected.get(0));
           assertEquals("Only rebuilding with a different mode changes selection",
@@ -167,6 +167,82 @@ public final class WorkspaceToolsTest {
         assertEquals("Tools/hide must not select another workspace", selections, calls.selected.size());
       });
     }
+  }
+
+  @Test
+  public void fixedProfileFieldsAreCompactAndEditsKeepUnrelatedData() throws Exception {
+    openWindow();
+    String id = UUID.randomUUID().toString(), company = UUID.randomUUID().toString();
+    JSONObject person = new JSONObject().put("id", id).put("name", "小周")
+        .put("aliases", new org.json.JSONArray()).put("identities", new org.json.JSONArray()
+            .put(new JSONObject().put("platform", "QQ").put("nickname", "小周").put("handle", "qa-fixture")))
+        .put("facts", new org.json.JSONArray()
+            .put(new JSONObject().put("id", company).put("key", "company").put("value", "星野工作室").put("scope", "当前"))
+            .put(new JSONObject().put("id", UUID.randomUUID().toString()).put("key", "爱好").put("value", "周末爬山").put("scope", "当前")))
+        .put("relations", new org.json.JSONArray());
+    JSONObject memory = new JSONObject().put("hotwords", new org.json.JSONArray()).put("styles", new org.json.JSONArray())
+        .put("people", new org.json.JSONArray().put(person)).put("candidates", new org.json.JSONArray());
+    services.store.cache(services.cloud.userId(), 7, memory);
+    app.doudou.ime.memory.CloudMemory cloud = new app.doudou.ime.memory.CloudMemory(services);
+    app.doudou.ime.memory.MemoryStore.Item owner = services.store.list("person", 0).get(0);
+    JSONObject rename = cloud.operation(owner, "person", 0, "小周同学", "");
+    assertEquals("Platform identity survives renaming", person.getJSONArray("identities").toString(), rename.getJSONObject("value").getJSONArray("identities").toString());
+    app.doudou.ime.memory.MemoryStore.Item fact = services.store.list("memory", owner.id).stream().filter(v -> v.globalId.equals(company)).findFirst().get();
+    JSONObject edited = cloud.operation(fact, "memory", owner.id, "公司", "云杉工作室");
+    assertEquals(company, edited.getString("id")); assertEquals(id, edited.getString("personId"));
+    assertEquals("当前", edited.getJSONObject("value").getString("scope"));
+    cloud.expect(services.cloud.userId(), 7);
+    try { cloud.mutate("another-account", 7, new org.json.JSONArray().put(rename)); fail("Cross-account edit must fail before HTTP"); }
+    catch (IllegalStateException expected) { assertTrue(expected.getMessage().contains("账户")); }
+    try { cloud.mutate(services.cloud.userId(), 6, new org.json.JSONArray().put(edited)); fail("Stale snapshot must fail before HTTP"); }
+    catch (IllegalStateException expected) { assertTrue(expected.getMessage().contains("更新")); }
+    ins.runOnMainSync(() -> {
+      LinearLayout root = Ui.col(activity); Ui.pad(activity, root, 16, 8);
+      root.addView(Ui.text(activity, "人物 · 内测样本", 22, Ui.ink()));
+      android.widget.ScrollView scroll = new android.widget.ScrollView(activity);
+      LinearLayout body = Ui.col(activity); scroll.addView(body); root.addView(scroll);
+      app.doudou.ime.people.PeopleScreen screen = new app.doudou.ime.people.PeopleScreen(activity, services,
+          new app.doudou.ime.app.Navigator() { public void open(String p, long i) {} public void refresh() {} public void notice(String s, Runnable u) {} });
+      screen.person(owner.id); screen.render(body); activity.setContentView(root);
+      for (String label : new String[]{"昵称", "关系", "性别", "年龄", "公司", "职位", "工作经历", "记忆", "爱好"})
+        assertTrue("Visible preset field " + label, containsText(root, label));
+    });
+    ins.waitForIdleSync();
+    android.graphics.Bitmap shot = ins.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES).takeScreenshot();
+    try (java.io.FileOutputStream out = new java.io.FileOutputStream(new File(ins.getTargetContext().getCacheDir(), "qa-v093-people.png"))) {
+      assertTrue(shot.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out));
+    } finally { shot.recycle(); }
+  }
+
+  @Test
+  public void historyUpgradePreservesRowsAndPracticeDoesNotEnterLearningQueue() throws Exception {
+    File db = new File(fixtureDirectory, "history.db");
+    // Create the old schema using the real creator, then remove only the newly added column.
+    app.doudou.ime.history.HistoryStore initial = new app.doudou.ime.history.HistoryStore(fixtureContext, db.getAbsolutePath());
+    initial.getWritableDatabase().execSQL("ALTER TABLE history DROP COLUMN practice");
+    initial.getWritableDatabase().setVersion(2); initial.close();
+    SQLiteDatabase old = SQLiteDatabase.openDatabase(db.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
+    android.content.ContentValues row = new android.content.ContentValues();
+    row.put("id", "retained"); row.put("type", "voice"); row.put("asr_text", "保留的旧记录");
+    row.put("account", services.cloud.userId()); row.put("created", 1); row.put("updated", 1);
+    old.insertOrThrow("history", null, row); old.close();
+    app.doudou.ime.history.HistoryStore upgraded = new app.doudou.ime.history.HistoryStore(fixtureContext, db.getAbsolutePath());
+    try {
+      assertEquals("保留的旧记录", upgraded.get("retained").asrText);
+      assertFalse(upgraded.get("retained").practice);
+      row.put("id", "practice"); row.put("practice", 1); row.put("asr_text", "练习不会污染人物");
+      upgraded.getWritableDatabase().insertOrThrow("history", null, row);
+      assertEquals(1, upgraded.pending(services.cloud.userId()).size());
+      assertEquals("retained", upgraded.pending(services.cloud.userId()).get(0).id);
+      assertTrue(upgraded.get("practice").json().getBoolean("practice"));
+    } finally { upgraded.close(); SQLiteDatabase.deleteDatabase(db); }
+  }
+
+  private static boolean containsText(View view, String value) {
+    if (view instanceof TextView && value.contentEquals(((TextView)view).getText())) return true;
+    if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup)view).getChildCount(); i++)
+      if (containsText(((ViewGroup)view).getChildAt(i), value)) return true;
+    return false;
   }
 
   @Test

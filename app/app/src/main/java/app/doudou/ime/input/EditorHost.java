@@ -14,6 +14,7 @@ public interface EditorHost {
   long generation();
 
   String editorPackage();
+  boolean practiceMode();
 
   String mode();
 

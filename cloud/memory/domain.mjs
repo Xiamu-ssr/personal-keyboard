@@ -1,6 +1,7 @@
 import { isUuid } from '../billing/ledger.mjs';
 import { requireValue } from '../http/errors.mjs';
 import { canonical, digest, uuid } from '../security.mjs';
+import { learnedTerm, groundedPerson, groundedQuote, canonicalFactKey, canonicalFactScope, nicknameFact } from './quality.mjs';
 
 const groups = { hotword: 'hotwords', style: 'styles', person: 'people' };
 const text = (value, max, empty = false) => {
@@ -104,7 +105,15 @@ export function changeMemory(current, raws, { manual = false, history, histories
   const operations = raws.map(raw => operation(raw, { ids, createId }));
   const touched = new Set();
   for (let i = 0; i < operations.length; i++) {
-    const op = operations[i], key = entityKey(op), raw = raws[i];
+    const op = operations[i], raw = raws[i];
+    if (!manual && op.kind === 'fact' && op.action === 'upsert') {
+      op.value.key = canonicalFactKey(op.value.key);
+      op.value.scope = canonicalFactScope(op.value.scope);
+      const person = memory.people.find(p => p.id === op.personId);
+      const same = person?.facts.find(f => canonicalFactKey(f.key) === op.value.key && canonicalFactScope(f.scope) === op.value.scope);
+      if (same && same.id !== op.id) op.id = same.id;
+    }
+    const key = entityKey(op);
     requireValue(!touched.has(key), 'MEMORY_FORMAT', '同一项不能在一批中重复修改'); touched.add(key);
     const old = findEntity(memory, op);
     const source = histories ? histories.find(h => h.id === raw.sourceId && h.revision === raw.sourceRevision) : history;
@@ -115,6 +124,13 @@ export function changeMemory(current, raws, { manual = false, history, histories
       if (raw.confidence < 0.9 || memory.blockedWords.includes(op.value?.text)) continue;
       const explicitCorrection = raw.category === 'correction' && raw.confidence >= 0.95 && correctedWords(source, op);
       if (raw.category === 'correction' && !explicitCorrection) continue;
+      if (source.practice === true) continue;
+      if (source.type === 'recording' && op.kind !== 'hotword') continue;
+      if (op.action === 'upsert' && op.kind === 'hotword' && !learnedTerm(raw, source, op.value.text)) continue;
+      if (op.action === 'upsert' && op.kind === 'person' && !groundedPerson(op, raw, source, operations, raws, old)) continue;
+      if (op.action === 'upsert' && ['fact', 'relation'].includes(op.kind)
+          && (!groundedQuote(raw, source) || !raw.quote.includes(op.kind === 'fact' ? op.value.value : op.value.type))) continue;
+      if (op.action === 'upsert' && op.kind === 'fact' && nicknameFact(op.value.key)) continue;
       const ownText = source.resultText || '';
       const adopted=(histories || [source]).filter(h=>h.type!=='recording').map(h=>h.resultText || '').join('\n');
       // Suggestions are not the user's style; require a verbatim example from their adopted text.
@@ -124,6 +140,7 @@ export function changeMemory(current, raws, { manual = false, history, histories
         if (!term || !ownText.includes(term)) continue;
       }
       if (op.action === 'delete') continue; // Retractions use evidence revisions; deletion is never inferred from silence.
+      if (old && canonical(Object.fromEntries(Object.keys(op.value).map(k => [k, old[k]]))) === canonical(op.value)) continue;
       const conflict = memory.protected.includes(key) || (old && ['fact', 'relation', 'person'].includes(op.kind) && canonical(Object.fromEntries(Object.keys(op.value).map(k=>[k,old[k] || (Array.isArray(op.value[k])?[]:'')]))) !== canonical(op.value));
       if (conflict) {
         if (!memory.candidates.some(c => c.expected === fingerprint(old) && canonical(c.operation) === canonical(op)))

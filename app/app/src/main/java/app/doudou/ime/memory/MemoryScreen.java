@@ -140,6 +140,7 @@ public final class MemoryScreen extends Screen {
 
   private void menu(MemoryStore.Item item, View anchor) {
     PopupMenu menu = new PopupMenu(activity, anchor);
+    menu.getMenu().add("查看来源").setOnMenuItemClickListener(i -> { editor.source(item); return true; });
     menu.getMenu()
         .add("删除")
         .setOnMenuItemClickListener(

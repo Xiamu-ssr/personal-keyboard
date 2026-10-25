@@ -12,18 +12,40 @@ public final class RecordingPanel {
   private final EditorHost host;
   private int renderSerial;
   private String recordId = "", account = "";
+  private long requestedAt;
   private final Handler main = new Handler(Looper.getMainLooper());
 
   public RecordingPanel(EditorHost h) {
     host = h;
   }
 
-  /** Entering the tab starts a fresh recording, unless this account is already recording. */
+  /** Navigation never opens the microphone; Start is an explicit action. */
   public void enter() {
-    RecordingService current = RecordingService.current;
-    if (current == null) recordId = "";
-    else if (current.belongsToCurrentAccount() && !current.active()) current.startNextRecording();
     show();
+  }
+
+  private void start() {
+    if (host.privateMode()) return;
+    Context c = host.context();
+    if (c.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+      host.message("允许录音", "", "允许麦克风", () -> host.settings("settings"));
+      return;
+    }
+    RecordingService current = RecordingService.current;
+    if (current != null) {
+      if (current.belongsToCurrentAccount() && !current.active()) current.startNextRecording();
+      show(); return;
+    }
+    if (requestedAt > 0 && SystemClock.uptimeMillis() - requestedAt < 5000) return;
+    try {
+      requestedAt = SystemClock.uptimeMillis(); recordId = "";
+      c.startForegroundService(new Intent(c, RecordingService.class));
+      show();
+    } catch (Exception e) {
+      requestedAt = 0;
+      host.message("暂时无法录音", "", "重试", this::start);
+    }
   }
 
   public String text() {
@@ -52,34 +74,15 @@ public final class RecordingPanel {
   public void show() {
     Context c = host.context();
     String currentAccount = host.services().cloud.userId();
-    if (!currentAccount.equals(account)) { account = currentAccount; recordId = ""; }
+    if (!currentAccount.equals(account)) { account = currentAccount; recordId = ""; requestedAt = 0; }
     if (host.privateMode()) return;
     if (RecordingService.current != null && !RecordingService.current.belongsToCurrentAccount()) {
       host.message("另一账号的录音仍在进行", "请先结束这段录音", "返回键盘", host::typing);
       return;
     }
-    if (c.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
-        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-      host.message("允许录音", "", "允许麦克风", () -> host.settings("settings"));
-      return;
-    }
     host.cancelVoice();
     host.commitComposing();
-    final boolean starting = RecordingService.current == null && recordId.isEmpty();
-    if (starting)
-      try {
-        c.startForegroundService(new Intent(c, RecordingService.class));
-      } catch (Exception e) {
-        host.message(
-            "暂时无法录音",
-            "请打开录音笔重试",
-            "打开录音笔",
-            () ->
-                c.startActivity(
-                    new Intent(c, RecordingActivity.class)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
-        return;
-      }
+    final boolean starting = requestedAt > 0 && SystemClock.uptimeMillis() - requestedAt < 5000;
     LinearLayout root = host.openPanel("recorder", KeyboardView.HEIGHT_DP);
     root.setBackgroundColor(Ui.keyboard());
     root.addView(host.workspaceBar(WorkspaceBar.Mode.RECORDING), new LinearLayout.LayoutParams(-1, Ui.dp(c, 48)));
@@ -115,17 +118,21 @@ public final class RecordingPanel {
     Ui.pad(c, footer, 16, 6);
     RecordingWaveform waveform = new RecordingWaveform(c);
     footer.addView(waveform, new LinearLayout.LayoutParams(Ui.dp(c, 64), Ui.dp(c, 36)));
-    TextView status = Ui.text(c, "正在开始…", 13, Ui.sub());
+    TextView status = Ui.text(c, starting ? "正在开始…" : "未开始", 13, Ui.sub());
     footer.addView(status, new LinearLayout.LayoutParams(0, -2, 1));
+    RecordingService initial = RecordingService.current;
+    boolean active = initial != null && initial.active();
     TextView stop =
         Ui.primary(
             c,
-            "结束",
+            active ? "结束" : starting ? "正在开始…" : "开始录音",
             () -> {
-              if (RecordingService.current != null) RecordingService.current.finish();
-              else { recordId = ""; show(); }
+              RecordingService current = RecordingService.current;
+              if (current != null && current.belongsToCurrentAccount() && current.active()) current.finish();
+              else start();
             });
     stop.setMinWidth(Ui.dp(c, 88));
+    stop.setEnabled(active || !starting);
     footer.addView(stop, new LinearLayout.LayoutParams(-2, Ui.dp(c, 48)));
     root.addView(footer);
     long generation = host.generation();
@@ -141,6 +148,7 @@ public final class RecordingPanel {
                 || host.generation() != generation) return;
             RecordingService service = RecordingService.current;
             if (service != null) {
+              requestedAt = 0;
               saved[0] = false;
               recordId = service.id();
               open.setVisibility(service.active() ? View.GONE : View.VISIBLE);
@@ -154,8 +162,8 @@ public final class RecordingPanel {
               clock.setText(duration(service.bytes()));
               status.setText(service.status());
               if (!service.active()) {
-                stop.setText(service.startingNext() ? "正在开始…" : "保存中…");
-                stop.setEnabled(false);
+                stop.setText(service.startingNext() ? "正在开始…" : "开始录音");
+                stop.setEnabled(!service.startingNext());
               } else {
                 stop.setText("结束");
                 stop.setEnabled(true);
@@ -168,12 +176,11 @@ public final class RecordingPanel {
               if (!saved[0]) { clock.setText(duration(savedBytes())); saved[0] = true; }
               waveform.level(0);
               open.setVisibility(recordId.isEmpty() ? View.GONE : View.VISIBLE);
-              status.setText(recordId.isEmpty() ? "准备录音" : "已保存");
+              status.setText(recordId.isEmpty() ? "未开始" : "已保存");
               String value = text();
               if (!value.equals(last[0])) { text.setText(value); last[0] = value; }
-              stop.setText(recordId.isEmpty() ? "开始录音" : "新录音");
+              stop.setText("开始录音");
               stop.setEnabled(true);
-              stop.setOnClickListener(v -> { recordId = ""; show(); });
             }
             main.postDelayed(this, 400);
           }

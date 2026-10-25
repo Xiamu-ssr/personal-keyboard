@@ -1,4 +1,5 @@
 import { Palettes } from './advisor/palette.mjs';
+import { usageExamples } from './billing/examples.mjs';
 import { migratePalettes } from './advisor/migrate.mjs';
 import { migrateDefaultSlots } from './advisor/defaults-migration.mjs';
 import http from "node:http";
@@ -95,8 +96,10 @@ export async function createCloudServer({
           metering: cfg.plans.metering,
           purchaseEnabled: false,
         });
-      if (method === 'GET' && route === '/v1/credit-pricing')
-        return json(res, await ledger.pricing.get());
+      if (method === 'GET' && route === '/v1/credit-pricing') {
+        const tariff = await ledger.pricing.get();
+        return json(res, { ...tariff, examples: usageExamples(tariff.definition, cfg) });
+      }
       if (method === "POST" && ["/v1/auth/register", "/v1/auth/login", "/v1/auth/recover"].includes(route)) {
         const action = route.split('/').at(-1);
         return json(res, await accounts[action](await jsonBody(req, 4096), ip(req)), action === 'register' ? 201 : 200);
@@ -281,10 +284,12 @@ export async function createCloudServer({
           return json(res, await jobs.get(user, match[1]));
         if (match && method === "POST" && match[2])
           return json(res, await jobs.cancel(user, match[1]));
-        if (method === 'GET' && route === '/v1/jobs') return json(res, { jobs:
-          (await db.query("SELECT id,kind,status,consumed_credits,billing_snapshot,provider_usage,created_at FROM jobs WHERE user_id=$1 AND billing_snapshot ? 'version' ORDER BY created_at DESC LIMIT 50", [user.id])).rows
+        if (method === 'GET' && ['/v1/jobs', '/v1/credit-usage'].includes(route)) return json(res, { jobs:
+          (await db.query("SELECT id,kind,status,consumed_credits,billing_snapshot,provider_usage,created_at FROM jobs WHERE user_id=$1 AND billing_snapshot ? 'version' "
+            + (route === '/v1/credit-usage' ? "AND status='succeeded' " : "") + "ORDER BY created_at DESC LIMIT 50", [user.id])).rows
             .map(row => ({ id: row.id, kind: row.kind, status: row.status, credits: Number(row.consumed_credits) / 1000,
               pricingVersion: Number(row.billing_snapshot.version || 0), createdAt: row.created_at,
+              replyCount: row.billing_snapshot.replyCount || null,
               billing: { inputTokens: row.provider_usage?.prompt_tokens ?? row.provider_usage?.input_tokens ?? null,
                 outputTokens: row.provider_usage?.completion_tokens ?? row.provider_usage?.output_tokens ?? null,
                 inputCreditsPerThousand: row.billing_snapshot.rate.inputMicroCnyPerMillion * row.billing_snapshot.markupBasisPoints / 10000000000,

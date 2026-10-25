@@ -84,13 +84,20 @@ public final class WorkspaceBar extends LinearLayout {
       tab.setEnabled(mode == Mode.INPUT || !privateMode);
       tab.setAlpha(tab.isEnabled() ? 1 : .4f);
       tab.setOnClickListener(v -> {
-        if (mode != selected || mode == Mode.RECORDING) actions.select(mode);
+        if (mode != selected) actions.select(mode);
       });
       int labelWidth = (int)Math.ceil(tab.getPaint().measureText(labels[i])) + Ui.dp(c, 8);
-      tabs.addView(tab, selected == mode ? new LayoutParams(0, Ui.dp(c, 48), 1)
+      int selectedWidth = labelWidth + Ui.dp(c, 40);
+      tabs.addView(tab, selected == mode ? new LayoutParams(Math.max(Ui.dp(c, 48), selectedWidth), Ui.dp(c, 48))
           : new LayoutParams(Math.max(Ui.dp(c, 48), labelWidth), Ui.dp(c, 48)));
     }
-    addView(tabs, new LayoutParams(0, Ui.dp(c, 48), 1));
+    HorizontalScrollView viewport = new HorizontalScrollView(c);
+    viewport.setHorizontalScrollBarEnabled(false);
+    viewport.setFillViewport(true);
+    LinearLayout centered = Ui.row(c); centered.setGravity(Gravity.CENTER);
+    centered.addView(tabs, new LayoutParams(-2, Ui.dp(c, 48)));
+    viewport.addView(centered, new HorizontalScrollView.LayoutParams(-2, Ui.dp(c, 48)));
+    addView(viewport, new LayoutParams(0, Ui.dp(c, 48), 1));
     View hide = Ui.icon(c, "收起", actions::hide);
     hide.setContentDescription("收起键盘");
     addView(hide, new LayoutParams(Ui.dp(c, 48), Ui.dp(c, 48)));
@@ -115,7 +122,10 @@ public final class WorkspaceBar extends LinearLayout {
       super.onDraw(canvas);
       if (recording) {
         paint.setColor(Ui.audioStart());
+        boolean animate = android.animation.ValueAnimator.areAnimatorsEnabled() && isShown();
+        paint.setAlpha(animate ? 150 + (int)(105 * (.5 + .5 * Math.sin(android.os.SystemClock.uptimeMillis() * Math.PI / 800))) : 255);
         canvas.drawCircle(getScrollX() + getWidth() - Ui.dp(getContext(), 9), Ui.dp(getContext(), 10), Ui.dp(getContext(), 3), paint);
+        if (animate) postInvalidateOnAnimation();
       }
     }
   }
