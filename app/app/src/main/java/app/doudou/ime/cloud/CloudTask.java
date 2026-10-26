@@ -4,13 +4,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.json.*;
 
 /**
- * Polls the same durable Cloud task after transport interruptions. Cancellation releases its
+ * Waits for the same durable Cloud task after transport interruptions. Cancellation releases its
  * reservation.
  */
 public final class CloudTask {
   private final CloudClient client;
   private final String account;
   private final AtomicBoolean cancelled = new AtomicBoolean();
+  private final RequestCancellation waiting = new RequestCancellation();
   private volatile String job = "";
 
   public CloudTask(CloudClient c) {
@@ -20,6 +21,7 @@ public final class CloudTask {
 
   public void cancel() {
     cancelled.set(true);
+    waiting.cancel();
     String id = job;
     if (!id.isEmpty())
       app.doudou.ime.app.KeyboardApp.instance.network.execute(
@@ -32,6 +34,7 @@ public final class CloudTask {
   }
 
   public JSONObject run(String kind, JSONObject input, String sourceJob) throws Exception {
+    if (cancelled.get()) throw new java.io.IOException("任务已取消");
     String fingerprint = kind + ":" + sha(input.toString() + sourceJob),
         requestId = client.requestId(fingerprint);
     JSONObject payload =
@@ -39,7 +42,7 @@ public final class CloudTask {
     if (sourceJob != null && !sourceJob.isEmpty()) payload.put("sourceJob", sourceJob);
     JSONObject current = client.request(account, "/v1/jobs", "POST", payload);
     job = current.getString("id");
-    long deadline = System.currentTimeMillis() + 85000;
+    long deadline = android.os.SystemClock.elapsedRealtime() + 85000;
     while (true) {
       if (cancelled.get()) {
         client.request(account, "/v1/jobs/" + job + "/cancel", "POST", new JSONObject());
@@ -56,9 +59,9 @@ public final class CloudTask {
         JSONObject error = current.optJSONObject("error");
         throw new java.io.IOException(error == null ? "任务失败，预留已释放" : error.optString("message"));
       }
-      if (System.currentTimeMillis() > deadline) throw new java.io.IOException("任务仍在处理，可重试恢复原任务");
-      Thread.sleep(650);
-      current = client.request(account, "/v1/jobs/" + job, "GET", null);
+      long remaining = deadline - android.os.SystemClock.elapsedRealtime();
+      if (remaining <= 0) throw new java.io.IOException("任务仍在处理，可重试恢复原任务");
+      current = client.request(account, "/v1/jobs/" + job + "?wait=" + Math.min(20000, remaining), "GET", null, waiting);
     }
   }
 

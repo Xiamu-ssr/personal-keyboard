@@ -156,7 +156,11 @@ public final class CloudMemory {
         for (int i = 0; i < rows.length(); i++)
           if (rows.getJSONObject(i).getString("id").equals(item.globalId)) {
             JSONObject original = rows.getJSONObject(i);
-            if (type.equals("hotword")) value.put("variants", original.getJSONArray("variants"));
+            if (type.equals("hotword")) {
+              value.put("variants", original.getJSONArray("variants"));
+              if (original.optJSONObject("lexical") != null)
+                value.put("lexical", original.getJSONObject("lexical"));
+            }
             else if (type.equals("style")) value.put("examples", original.getJSONArray("examples"));
             else
               value.put(

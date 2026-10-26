@@ -34,7 +34,13 @@ export function operation(raw, { ids = new Map(), createId = uuid } = {}) {
   if (raw.action === 'delete') return out;
   const v = raw.value;
   requireValue(v && typeof v === 'object' && !Array.isArray(v), 'MEMORY_FORMAT', '缺少记忆内容');
-  if (raw.kind === 'hotword') out.value = { text: text(v.text, 60), variants: list(v.variants || [], 50, 60) };
+  if (raw.kind === 'hotword') {
+    out.value = { text: text(v.text, 60), variants: list(v.variants || [], 50, 60) };
+    if (v.lexical) {
+      requireValue(['name', 'technical', 'abbreviation', 'address'].includes(v.lexical.kind), 'MEMORY_FORMAT', '词条类型错误');
+      out.value.lexical = { kind: v.lexical.kind, meaning: text(v.lexical.meaning, 160) };
+    }
+  }
   if (raw.kind === 'style') out.value = { scene: text(v.scene, 80), rules: list(v.rules || [], 30, 300), examples: list(v.examples || [], 12, 600) };
   if (raw.kind === 'person') {
     requireValue(Array.isArray(v.identities || []) && (v.identities || []).length <= 10, 'MEMORY_FORMAT', '人物身份过多');
@@ -126,7 +132,7 @@ export function changeMemory(current, raws, { manual = false, history, histories
       if (raw.category === 'correction' && !explicitCorrection) continue;
       if (source.practice === true) continue;
       if (source.type === 'recording' && op.kind !== 'hotword') continue;
-      if (op.action === 'upsert' && op.kind === 'hotword' && !learnedTerm(raw, source, op.value.text)) continue;
+      if (op.action === 'upsert' && op.kind === 'hotword' && !learnedTerm(raw, source, op.value)) continue;
       if (op.action === 'upsert' && op.kind === 'person' && !groundedPerson(op, raw, source, operations, raws, old)) continue;
       if (op.action === 'upsert' && ['fact', 'relation'].includes(op.kind)
           && (!groundedQuote(raw, source) || !raw.quote.includes(op.kind === 'fact' ? op.value.value : op.value.type))) continue;

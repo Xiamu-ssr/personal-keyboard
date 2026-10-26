@@ -3,6 +3,27 @@ import fs from 'node:fs';
 export const personFields = JSON.parse(fs.readFileSync(new URL('../contracts/person.json', import.meta.url), 'utf8')).fields;
 const termTypes = new Set(['name', 'technical', 'abbreviation', 'address']);
 
+/** Admission describes a reusable referent, not the fact that somebody edited it. */
+export function lexicalEntry(value) {
+  const lexical = value?.lexical;
+  return reusableTerm(value?.text) && termTypes.has(lexical?.kind)
+    && typeof lexical.meaning === 'string' && lexical.meaning.trim().length >= 2
+    && lexical.meaning.length <= 160 && lexical.meaning.trim() !== value.text;
+}
+
+export function usableHotwords(memory) {
+  const manual = new Set(memory.protected || []);
+  return memory.hotwords.filter(word => reusableTerm(word.text)
+    && (manual.has('hotword:' + word.id) || lexicalEntry(word)));
+}
+
+export function recognitionVocabulary(memory, context) {
+  const manual = new Set(memory.protected || []);
+  const weight = word => context.includes(word.text) ? 3 : manual.has('hotword:' + word.id) ? 2 : 1;
+  return Object.fromEntries(usableHotwords(memory).sort((a, b) => weight(b) - weight(a)
+    || Number(b.confidence || 0) - Number(a.confidence || 0)).slice(0, 256).map(word => [word.text, weight(word)]));
+}
+
 /** Short reusable vocabulary, never a sentence, bare quantity or unfinished input. */
 export function reusableTerm(term) {
   if (typeof term !== 'string' || !term.trim() || Array.from(term).length > 32) return false;
@@ -19,8 +40,9 @@ export function groundedQuote(raw, history) {
     && evidenceText(history).includes(raw.quote);
 }
 
-export function learnedTerm(raw, history, term) {
-  return reusableTerm(term) && termTypes.has(raw.termType) && groundedQuote(raw, history)
+export function learnedTerm(raw, history, value) {
+  const term = value.text;
+  return lexicalEntry(value) && groundedQuote(raw, history)
     && raw.quote.includes(term) && (history.resultText || '').includes(raw.quote);
 }
 

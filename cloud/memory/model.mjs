@@ -7,10 +7,10 @@ import { personFields } from './quality.mjs';
 export const memoryOutputContract = {
   baseVersion: '与输入一致的整数',
   operations: [{ action: 'upsert 或 delete', kind: 'hotword / style / person / fact / relation', id: '已有 UUID；新增必须匹配 ^new:[A-Za-z0-9_-]{1,64}$，例如 new:word1，不能含中文', personId: '仅 fact/relation 填所属人物 UUID 或本批 new:person1，其他类型不填',
-    value: 'hotword={text:结果稿里纠正后的标准词,variants:[填入稿里纠正前的错误写法]}; style={scene,rules,examples}; person={name,aliases,identities:[{platform,nickname,handle}]}; fact={key,value,scope}; relation={targetId,type}',
+    value: 'hotword={text:有独立指代的专名或领域词,variants:[确实误识别的写法],lexical:{kind:name/technical/abbreviation/address,meaning:此词在证据中具体指什么，最多160字}}; style={scene,rules,examples}; person={name,aliases,identities:[{platform,nickname,handle}]}; fact={key,value,scope}; relation={targetId,type}',
     sourceId: '本批历史 ID', sourceRevision: '本批历史修订', category: 'correction 或 observation',
     quote: '逐字证据：来自本人resultText或说话人明确的messages；包含词条、人物名或资料值，不能拼接、改写',
-    termType: '仅hotword必填：name / technical / abbreviation / address', confidence: '0至1', reason: '简短理由' }],
+    confidence: '0至1', reason: '简短理由；纠过字不代表值得收为热词' }],
   personFields,
 };
 

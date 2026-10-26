@@ -2,6 +2,7 @@ import WebSocket from "ws";
 import { uuid } from "../security.mjs";
 import { requireValue } from "../http/errors.mjs";
 import { billableCharacters } from "../billing/ledger.mjs";
+import { recognitionVocabulary } from '../memory/quality.mjs';
 export function asrInput(raw) {
   requireValue(raw.words === undefined, 'INVALID_INPUT', '热词由云端个人记忆提供');
   requireValue(
@@ -140,11 +141,9 @@ export function connectAsr(
     void (async () => {
       requireValue(cfg.asrReady, "ASR_NOT_READY", "云端实时语音尚未配置", 503);
       const input = asrInput(msg);
-      const hotwords = (await memory.snapshot(user.id)).memory.hotwords;
-      const words = [...hotwords].sort((a,b) => Number(input.context.includes(b.text)) - Number(input.context.includes(a.text))
-        || Number(b.confidence || 0) - Number(a.confidence || 0)).slice(0, 2000).map(w => w.text);
+      const vocabulary = recognitionVocabulary((await memory.snapshot(user.id)).memory, input.context);
       const quote = { model: cfg.asrModel, asr: { maxSeconds: cfg.maxAsrSeconds,
-        baseTokens: 256 + Buffer.byteLength(JSON.stringify({ context: input.context, words })) } };
+        baseTokens: 256 + Buffer.byteLength(JSON.stringify({ context: input.context, vocabulary })) } };
       const reserved = await ledger.reserve(user.id, msg.requestId, 'asr', input, { quote });
       job = reserved.job;
       owns = reserved.created;
@@ -200,7 +199,7 @@ export function connectAsr(
                 intermediate_result_enabled: true,
                 disfluency_removal_enabled: input.polish,
                 vad_model: "near_meeting_16k",
-                vocabulary: Object.fromEntries(words.map((w) => [w, 4])),
+                vocabulary,
               },
               input: input.context
                 ? {

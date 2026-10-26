@@ -65,12 +65,15 @@ public final class KeyboardView extends LinearLayout {
   }
 
   private final Actions actions;
-  private final LinearLayout candidateRow, idle, busy, editing, keys;
+  private final LinearLayout candidateRow, idle, busy, editing, keys, keyRows;
   private final DictationSurface dictation;
   private final HorizontalScrollView candidateScroll;
   private final View expand, recover, voiceClose;
   private final ProgressBar pending;
   private final TextView voiceHint;
+  private final TextView composing;
+  private final HorizontalScrollView composingScroll;
+  private final LinearLayout composingRow;
   private VoiceSpaceKey spaceKey;
   private VoiceState voiceState = VoiceState.IDLE;
   private final Handler repeats = new Handler(Looper.getMainLooper());
@@ -92,6 +95,20 @@ public final class KeyboardView extends LinearLayout {
     FrameLayout surfaces = new FrameLayout(c);
     keys = Ui.col(c);
     keys.setPadding(Ui.dp(c, 3), 0, Ui.dp(c, 3), 0);
+    composingRow = Ui.row(c);
+    composingRow.setVisibility(GONE);
+    composing = Ui.text(c, "", 16, Ui.ink());
+    composing.setSingleLine(true);
+    composing.setHorizontallyScrolling(true);
+    composing.setGravity(Gravity.CENTER_VERTICAL);
+    composing.setPadding(Ui.dp(c, 12), 0, Ui.dp(c, 12), 0);
+    composing.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
+    composingScroll = new HorizontalScrollView(c);
+    composingScroll.setHorizontalScrollBarEnabled(false);
+    composingScroll.setFillViewport(true);
+    composingScroll.addView(composing, new HorizontalScrollView.LayoutParams(-2, -1));
+    composingRow.addView(composingScroll, new LayoutParams(-1, -1));
+    keys.addView(composingRow, new LayoutParams(-1, Ui.dp(c, 24)));
     surfaces.addView(keys, new FrameLayout.LayoutParams(-1, -1));
     addView(surfaces, new LayoutParams(-1, 0, 1));
     LinearLayout bar = Ui.row(c);
@@ -136,30 +153,33 @@ public final class KeyboardView extends LinearLayout {
     editButton(editing, "完成", a::finishEditing, false);
     bar.addView(editing, new LayoutParams(-1, -1));
     keys.addView(bar, new LayoutParams(-1, Ui.dp(c, 48)));
+    keyRows = Ui.col(c);
+    keys.addView(keyRows, new LayoutParams(-1, 0, 1));
     if (symbols) {
-      for (String chars : new String[] {"1234567890", "@#¥%&*+-=_", ".,/?!:;()'"}) {
-        LinearLayout row = row();
-        for (char ch : chars.toCharArray()) key(row, "" + ch, 1, () -> a.letter(ch), false);
-      }
-      LinearLayout row = row();
-      key(row, "ABC", 1.4f, a::symbols, true);
-      key(row, "#+=", .9f, a::symbolPanel, true);
-      space(row, 3.2f, !privacy && !nested);
-      icon(row, "退格", 1.4f, a::delete, false);
-      icon(row, "换行", 1.85f, a::enter, true);
+      numbers(!privacy && !nested);
     } else {
       String[] rows = {"qwertyuiop", "asdfghjkl", "zxcvbnm"};
       for (int n = 0; n < rows.length; n++) {
         LinearLayout row = row();
         if (n == 1) row.addView(new Space(c), new LayoutParams(0, 1, .5f));
-        if (n == 2) icon(row, "大写", 1.35f, a::shift, false);
-        for (char ch : rows[n].toCharArray())
+        if (n == 2) {
+          icon(row, "大写", 1.35f, a::shift, false);
+          View shiftKey = row.getChildAt(row.getChildCount() - 1);
+          ((Ui.Glyph) shiftKey).color = capital ? Ui.bg() : Ui.ink();
+          shiftKey.setBackground(Ui.pressable(c, capital ? Ui.ink() : Ui.specialKey(), 7));
+          shiftKey.setSelected(capital);
+          shiftKey.setStateDescription(capital ? "大写已开启" : "小写输入");
+        }
+        for (char ch : rows[n].toCharArray()) {
           key(
               row,
-              capital ? ("" + ch).toUpperCase(java.util.Locale.ROOT) : "" + ch,
+              ("" + ch).toUpperCase(java.util.Locale.ROOT),
               1,
               () -> a.letter(ch),
               false);
+          row.getChildAt(row.getChildCount() - 1).setContentDescription(
+              english && capital ? ("" + ch).toUpperCase(java.util.Locale.ROOT) : "" + ch);
+        }
         if (n == 1) row.addView(new Space(c), new LayoutParams(0, 1, .5f));
         if (n == 2) icon(row, "退格", 1.35f, a::delete, false);
       }
@@ -186,9 +206,48 @@ public final class KeyboardView extends LinearLayout {
     surfaces.addView(dictation, new FrameLayout.LayoutParams(-1, -1));
   }
 
+  private void numbers(boolean speech) {
+    keyRows.removeAllViews();
+    // Official Doubao reference: the primary numbers/symbols surface keeps a full 1–0 row;
+    // its separate keypad is reached explicitly. Decimal/email/URL punctuation stays visible.
+    for (String chars : new String[] {"1234567890", "-/:~()_@#&", "+%=?!,.;'\""}) {
+      LinearLayout row = row();
+      for (char ch : chars.toCharArray()) key(row, "" + ch, 1, () -> actions.letter(ch), false);
+    }
+    LinearLayout row = row();
+    key(row, "ABC", 1.4f, actions::symbols, true);
+    key(row, "12\n34", 1.1f, () -> numberPad(speech), true);
+    row.getChildAt(row.getChildCount() - 1).setContentDescription("数字");
+    key(row, "#+=", .9f, actions::symbolPanel, true);
+    space(row, 3f, speech);
+    icon(row, "退格", 1.4f, actions::delete, false);
+    icon(row, "换行", 1.85f, actions::enter, true);
+  }
+
+  private void numberPad(boolean speech) {
+    keyRows.removeAllViews();
+    String[] digits = {"123", "456", "789"};
+    for (int i = 0; i < 3; i++) {
+      LinearLayout row = row();
+      final char symbol = i == 0 ? '.' : i == 1 ? ',' : '%';
+      key(row, "" + symbol, 1.15f, () -> actions.letter(symbol), true);
+      for (char digit : digits[i].toCharArray())
+        key(row, "" + digit, 1.75f, () -> actions.letter(digit), false);
+      if (i == 0) icon(row, "退格", 1.65f, actions::delete, false);
+      else if (i == 1) key(row, "#+=", 1.65f, actions::symbolPanel, true);
+      else key(row, "符号", 1.65f, () -> numbers(speech), true);
+    }
+    LinearLayout row = row();
+    key(row, "ABC", 1.15f, actions::symbols, true);
+    space(row, 1.75f, speech);
+    key(row, "0", 1.75f, () -> actions.letter('0'), false);
+    key(row, "=", 1.75f, () -> actions.letter('='), true);
+    icon(row, "换行", 1.65f, actions::enter, true);
+  }
+
   private LinearLayout row() {
     LinearLayout r = Ui.row(getContext());
-    keys.addView(r, new LayoutParams(-1, 0, 1));
+    keyRows.addView(r, new LayoutParams(-1, 0, 1));
     return r;
   }
 
@@ -205,11 +264,18 @@ public final class KeyboardView extends LinearLayout {
   private void key(LinearLayout row, String label, float weight, Runnable click, boolean special) {
     Context c = getContext();
     TextView key = Ui.text(c, label, special ? 16 : label.length() > 1 ? 14 : 22, Ui.ink());
+    key.setSingleLine(!label.contains("\n"));
+    key.setHorizontallyScrolling(false);
+    if (label.contains("\n")) key.setMaxLines(2);
+    if (special && label.length() > 1)
+      key.setAutoSizeTextTypeUniformWithConfiguration(12, label.contains("\n") ? 14 : 16,
+          1, android.util.TypedValue.COMPLEX_UNIT_SP);
     key.setGravity(Gravity.CENTER);
     key.setFontFeatureSettings("kern");
     key.setBackground(Ui.pressable(c, special ? Ui.specialKey() : Ui.key(), 7));
     key.setElevation(Ui.dp(c, .8f));
-    key.setContentDescription(label);
+    key.setContentDescription(label.matches("[A-Z]")
+        ? label.toLowerCase(java.util.Locale.ROOT) : label);
     key.setFocusable(true);
     key.setOnClickListener(
         v -> {
@@ -346,6 +412,16 @@ public final class KeyboardView extends LinearLayout {
     candidateScroll.setVisibility(VISIBLE);
     expand.setVisibility(VISIBLE);
     candidateRow.removeAllViews();
+    candidateScroll.scrollTo(0, 0);
+  }
+
+  /** Independent of the host editor's composing decoration; never grows the keyboard window. */
+  public void setComposing(String raw) {
+    String text = raw == null ? "" : raw;
+    composing.setText(text);
+    composing.setContentDescription("正在输入拼音：" + text);
+    composingRow.setVisibility(text.isEmpty() ? GONE : VISIBLE);
+    if (!text.isEmpty()) composingScroll.post(() -> composingScroll.fullScroll(View.FOCUS_RIGHT));
   }
 
   public void voice(VoiceState state, String hint, boolean held, VoiceGesture.Target target) {

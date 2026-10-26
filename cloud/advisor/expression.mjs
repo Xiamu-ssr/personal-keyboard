@@ -30,7 +30,7 @@ export function expressionInstruction(raw) {
     const selected = a.kind === 'multi' ? value[a.id] : [value[a.id]];
     return a.options.filter(o => selected.includes(o.id) && o.instruction).map(o => a.name + '（' + o.name + '）：' + o.instruction);
   });
-  return ['未指定的维度沿用本人在本场景的文风。没有适用文风时，使用简洁、日常、清楚友好且克制的聊天表达，默认不用 Emoji、不额外添加修辞。槽位名称只是用户标签，不可拿名字覆盖属性。明确属性优先于文风；本人事实、意图、人物关系与本次对话始终优先于表达偏好。', ...rules].join('\n');
+  return rules.join('\n');
 }
 
 export function defaultPaletteSlots() {

@@ -56,7 +56,8 @@ test('romantic intent, warmth, irony and emotion are independently expressible',
 test('explicit off overrides inheritance; unlearned styles have an explicit fallback', () => {
   const raw = Object.fromEntries(attributes.map(a => [a.id, a.kind === 'multi' ? [] : 'inherit']));
   const inherited = expressionInstruction(raw);
-  assert(inherited.includes('没有适用文风时'));
+  assert.equal(inherited, '', 'inheritance policy is shared once, not repeated in every slot');
+  assert(readFileSync(new URL('../prompts/reply.md', import.meta.url), 'utf8').includes('无适用文风时'));
   const off = expressionInstruction({ ...raw, rhetoric: ['plain'], emoji: 'none' });
   assert(off.includes('不使用 Emoji'));
   assert(off.includes('不用玩笑、反讽或暗示'));

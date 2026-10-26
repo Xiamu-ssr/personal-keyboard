@@ -24,18 +24,20 @@ Java_app_doudou_ime_input_engine_PinyinEngine_nativeOpen(JNIEnv* e,jclass,jstrin
     return opened;
 }
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_app_doudou_ime_input_engine_PinyinEngine_nativeCandidates(JNIEnv* e,jclass,jstring input,jint limit) {
+Java_app_doudou_ime_input_engine_PinyinEngine_nativeCandidates(JNIEnv* e,jclass,jstring input,jint offset,jint limit) {
     std::lock_guard<std::mutex> lock(mutex);
     jclass stringClass=e->FindClass("java/lang/String");
     std::string raw=utf8(e,input);
-    if(!opened||raw.empty()||raw.size()>39)return e->NewObjectArray(0,stringClass,nullptr);
+    if(!opened||raw.empty()||raw.size()>39||offset<0||limit<=0)return e->NewObjectArray(0,stringClass,nullptr);
     ime_pinyin::im_reset_search();size_t count=ime_pinyin::im_search(raw.c_str(),raw.size());
     size_t decoded=0;ime_pinyin::im_get_sps_str(&decoded);
     if(count==0||decoded==0)return e->NewObjectArray(0,stringClass,nullptr);
     const unsigned short* positions=nullptr;
     size_t spellings=ime_pinyin::im_get_spl_start_pos(positions);
     std::vector<std::pair<std::u16string,int>> rows;
-    for(size_t i=0;i<std::min(count,static_cast<size_t>(limit));i++){
+    const size_t first=std::min(count,static_cast<size_t>(offset));
+    const size_t end=first+std::min(count-first,static_cast<size_t>(limit));
+    for(size_t i=first;i<end;i++){
         ime_pinyin::char16 text[256]={0};
         if(!ime_pinyin::im_get_candidate(i,text,256))continue;
         size_t len=0;while(len<255&&text[len])len++;

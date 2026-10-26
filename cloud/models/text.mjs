@@ -17,10 +17,10 @@ const strings = (values, max = 20, length = 200) => {
 export function modelInput(kind, raw) {
   if (kind === 'translation') return translationInput(raw);
   requireValue(raw && typeof raw === 'object' && !Array.isArray(raw), 'INVALID_INPUT', '缺少任务内容');
-  const allowed = kind === 'rewrite' ? ['transcript', 'recentContext', 'conversationRef'] : ['images', 'conversationRef', 'recentContext', 'intent', 'slotId', 'previousReplies', 'platform'];
+  const allowed = kind === 'rewrite' ? ['transcript', 'recentContext', 'conversationRef', 'editorContext'] : ['images', 'conversationRef', 'recentContext', 'intent', 'slotId', 'previousReplies', 'platform'];
   requireValue(Object.keys(raw).every(key => allowed.includes(key)), 'INVALID_INPUT', '个人记忆由云端读取，请勿重复上传');
   const input = { recentContext: bounded(raw.recentContext || '', 12000), conversationRef: bounded(raw.conversationRef || '', 250) };
-  if (kind === 'rewrite') return { ...input, transcript: bounded(raw.transcript, 4000) };
+  if (kind === 'rewrite') return { ...input, transcript: bounded(raw.transcript, 4000), editorContext: bounded(raw.editorContext || '', 2000) };
   requireValue(kind === 'advisor', 'INVALID_KIND', '未知文字任务');
   requireValue(!raw.slotId || /^slot[1-6]$/.test(raw.slotId), 'INVALID_INPUT', '表达槽位无效');
   Object.assign(input, { intent: bounded(raw.intent || '', 1000), platform: bounded(raw.platform || '', 120), slotId: raw.slotId || '', previousReplies: strings(raw.previousReplies || [], 24, 1000), imageDigests: [] });
@@ -84,6 +84,14 @@ export function advisorDirective(input, template) {
     + template.suffix;
 }
 
+export function providerInput(kind, input) {
+  // Send one compiled expression per position. Raw attributes, labels and a
+  // repeated shared policy are not competing instructions to the model.
+  return kind === 'advisor'
+    ? { ...input, slots: input.slots.map(slot => ({ instruction: slot.instruction })) }
+    : input;
+}
+
 export class TextModels {
   constructor(cfg, fetcher = fetch) { this.cfg = cfg; this.fetcher = fetcher; this.prompts = new Map(); }
   async init() {
@@ -104,7 +112,7 @@ export class TextModels {
     const responseFormat = visual ? advisorResponseFormat(input) : { type: 'json_object' };
     // The verified text counter receives a conservative representation including the
     // schema; image and generation/reasoning allowances are reserved separately.
-    const textRequest = { model: this.cfg.textModel, enable_thinking: false, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: systemText }, { role: 'user', content: JSON.stringify(visual ? { input, response_format: responseFormat, directive } : input) }] };
+    const textRequest = { model: this.cfg.textModel, enable_thinking: false, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: systemText }, { role: 'user', content: JSON.stringify(visual ? { input: providerInput(kind, input), response_format: responseFormat, directive } : input) }] };
     const tokens = (await memoryCounter.count(textRequest)).tokens;
     // Visual reasoning, its schema/protocol and output share a conservative 16K
     // allowance. This does not change the exact memory-learning input protocol.
@@ -115,15 +123,16 @@ export class TextModels {
   async execute(prepared, images, signal) {
     const { kind, input, model, directive, systemText, responseFormat, outputLimit, promptRevision } = prepared;
     const visual = kind === 'advisor';
-    const user = visual ? [{ type: 'text', text: JSON.stringify(input) }, ...images.map(url => ({ type: 'image_url', image_url: { url } })), { type: 'text', text: directive }] : JSON.stringify(input);
+    const user = visual ? [{ type: 'text', text: JSON.stringify(providerInput(kind, input)) }, ...images.map(url => ({ type: 'image_url', image_url: { url } })), { type: 'text', text: directive }] : JSON.stringify(input);
     let response;
+    const started = performance.now();
     try {
       response = await this.fetcher(this.cfg.textBase.replace(/\/$/, '') + '/chat/completions', {
         method: 'POST', signal: AbortSignal.any([signal, AbortSignal.timeout(65000)]),
         headers: { Authorization: 'Bearer ' + this.cfg.modelKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: systemText }, { role: 'user', content: user }],
-          max_completion_tokens: outputLimit, temperature: visual ? 0.3 : 0.2, response_format: responseFormat, enable_thinking: visual,
-          ...(visual ? { thinking_budget: 4096 } : {}) }),
+          max_completion_tokens: outputLimit, temperature: 0.2, response_format: responseFormat, enable_thinking: visual,
+          ...(visual ? { thinking_budget: 1024 } : {}) }),
       });
     } catch {
       if (signal.aborted) throw new ServiceError('CANCELLED', '任务已取消', 409);
@@ -141,6 +150,6 @@ export class TextModels {
     catch { throw new ServiceError('MODEL_FORMAT', '模型返回格式不正确', 502); }
     requireValue(output.choices?.[0]?.finish_reason === 'stop', 'MODEL_TRUNCATED', '模型结果没有完整返回，请重试', 502);
     return { result: validateModelResult(kind, output.choices?.[0]?.message?.content || '', input),
-      provider: { model, usage: { ...output.usage, promptRevision } } };
+      provider: { model, usage: { ...output.usage, promptRevision, providerMs: Math.round(performance.now() - started) } } };
   }
 }

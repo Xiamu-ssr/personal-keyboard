@@ -1,58 +1,71 @@
 {
-  "reviewedAt": "2026-10-25T16:50:42.510378+00:00",
-  "version": "0.9.3-alpha.1",
+  "reviewedAt": "2026-10-26T13:56:16.035764+00:00",
+  "version": "0.9.4-alpha.1",
   "artifact": {
     "package": "app.doudou.ime",
-    "version": "0.9.3-alpha.1",
-    "sha256": "88f3cd1b43a6bb1420e154eb63ad3668a7ea932ce09578941983ecae65018e4b",
-    "bytes": 42229581,
+    "version": "0.9.4-alpha.1",
+    "sha256": "1dbb4a29fcd5e314f4f50f80fcdae7ae159f2da9283144ddc3a6aef25ef10438",
+    "bytes": 42281357,
     "buildType": "debug",
     "production": false,
     "modelsBundled": false
   },
-  "status": "Invited preview: explicit recorder start, compact four-tab navigation, optional profile fields, transparent Credit workload examples and comment practice.",
+  "status": "Invited preview: full candidate grid, weighted pinyin correction, stable emoji return, contextual speech proofreading and qualified vocabulary.",
   "checks": [
     {
-      "name": "Node contracts, graph and learning quality",
-      "passed": 39,
+      "name": "Node contracts, graph, lexical admission and completion races",
+      "passed": 44,
       "skipped": 6,
-      "source": "npm run check; database gate separately"
+      "source": "npm run check; database integration separately"
     },
     {
-      "name": "PostgreSQL account, memory delta, CAS and financial integration",
+      "name": "PostgreSQL ownership, CAS, model completion and settlement",
       "status": "passed",
-      "source": "Isolated local PostgreSQL"
+      "source": "Isolated local PostgreSQL; completion delivered in one waiting GET"
     },
     {
       "name": "Android JVM and lint",
-      "passed": 38,
-      "source": "Final candidate"
+      "passed": 48,
+      "status": "passed"
     },
     {
-      "name": "Native workspaces, explicit recorder start, background indication, source-preserving translations, comments, history upgrade and profile isolation",
-      "passed": 15,
-      "source": "Android 15 owned emulator, final APK, dedicated ordinary QA account and owned local fixtures"
-    },
-    {
-      "name": "Real learning-provider quality probe",
+      "name": "Native input and editor integration",
       "status": "passed",
-      "source": "qwen3.8-flash, synthetic correction, quantity, name mention and explicit relationship; no database writes"
+      "source": "Uppercase keycaps, visible spelling, typo correction, all candidate pages, raw Enter, emoji return, digits, auto-final edit ownership, qualified-memory projection and workspaces; emulator only. Two changed accessible labels rechecked."
     },
     {
-      "name": "Signing continuity and media provenance",
+      "name": "Real ASR and linked correction",
       "status": "passed",
-      "source": "Stable signing certificate and manifest hash verification"
+      "source": "Synthetic 3.99s PCM through live Cloud and the actual supplier; original text and linked correction preserved"
+    },
+    {
+      "name": "Learning provider lexical quality",
+      "status": "passed",
+      "source": "Synthetic proper terms learned; ordinary corrections and quantities skipped; no profile database writes"
+    },
+    {
+      "name": "Signing continuity and public media provenance",
+      "status": "passed"
     }
   ],
   "cloud": {
-    "deployedVersion": "0.9.3-alpha.1",
+    "deployedVersion": "0.9.4-alpha.1",
     "models": {
       "asr": "qwen-audio-3.1-asr-flash-message",
       "textAndVision": "qwen3.8-flash"
     },
     "provider": "Alibaba Cloud Model Studio",
     "accountGrantsMemoryPreserved": true,
-    "historyLocation": "device; temporary learning increments cleared after processing"
+    "historyLocation": "device; temporary learning increments cleared after processing",
+    "sourceModulesVerified": 15,
+    "vocabularyReview": {
+      "reviewed": 19,
+      "kept": 8,
+      "dropped": 11,
+      "manualRecordsProtected": true,
+      "transactionAudit": true,
+      "backupRetained": true
+    }
   },
   "pricing": {
     "unit": "Credit",
@@ -61,13 +74,41 @@
     "workloads": "Illustrative input/output Token workloads calculated from the current tariff, not fixed fees or measured averages."
   },
   "limits": [
-    "No new physical OPPO acceptance: the connected device is locked.",
-    "The memory screenshot and two videos retain their original 0.8.0 provenance; fourteen screenshots are from this APK.",
-    "Existing personal memory was retained; new learning guards do not retroactively delete user records.",
+    "No new physical OPPO microphone acceptance; the connected phone remained locked.",
+    "Five screenshots are from this APK; other screenshots and videos retain their original provenance.",
+    "Advisor semantic trials still show extra assumptions in some replies; bounded thinking is not a claim of perfect intent fidelity.",
+    "Existing automatic vocabulary without qualification remains editable but does not boost recognition until reviewed or explicitly edited.",
     "Development preview; purchases remain disabled."
   ],
   "independentReview": {
-    "status": "Focused source findings closed; six real native screenshots reviewed with no release-blocking visual finding. Motion and native execution were verified separately by the developer gates.",
-    "scope": "Focused read-only source and native screenshot review, not an all-chat-app audit."
+    "status": "Two focused source P2 findings fixed and rechecked; five final native screenshots had no new P1/P2 visual blocker.",
+    "scope": "Focused source and static native screenshot review; runtime interaction verified separately."
+  },
+  "performance": {
+    "scope": "Small synthetic provider trials, not production p95 or physical-device latency",
+    "advisorThinkingTokens": 1024,
+    "advisorPreviousThinkingTokens": 4096,
+    "advisorBoundedTrialMs": [
+      11745,
+      11827,
+      12715
+    ],
+    "advisorPreviousTrialMs": [
+      25210,
+      22430,
+      12930
+    ],
+    "proofreadingTrialMs": [
+      793,
+      1455,
+      718,
+      805
+    ],
+    "cloudAsrPipeline": {
+      "audioSeconds": 3.9935625,
+      "finalizationMs": 63,
+      "linkedRewriteMs": 3370
+    },
+    "fixedPollingDelayRemovedMs": 650
   }
 }

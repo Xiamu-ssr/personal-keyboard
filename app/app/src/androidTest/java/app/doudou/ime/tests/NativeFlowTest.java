@@ -256,7 +256,6 @@ public class NativeFlowTest {
     assertEquals("人工智能", value());
     clear();
     for (char c : "haha".toCharArray()) click("" + c);
-    click("展开");
     click("😂");
     assertEquals("😂", value());
     click("更多");
@@ -267,6 +266,28 @@ public class NativeFlowTest {
     await("q");
     assertEquals("😂≠", value());
     screenshot("modern-input");
+  }
+
+  @Test
+  public void correctedSpellingAndExpandedGridUseTheRealHostEditor() {
+    for (char c : "nihso".toCharArray()) click("" + c);
+    await("正在输入拼音：nihso");
+    click("你好");
+    assertEquals("你好", value());
+    clear();
+    for (char c : "shi".toCharArray()) click("" + c);
+    await("正在输入拼音：shi");
+    click("展开");
+    await("拼音候选词网格");
+    assertTrue(await("下一页").isEnabled());
+    click("下一页");
+    assertTrue(await("上一页").isEnabled());
+    screenshot("candidates-grid");
+    click("返回键盘");
+    await("q");
+    await("正在输入拼音：shi");
+    click("是");
+    assertEquals("是", value());
   }
 
   @Test

@@ -14,6 +14,14 @@ public final class MemoryStore extends SQLiteOpenHelper {
     public boolean deleted;
     public String kind, title, body, aux, source, globalId, modifiedBy, clock;
 
+    public boolean usableWord() {
+      if (!"word".equals(kind)) return false;
+      try {
+        JSONObject metadata = new JSONObject(aux);
+        return metadata.optBoolean("manual") || metadata.optJSONObject("lexical") != null;
+      } catch (JSONException ignored) { return false; }
+    }
+
     public JSONObject json() throws JSONException {
       return new JSONObject()
           .put("id", id)
@@ -187,7 +195,7 @@ public final class MemoryStore extends SQLiteOpenHelper {
       } catch (Exception ignored) {
       }
     }
-    for (Item i : list("word", 0)) m.put(i.title, 100);
+    for (Item i : list("word", 0)) if (i.usableWord()) m.put(i.title, 100);
     return m;
   }
 
@@ -274,15 +282,22 @@ public final class MemoryStore extends SQLiteOpenHelper {
           styles = memory.getJSONArray("styles"),
           people = memory.getJSONArray("people"),
           candidates = memory.optJSONArray("candidates");
+      Set<String> protectedKeys = new HashSet<>();
+      JSONArray protectedRecords = memory.optJSONArray("protected");
+      if (protectedRecords != null)
+        for (int i = 0; i < protectedRecords.length(); i++)
+          protectedKeys.add(protectedRecords.getString(i));
       for (int i = 0; i < words.length(); i++) {
         JSONObject w = words.getJSONObject(i);
+        boolean manual = protectedKeys.contains("hotword:" + w.getString("id"));
         String code = meta("word.code:" + w.getString("id"), "");
         if (code.isEmpty())
           code =
               com.github.promeg.pinyinhelper.Pinyin.toPinyin(w.getString("text"), "")
                   .toLowerCase(java.util.Locale.ROOT);
         cacheItem(
-            d, ids, used, w.getString("id"), "word", 0, w.getString("text"), code, "", version);
+            d, ids, used, w.getString("id"), "word", 0, w.getString("text"), code,
+            new JSONObject().put("manual", manual).put("lexical", w.optJSONObject("lexical")).toString(), version);
       }
       for (int i = 0; i < styles.length(); i++) {
         JSONObject s = styles.getJSONObject(i);

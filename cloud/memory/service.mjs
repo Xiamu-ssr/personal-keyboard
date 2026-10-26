@@ -1,5 +1,6 @@
 import { emptyMemory, changeMemory, resolveCandidate, memoryDelta, retractRevision } from './domain.mjs';
 import { historyEvent } from './history.mjs';
+import { usableHotwords } from './quality.mjs';
 import { historyBatch } from './model.mjs';
 import { canonical, digest, seal, unseal, uuid } from '../security.mjs';
 import { isUuid } from '../billing/ledger.mjs';
@@ -135,7 +136,7 @@ export class PersonalMemory {
   }
   async forTask(user, kind, input) {
     const { memory } = await this.snapshot(user);
-    if (kind === 'rewrite') return { ...input, words: memory.hotwords.map(w => w.text), styles: memory.styles };
+    if (kind === 'rewrite') return { ...input, words: usableHotwords(memory).map(w => w.text), styles: memory.styles };
     return { ...input, people: memory.people, styles: memory.styles }; // One visual request identifies the subject against the complete identity set; no hotwords.
 
   }

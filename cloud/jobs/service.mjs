@@ -3,6 +3,7 @@ import { modelInput } from "../models/text.mjs";
 import { unseal } from "../security.mjs";
 import { isUuid } from "../billing/ledger.mjs";
 import { requireValue, ServiceError } from "../http/errors.mjs";
+import { CompletionSignal } from './completion.mjs';
 export class Jobs {
   constructor(db, ledger, models, cfg, memory, palettes) {
     Object.assign(this, { db, ledger, models, cfg, memory, palettes });
@@ -10,6 +11,7 @@ export class Jobs {
     this.controllers = new Map();
     this.running = 0;
     this.stopped = false;
+    this.completion = new CompletionSignal();
   }
   async submit(user, request) {
     requireValue(
@@ -57,7 +59,7 @@ export class Jobs {
     await this.get(user, id);
     this.controllers.get(id)?.abort();
     this.images.delete(id);
-    return this.ledger.view(
+    const result = this.ledger.view(
       await this.ledger.finish(
         id,
         "cancelled",
@@ -66,6 +68,22 @@ export class Jobs {
         { code: "CANCELLED", message: "已取消，预留已释放" },
       ),
     );
+    this.completion.publish(id);
+    return result;
+  }
+  async wait(user, id, milliseconds, signal) {
+    requireValue(Number.isInteger(milliseconds) && milliseconds >= 0 && milliseconds <= 20000,
+      'INVALID_WAIT', '等待时长无效');
+    // Subscribe before reading: finishing between the SELECT and the wait cannot lose a wakeup.
+    const subscription = this.completion.subscribe(id, { milliseconds, signal });
+    try {
+      let result = await this.get(user, id); // Authentication/ownership applies before waiting too.
+      if (['queued', 'running'].includes(result.status) && milliseconds > 0 && !signal?.aborted) {
+        await subscription.promise;
+        result = await this.get(user, id);
+      }
+      return result;
+    } finally { subscription.close(); }
   }
   async pump() {
     if (this.stopped || this.pumping) return;
@@ -127,6 +145,7 @@ export class Jobs {
         )
         .catch(() => console.error("Job settlement pending"));
     } finally {
+      this.completion.publish(job.id);
       this.images.delete(job.id);
       this.controllers.delete(job.id);
     }
@@ -139,6 +158,7 @@ export class Jobs {
   }
   async stop() {
     this.stopped = true;
+    this.completion.close();
     for (const c of this.controllers.values()) c.abort();
     while (this.running || this.pumping)
       await new Promise((r) => setTimeout(r, 50));

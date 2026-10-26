@@ -5,6 +5,7 @@ import android.media.*;
 import android.os.*;
 import app.doudou.ime.BuildConfig;
 import app.doudou.ime.app.KeyboardApp;
+import app.doudou.ime.model.ExpressionContext;
 import java.util.ArrayDeque;
 import okhttp3.*;
 import okio.ByteString;
@@ -40,7 +41,7 @@ public final class AsrStream {
         });
   }
 
-  public void start(VoiceInput.Listener next, String conversationRef, String requestId) {
+  public void start(VoiceInput.Listener next, String conversationRef, String requestId, String editorContext) {
     cancel();
     listener = next;
     final int token = epoch;
@@ -74,7 +75,7 @@ public final class AsrStream {
                     .put("type", "configure")
                     .put("requestId", requestId)
                     .put("polish", app.prefs().getBoolean("asrPolish", true));
-            config.put("context", app.histories.recent(conversationRef, 400));
+            config.put("context", ExpressionContext.recognition(app.histories.recent(conversationRef, 400), editorContext));
             Request request =
                 new Request.Builder()
                     .url(BuildConfig.API_BASE_URL.replace("https:", "wss:") + "/v1/asr")

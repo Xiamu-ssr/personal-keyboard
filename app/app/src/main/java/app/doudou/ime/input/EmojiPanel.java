@@ -20,17 +20,21 @@ public final class EmojiPanel {
     LinearLayout root = host.openPanel("emoji", KeyboardView.HEIGHT_DP);
     root.setBackgroundColor(Ui.keyboard());
     LinearLayout header = Ui.row(c);
-    header.addView(Ui.button(c, "ABC", host::letters), new LinearLayout.LayoutParams(Ui.dp(c, 64), Ui.dp(c, 48)));
+    TextView back = Ui.button(c, "返回键盘", host::letters);
+    back.setMinWidth(Ui.dp(c, 100));
+    header.addView(back, new LinearLayout.LayoutParams(-2, -1));
     TextView title = Ui.text(c, "表情", 15, Ui.sub()); Ui.pad(c, title, 10, 0);
     header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
     header.addView(Ui.icon(c, "退格", host::delete), new LinearLayout.LayoutParams(Ui.dp(c, 48), Ui.dp(c, 48)));
-    root.addView(header);
+    // The header is an unweighted sibling, never part of the picker's scrolling area. Picker
+    // measurements, category changes and font scaling cannot consume its return target.
+    root.addView(header, new LinearLayout.LayoutParams(-1, Ui.dp(c, 48)));
     android.content.res.Configuration locale = new android.content.res.Configuration(c.getResources().getConfiguration());
     locale.setLocales(new android.os.LocaleList(java.util.Locale.SIMPLIFIED_CHINESE));
     Context pickerContext = new ContextThemeWrapper(c.createConfigurationContext(locale), app.doudou.ime.design.Skin.theme());
     EmojiPickerView picker = new EmojiPickerView(pickerContext);
     picker.setEmojiGridColumns(Math.max(5, Math.min(7, c.getResources().getConfiguration().screenWidthDp / 52)));
-    picker.setEmojiGridRows(3f);
+    picker.setEmojiGridRows(2.5f);
     picker.setRecentEmojiProvider(new RecentEmojiProvider() {
       private String key() { return "emoji.recent:" + host.services().cloud.userId(); }
       public void recordSelection(String emoji) {
@@ -51,6 +55,9 @@ public final class EmojiPanel {
       public Object getRecentEmojiList(kotlin.coroutines.Continuation<? super List<String>> continuation) { return list(); }
     });
     picker.setOnEmojiPickedListener(item -> host.insert(item.getEmoji()));
-    root.addView(picker, new LinearLayout.LayoutParams(-1, 0, 1));
+    FrameLayout viewport = new FrameLayout(c);
+    viewport.setClipChildren(true);
+    viewport.addView(picker, new FrameLayout.LayoutParams(-1, -1));
+    root.addView(viewport, new LinearLayout.LayoutParams(-1, 0, 1));
   }
 }

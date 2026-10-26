@@ -3,19 +3,51 @@ import assert from 'node:assert/strict';
 import { uuid } from '../security.mjs';
 import { emptyMemory, changeMemory } from '../memory/domain.mjs';
 import { historyEvent } from '../memory/history.mjs';
+import { usableHotwords, recognitionVocabulary } from '../memory/quality.mjs';
+import { reviewVocabulary } from '../memory/vocabulary-review.mjs';
+import { canonical, digest } from '../security.mjs';
 
 const history = (text, extra = {}) => ({ id: uuid(), revision: 1, type: 'voice', resultText: text, insertedText: text, ...extra });
 const proposal = (h, kind, value, extra = {}) => ({ kind, action: 'upsert', id: 'new:' + kind,
   value, sourceId: h.id, sourceRevision: h.revision, category: 'observation', confidence: .99, quote: h.resultText, ...extra });
 const learn = (h, ops, old = emptyMemory()) => changeMemory(old, ops, { history: h }).memory;
 
+test('editing a normal word is not lexical admission; manual vocabulary is respected', () => {
+  const h = history('没有', { insertedText: '没油' });
+  const correction = proposal(h, 'hotword', { text: '没有', variants: ['没油'] }, { category: 'correction' });
+  assert.equal(learn(h, [correction]).hotwords.length, 0);
+  const memory = emptyMemory();
+  memory.hotwords = [
+    { id: uuid(), text: '旧的纠词', variants: [] },
+    { id: uuid(), text: '蓝鲸引擎', variants: [], lexical: { kind: 'name', meaning: '项目里的语音识别引擎' } },
+    { id: uuid(), text: '自定义叫法', variants: [] },
+  ];
+  memory.protected.push('hotword:' + memory.hotwords[2].id);
+  assert.deepEqual(usableHotwords(memory).map(w => w.text), ['蓝鲸引擎', '自定义叫法']);
+  assert.deepEqual(recognitionVocabulary(memory, ''), { 自定义叫法: 2, 蓝鲸引擎: 1 });
+  assert.equal(recognitionVocabulary(memory, '讨论蓝鲸引擎')['蓝鲸引擎'], 3);
+});
+
+test('old automatic vocabulary review is versioned, preserves manual entries and never blacklists a spelling', () => {
+  const old = emptyMemory(), auto = uuid(), manual = uuid();
+  old.hotwords = [{ id: auto, text: '没有', variants: ['没油'] }, { id: manual, text: '自定义词', variants: [] }];
+  old.protected.push('hotword:' + manual);
+  const plan = { expectedDigest: digest(canonical(old)), entries: [{ id: auto, action: 'drop' }] };
+  const clean = reviewVocabulary(old, plan);
+  assert.equal(old.hotwords.length, 2);
+  assert.deepEqual(clean.hotwords, [old.hotwords[1]]);
+  assert.deepEqual(clean.blockedWords, []);
+  assert.throws(() => reviewVocabulary(clean, plan), /记忆已变化/);
+  assert.throws(() => reviewVocabulary(old, { ...plan, entries: [{ id: manual, action: 'drop' }] }), /自动词条/);
+});
+
 test('learn reusable vocabulary from adopted text, never measurements, sentences or invented evidence', () => {
-  for (const [term, termType] of [['1.5米', 'technical'], ['十二点到了。', 'name'], ['hao', 'pinyin'], ['123', 'technical']]) {
+  for (const [term, termType] of [['1.5米', 'technical'], ['十二点到了。', 'name'], ['123', 'technical']]) {
     const h = history(term);
-    assert.equal(learn(h, [proposal(h, 'hotword', { text: term }, { termType })]).hotwords.length, 0);
+    assert.equal(learn(h, [proposal(h, 'hotword', { text: term, lexical: { kind: termType === 'pinyin' ? 'name' : termType, meaning: '合成测试词条' } })]).hotwords.length, 0);
   }
   const h = history('我们正在试用Nebula-X。', { asrText: '多出来的词' });
-  const op = proposal(h, 'hotword', { text: 'Nebula-X' }, { termType: 'name' });
+  const op = proposal(h, 'hotword', { text: 'Nebula-X', lexical: { kind: 'name', meaning: '正在试用的产品名称' } });
   assert.equal(learn(h, [op]).hotwords[0].text, 'Nebula-X');
   assert.equal(learn(h, [{ ...op, quote: 'Nebula-X不存在的证据' }]).hotwords.length, 0);
   assert.equal(learn(h, [{ ...op, quote: h.asrText, value: { text: h.asrText } }]).hotwords.length, 0);
@@ -24,7 +56,7 @@ test('learn reusable vocabulary from adopted text, never measurements, sentences
 test('practice never changes personal memory; ambient recordings cannot teach personal style or people', () => {
   const h = history('小周是我的同事。', { practice: true });
   assert.equal(historyEvent(h).practice, true);
-  const ops = [proposal(h, 'hotword', { text: '小周' }, { termType: 'name' }),
+  const ops = [proposal(h, 'hotword', { text: '小周', lexical: { kind: 'name', meaning: '同事的称呼' } }),
     proposal(h, 'style', { scene: '工作', rules: ['简洁'], examples: [h.resultText] })];
   assert.deepEqual(learn(h, ops), emptyMemory());
   assert.equal(learn({ ...h, practice: false, type: 'recording' }, [ops[1]]).styles.length, 0);

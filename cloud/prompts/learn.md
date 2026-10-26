@@ -6,7 +6,7 @@
 
 recording 是录音笔记录，可能包含他人讲话，不能把它当成本人文风或未经确认的人物事实。
 
-热词仅收短的专有名词、技术术语、缩写、个人称呼和真实纠词；termType必须为name、technical、abbreviation、address之一。不收普通日常词、整句话、语气片段、未完成的拼音或“1.5米”这类量值。每项热词给逐字quote，必须来自本人resultText并包含词条；纠词还必须有填入稿到本人改稿的真实局部替换。文风按场景；规则简短、可执行，examples必须逐字来自本人已采用的resultText。练习数据和录音笔不作为本人文风、人物事实学习。低置信度省略，不制造待学习任务。
+热词是以后仍有必要提示识别器的词汇，不是纠错记录。先判断词本身是否指向具体的名字、专门概念、正式缩写或某人的固定称呼，再看证据。把任意普通动词、日常名词或纠正过的错字标成technical/address不成立；address是某人的特定叫法，不是通用职务。拼音片段、混合残词、孤立量值、普通词和整句不收。证据不足以解释具体指代时直接略过，不编造含义。每项提供lexical:{kind:name/technical/abbreviation/address,meaning:证据中具体指什么}；meaning不能只是“用户纠正过/经常用/需要识别”。quote必须逐字来自本人resultText并包含词条。correction还须有insertedText到resultText的真实局部替换；普通纠错留在历史，不进入热词。已存在的词沿用ID，不因每次纠错重复建词。文风按场景；规则简短、可执行，examples必须逐字来自本人已采用的resultText。练习数据和录音笔不作为本人文风、人物事实学习。低置信度省略，不制造待学习任务。
 
 军师messages含说话人；未采纳建议不是本人表达。新增人物须有本次identity核实的平台和昵称，或明确介绍此人的关系、资料；仅提到一个名字不建立联系人。person、fact、relation的quote必须逐字来自resultText或归属明确的messages，并含人物名、资料值或关系原词。昵称写person.name，别名写aliases，平台身份写identities，不再重复建立“nickname/昵称”事实。预制字段来自personFields：性别、年龄、公司、职位、工作经历用对应中文key；关系指向self或人物ID，type直接用证据原词（例如“同事”，不要译成colleague）。未知留空，不猜年龄性别；每条资料沿用原ID，scope默认“当前”，只有明确历史时期才填写其他范围。
 

@@ -7,7 +7,7 @@ import { MemoryModel, historyRequest, historyBatch } from '../memory/model.mjs';
 import { QwenCounter } from '../memory/counter.mjs';
 
 const history = () => ({ id: uuid(), revision: 2, type: 'voice', asrText: '豆包', insertedText: '豆包', resultText: '豆豆', conversationRef: '' });
-const wordOp = h => ({ kind: 'hotword', action: 'upsert', id: 'new:word', value: { text: '豆豆', variants: ['豆包'] }, sourceId: h.id, sourceRevision: h.revision, category: 'correction', confidence: 0.99, termType: 'name', quote: h.resultText });
+const wordOp = h => ({ kind: 'hotword', action: 'upsert', id: 'new:word', value: { text: '豆豆', variants: ['豆包'], lexical: { kind: 'name', meaning: '输入法产品名称' } }, sourceId: h.id, sourceRevision: h.revision, category: 'correction', confidence: 0.99, quote: h.resultText });
 const options = h => ({ history: h, origin: { historyId: h.id, revision: h.revision } });
 
 test('only explicit inserted-to-result corrections add reversible hotwords automatically', () => {

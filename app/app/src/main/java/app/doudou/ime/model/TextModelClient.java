@@ -72,7 +72,7 @@ public final class TextModelClient {
         });
   }
 
-  public void polish(String text, String source, String conversation, TextResult result) {
+  public void polish(String text, String source, String conversation, String editorContext, TextResult result) {
     final int token = ++epoch;
     CloudTask current = new CloudTask(app.cloud);
     task = current;
@@ -83,6 +83,7 @@ public final class TextModelClient {
                 new JSONObject()
                     .put("transcript", text)
                     .put("conversationRef", conversation)
+                    .put("editorContext", editorContext)
                     .put("recentContext", app.histories.recent(conversation, 12000));
             String value = current.run("rewrite", input, source).getString("text");
             main.post(

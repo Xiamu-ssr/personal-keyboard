@@ -45,7 +45,7 @@ public final class KeyboardService extends InputMethodService
   private final ClipboardManager.OnPrimaryClipChangedListener clipListener =
       () -> rememberClipboard(true);
   private long generation;
-  private int candidateSerial;
+  private volatile int candidateSerial;
   private boolean english, shift, caps, symbols, incognito, sensitive;
   private int compositionChange;
   private int bottomInset, contentHeight = KeyboardView.HEIGHT_DP;
@@ -238,6 +238,7 @@ public final class KeyboardService extends InputMethodService
       if (mode.equals("tools")
           || mode.equals("emoji")
           || mode.equals("symbols")
+          || mode.equals("candidates")
           || mode.equals("keyboards")
           || mode.equals("recorder")) {
         typing();
@@ -304,7 +305,7 @@ public final class KeyboardService extends InputMethodService
   }
 
   private app.doudou.ime.input.KeyboardView keyboard;
-  private List<PinyinEngine.Word> visibleCandidates = new ArrayList<>();
+  private PinyinEngine.Query candidateQuery;
 
   private void haptic(View v) {
     if (app.prefs().getBoolean("haptic", true))
@@ -474,17 +475,12 @@ public final class KeyboardService extends InputMethodService
   }
 
   private void showCandidates() {
-    if (composing.length() == 0) return;
-    final List<PinyinEngine.Word> options = new ArrayList<>(visibleCandidates);
+    if (composing.length() == 0 || candidateQuery == null
+        || !candidateQuery.input.equals(PinyinEngine.normalize(composing.toString()))) return;
+    final PinyinEngine.Query query = candidateQuery;
     reset("candidates", KeyboardView.HEIGHT_DP);
-    panelHeading(composing.toString(), this::typing);
-    ScrollView scroll = new ScrollView(this);
-    LinearLayout list = Ui.col(this);
-    Ui.pad(this, list, 12, 0);
-    scroll.addView(list);
-    for (PinyinEngine.Word word : options)
-      list.addView(Ui.cell(this, "", word.text, "", "", () -> choose(word.text, word.code)));
-    root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+    root.addView(new app.doudou.ime.input.CandidatePanel(this, composing.toString(), query,
+        this::typing, this::choose), new LinearLayout.LayoutParams(-1, 0, 1));
   }
 
   private void letter(char ch) {
@@ -509,9 +505,11 @@ public final class KeyboardService extends InputMethodService
     if (keyboard == null) return;
     keyboard.clearCandidates();
     String code = composing.toString();
+    keyboard.setComposing(code);
+    candidateQuery = null;
     final long gen = generation;
     final int request = ++candidateSerial;
-    addCandidate(code, () -> choose(code, code));
+    final boolean privateInput = privateMode();
     if (app.pinyin == null) {
       addCandidate(app.dictionaryError.isEmpty() ? "词库载入中…" : app.dictionaryError, () -> {});
       main.postDelayed(
@@ -524,26 +522,29 @@ public final class KeyboardService extends InputMethodService
     }
     app.worker.execute(
         () -> {
+          if (request != candidateSerial) return;
           List<PinyinEngine.Word> personal = new ArrayList<>();
-          if (!privateMode())
+          if (!privateInput)
             for (MemoryStore.Item word : app.store.list("word", 0))
-              if (!word.body.isEmpty())
+              if (word.usableWord() && !word.body.isEmpty())
                 personal.add(new PinyinEngine.Word(word.title, word.body, 26));
           app.pinyin.personalWords(personal);
-          List<PinyinEngine.Word> list =
-              app.pinyin.candidates(
-                  code, 12, privateMode() ? Collections.emptyMap() : app.store.frequencies());
+          PinyinEngine.Query query =
+              app.pinyin.query(code, privateInput ? Collections.emptyMap() : app.store.frequencies());
+          List<PinyinEngine.Word> list = query.page(0, 12);
           main.post(
               () -> {
                 if (request != candidateSerial || gen != generation || !mode.equals("typing"))
                   return;
                 keyboard.clearCandidates();
-                visibleCandidates = new ArrayList<>(list);
-                int emojiPosition = Math.min(1, visibleCandidates.size());
+                keyboard.setComposing(code);
+                candidateQuery = query;
+                List<PinyinEngine.Word> strip = new ArrayList<>(list);
+                int emojiPosition = Math.min(1, strip.size());
                 for (String emoji : KeyboardExtras.suggest(code))
-                  visibleCandidates.add(emojiPosition++, new PinyinEngine.Word(emoji, code, 0));
-                for (PinyinEngine.Word w : visibleCandidates)
-                  addCandidate(w.text, () -> choose(w.text, w.code));
+                  strip.add(emojiPosition++, new PinyinEngine.Word(emoji, code, 0));
+                for (PinyinEngine.Word w : strip)
+                  addCandidate(w.text, () -> choose(w));
                 if (list.isEmpty()) addCandidate(code, () -> choose(code, code));
               });
         });
@@ -554,6 +555,14 @@ public final class KeyboardService extends InputMethodService
   }
 
   private void choose(String text, String code) {
+    choose(text, code, code);
+  }
+
+  private void choose(PinyinEngine.Word word) {
+    choose(word.text, word.code, word.spelling);
+  }
+
+  private void choose(String text, String code, String spelling) {
     InputConnection ic = input();
     if (ic == null) return;
     String raw = composing.toString();
@@ -576,8 +585,8 @@ public final class KeyboardService extends InputMethodService
     if (!privateMode())
       app.worker.execute(
           () -> {
-            app.store.learn(text, code);
-            if (app.pinyin != null) app.pinyin.accept(code, text);
+            app.store.learn(text, spelling);
+            if (app.pinyin != null) app.pinyin.accept(spelling, text);
           });
     typing();
   }
@@ -614,7 +623,7 @@ public final class KeyboardService extends InputMethodService
             app.pinyin.candidates(
                 code, 1, privateMode() ? Collections.emptyMap() : app.store.frequencies());
         if (!ws.isEmpty()) {
-          choose(ws.get(0).text, ws.get(0).code);
+          choose(ws.get(0));
           return;
         }
       }

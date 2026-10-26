@@ -1,6 +1,6 @@
 # 豆豆输入法
 
-Android 输入法，与 Doudou Agent 独立。当前目标为 0.9.3 开发预览；版本、发布、生产状态必须实查，fixture 不等于真实用户验收。先读 spec/spec.yaml、PRODUCT.md 和 DESIGN.md。
+Android 输入法，与 Doudou Agent 独立。当前目标为 0.9.4 开发预览；版本、发布、生产状态必须实查，fixture 不等于真实用户验收。先读 spec/spec.yaml、PRODUCT.md 和 DESIGN.md。
 
 ## 产品与边界
 

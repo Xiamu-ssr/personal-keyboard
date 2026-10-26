@@ -280,8 +280,17 @@ export async function createCloudServer({
         if (method === 'POST' && route === '/v1/memory/history')
           return json(res, await memory.ingest(user, await jsonBody(req, 2000000)), 202);
         const match = /^\/v1\/jobs\/([0-9a-f-]+)(\/cancel)?$/.exec(route);
-        if (match && method === "GET" && !match[2])
-          return json(res, await jobs.get(user, match[1]));
+        if (match && method === "GET" && !match[2]) {
+          const wait = Number(new URL(req.url, 'http://local').searchParams.get('wait') || 0);
+          const controller = new AbortController();
+          const closed = () => controller.abort();
+          res.once('close', closed);
+          try {
+            const result = await jobs.wait(user, match[1], wait, controller.signal);
+            if (!res.destroyed) return json(res, result);
+            return;
+          } finally { res.removeListener('close', closed); }
+        }
         if (match && method === "POST" && match[2])
           return json(res, await jobs.cancel(user, match[1]));
         if (method === 'GET' && ['/v1/jobs', '/v1/credit-usage'].includes(route)) return json(res, { jobs:

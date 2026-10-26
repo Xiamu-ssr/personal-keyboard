@@ -1,7 +1,7 @@
 {
   "name": "@doudou/keyboard-cloud",
   "private": true,
-  "version": "0.9.3-alpha.1",
+  "version": "0.9.4-alpha.1",
   "type": "module",
   "engines": {
     "node": ">=22"

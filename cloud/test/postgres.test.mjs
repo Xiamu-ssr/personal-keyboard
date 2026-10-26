@@ -42,7 +42,7 @@ test(
       async generate(request) {
         modelCalls.push(structuredClone(request));
         const h = Array.isArray(request.history) ? request.history[0] : JSON.parse(request.history.text);
-        return { baseVersion: request.version, operations: h.resultText === '豆豆' && h.insertedText === '豆包' ? [{ kind: 'hotword', action: 'upsert', id: 'new:word', value: { text: '豆豆', variants: ['豆包'] }, sourceId: h.id, sourceRevision: h.revision, category: 'correction', confidence: 1, termType: 'name', quote: h.resultText }] : [] };
+        return { baseVersion: request.version, operations: h.resultText === '豆豆' && h.insertedText === '豆包' ? [{ kind: 'hotword', action: 'upsert', id: 'new:word', value: { text: '豆豆', variants: ['豆包'], lexical: { kind: 'name', meaning: '输入法产品名称' } }, sourceId: h.id, sourceRevision: h.revision, category: 'correction', confidence: 1, quote: h.resultText }] : [] };
       },
     };
     const models = {
@@ -261,12 +261,7 @@ test(
       };
       let pending = (await request("/v1/jobs", req, token)).value;
       assert(pending.id);
-      let done;
-      for (let i = 0; i < 30; i++) {
-        done = (await request("/v1/jobs/" + pending.id, null, token)).value;
-        if (done.status === "succeeded") break;
-        await new Promise((r) => setTimeout(r, 50));
-      }
+      const done = (await request("/v1/jobs/" + pending.id + '?wait=20000', null, token)).value;
       assert.equal(done.status, "succeeded");
       assert.equal(done.result.replies.length, 6);
       assert.equal(done.result.messages[0].speaker, 'other');

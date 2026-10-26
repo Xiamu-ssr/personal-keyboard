@@ -11,7 +11,7 @@ public final class KeyboardExtras {
   private final EditorHost host;
   private static final String[] SYMBOLS = {
     "， 。 ？ ！ 、 ： ； … — · ～ （ ） 【 】 《 》 「 」 『 』 〈 〉 \" ' / \\ _ @ # & * + - = % ¥ $ € £",
-    "1 2 3 4 5 6 7 8 9 0 ① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩ Ⅰ Ⅱ Ⅲ Ⅳ Ⅴ",
+    "1 2 3 4 5 6 7 8 9 0 壹 贰 叁 肆 伍 陆 柒 捌 玖 零 拾 佰 仟 万 亿 一 二 三 四 五 六 七 八 九 十 ① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩ Ⅰ Ⅱ Ⅲ Ⅳ Ⅴ",
     "＋ − × ÷ ＝ ≠ ≈ ≤ ≥ ± ∞ √ ∑ ∏ ∫ π ° ℃ ℉ ㎡ ㎥ ㎝ ㎜ ㎏ ㎎ ㏄ ％ ‰",
     "＠ ＃ ＆ ＊ ＿ ～ ＾ ｜ 〔 〕 〖 〗 ﹁ ﹂ ﹃ ﹄ ｛ ｝ ＜ ＞ § © ® ™ → ← ↑ ↓ ↔ ⇒ ✓ ★ ☆ ♡ ♥ ♪ ♫"
   };
@@ -35,9 +35,9 @@ public final class KeyboardExtras {
     LinearLayout root = host.openPanel("symbols", KeyboardView.HEIGHT_DP);
     root.setBackgroundColor(Ui.keyboard());
     LinearLayout header = Ui.row(c);
-    header.addView(
-        Ui.button(c, "ABC", host::letters),
-        new LinearLayout.LayoutParams(Ui.dp(c, 56), Ui.dp(c, 48)));
+    TextView back = Ui.button(c, "ABC", host::letters);
+    back.setPadding(0, 0, 0, 0);
+    header.addView(back, new LinearLayout.LayoutParams(Ui.dp(c, 56), Ui.dp(c, 48)));
     String[] names = {"常用", "数字", "数学", "更多"};
     for (int i = 0; i < names.length; i++) {
       final int page = i;
@@ -50,7 +50,7 @@ public final class KeyboardExtras {
     }
     header.addView(
         Ui.icon(c, "退格", host::delete), new LinearLayout.LayoutParams(Ui.dp(c, 48), Ui.dp(c, 48)));
-    root.addView(header);
+    root.addView(header, new LinearLayout.LayoutParams(-1, Ui.dp(c, 48)));
     ScrollView scroll = new ScrollView(c);
     LinearLayout content = Ui.col(c);
     Ui.pad(c, content, 4, 4);

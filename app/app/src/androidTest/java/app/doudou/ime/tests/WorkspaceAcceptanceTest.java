@@ -163,19 +163,19 @@ public final class WorkspaceAcceptanceTest {
     click("回复海盐的评论：看起来好香！番茄要先炒出汁。");
     onMain(() -> assertEquals("回复 海盐", editor.getHint().toString()));
     onMain(() -> editor.setText("明天试试，谢谢你的建议！"));
-    click("评论"); await("回复 海盐：明天试试，谢谢你的建议！", 5000);
+    click("评论"); await("回复周末小厨房的评论：回复 海盐：明天试试，谢谢你的建议！", 5000);
     assertEquals("", value());
     onMain(activity::finish);
     activity = ins.startActivitySync(new Intent(app, PracticeActivity.class).putExtra("scene", "comments").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     editor = field(activity.getWindow().getDecorView());
     await("评论 8", 5000);
-    assertNull("Re-entered practice is disposable", node("回复 海盐：明天试试，谢谢你的建议！"));
+    assertNull("Re-entered practice is disposable", node("回复周末小厨房的评论：回复 海盐：明天试试，谢谢你的建议！"));
     assertEquals("doudou:practice", editor.getPrivateImeOptions());
   }
 
   @Test public void emojiPickerCommitsWholeEmojiAndDeleteRemovesOneCluster() throws Exception {
     String before = value(); shot("typing"); click("更多"); shot("tools"); click("表情");
-    await("ABC", 5000); SystemClock.sleep(1600); shot("emoji-picker");
+    await("返回键盘", 5000); SystemClock.sleep(1600); shot("emoji-picker");
     // The official picker exposes each cell as a clickable image with the Unicode sequence.
     AccessibilityNodeInfo emoji = emojiNode(); assertNotNull("Real emoji cells in the native picker", emoji);
     String sequence = emoji.getContentDescription().toString();
@@ -183,7 +183,7 @@ public final class WorkspaceAcceptanceTest {
     SystemClock.sleep(200); String inserted = value();
     assertTrue("One complete emoji sequence was committed", inserted.startsWith(before) && inserted.length() > before.length());
     click("退格"); assertEquals("Backspace removes the whole selected sequence", before, value());
-    click("ABC"); await("空格", 5000);
+    click("返回键盘"); await("空格", 5000);
     // Owned text fixtures test complete-cluster deletion through the real IME, beyond one Picker cell.
     for (String cluster : new String[] {"👨‍👩‍👧‍👦", "👩🏽‍💻", "🇨🇳", "1️⃣", "e\u0301"}) {
       onMain(() -> { editor.setText(before + cluster); editor.setSelection(editor.length()); });

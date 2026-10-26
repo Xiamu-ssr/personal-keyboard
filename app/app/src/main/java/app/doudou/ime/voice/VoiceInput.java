@@ -39,7 +39,7 @@ public final class VoiceInput {
     return stream.sourceJob();
   }
 
-  public void start(Listener next, String conversation) {
+  public void start(Listener next, String conversation, String editorContext) {
     cancel();
     if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO)
         != PackageManager.PERMISSION_GRANTED) {
@@ -79,7 +79,7 @@ public final class VoiceInput {
           public void ready() {}
         },
         conversation,
-        UUID.randomUUID().toString());
+        UUID.randomUUID().toString(), editorContext);
     new Thread(() -> capture(token, next), "doudou-dictation").start();
   }
 

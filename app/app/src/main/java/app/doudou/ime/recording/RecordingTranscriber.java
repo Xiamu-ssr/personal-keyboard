@@ -113,7 +113,7 @@ public final class RecordingTranscriber extends Worker {
               public void processing() {}
             },
             "",
-            store.chunk(i).getString("requestId"));
+            store.chunk(i).getString("requestId"), "");
         if (!ready.await(15, TimeUnit.SECONDS)) {
           active.cancel();
           return Result.failure();

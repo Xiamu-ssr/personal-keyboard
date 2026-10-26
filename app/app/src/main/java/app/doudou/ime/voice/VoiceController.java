@@ -5,6 +5,7 @@ import app.doudou.ime.design.Ui;
 import app.doudou.ime.input.EditorHost;
 import app.doudou.ime.input.PanelController;
 import app.doudou.ime.model.TextModelClient;
+import app.doudou.ime.model.ExpressionContext;
 
 /** Space starts capture; the dedicated dictation surface owns the held gesture. */
 public final class VoiceController extends PanelController {
@@ -16,6 +17,7 @@ public final class VoiceController extends PanelController {
   private VoiceState state = VoiceState.IDLE;
   private VoiceGesture.Target target = VoiceGesture.Target.FINISH;
   private String transcript = "", rawTranscript = "", historyId = "";
+  private String editorContext = "";
 
   public VoiceController(EditorHost host) {
     super(host);
@@ -41,6 +43,11 @@ public final class VoiceController extends PanelController {
     editing = true;
     retained = host.retainVoice();
     host.voiceFeedback(VoiceState.IDLE, "", false, target);
+    if (!rawTranscript.isEmpty()) {
+      model.cancel();
+      working = false;
+      insertTranscript();
+    }
   }
 
   public void cancel() {
@@ -54,6 +61,7 @@ public final class VoiceController extends PanelController {
     voice.cancel();
     model.cancel();
     transcript = rawTranscript = historyId = "";
+    editorContext = "";
   }
 
   /** The tool card and accessibility action use this hands-free entry. */
@@ -79,6 +87,7 @@ public final class VoiceController extends PanelController {
     host.cancelAdvisor();
     cancel();
     commitComposing();
+    editorContext = ExpressionContext.tail(host.full(), 2000);
     snapshot();
     host.typing();
     sessionActive = true;
@@ -117,7 +126,7 @@ public final class VoiceController extends PanelController {
     return state == VoiceState.FINISHING
         ? "正在完成识别…"
         : state == VoiceState.REWRITING
-            ? "按你的口吻整理…"
+            ? "正在校对…"
             : !holding
                 ? "正在倾听"
                 : target == VoiceGesture.Target.CANCEL
@@ -138,6 +147,13 @@ public final class VoiceController extends PanelController {
     if (newline && !editing) host.previewVoice(transcript.trim() + "\n");
     present(VoiceState.FINISHING, "");
     voice.stop();
+  }
+
+  /** Manual stop, microphone timeout and provider final all enter the same ownership state. */
+  void beginFinalization() {
+    holding = false;
+    stopping = true;
+    if (state != VoiceState.REWRITING) present(VoiceState.FINISHING, "");
   }
 
   public void insertTranscript() {
@@ -185,6 +201,7 @@ public final class VoiceController extends PanelController {
 
           public void text(String value, boolean fin) {
             if (!active()) return;
+            if (fin) beginFinalization();
             transcript = value;
             if (!editing
                 && !value.isEmpty()
@@ -204,7 +221,7 @@ public final class VoiceController extends PanelController {
                 else failed("没听清，再按住说一次");
                 return;
               }
-              if (!editing && !app.store.list("style", 0).isEmpty()) polishVoice();
+              if (!editing) polishVoice();
               else insertTranscript();
             }
           }
@@ -223,7 +240,7 @@ public final class VoiceController extends PanelController {
           public void processing() {
             if (active()) {
               working = true;
-              present(VoiceState.FINISHING, "");
+              beginFinalization();
             }
           }
 
@@ -239,7 +256,7 @@ public final class VoiceController extends PanelController {
             } else failed(value);
           }
         },
-        host.conversationRef());
+        host.conversationRef(), editorContext);
   }
 
   private void polishVoice() {
@@ -251,6 +268,7 @@ public final class VoiceController extends PanelController {
         original,
         voice.sourceJob(),
         host.conversationRef(),
+        editorContext,
         (text, error) -> {
           if (!sessionActive
               || attempt != serial

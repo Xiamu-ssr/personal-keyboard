@@ -66,6 +66,11 @@ public final class CloudClient {
 
   private JSONObject execute(String route, String method, JSONObject body, String token)
       throws Exception {
+    return execute(route, method, body, token, null);
+  }
+
+  private JSONObject execute(String route, String method, JSONObject body, String token,
+      RequestCancellation cancellation) throws Exception {
     Request.Builder builder =
         new Request.Builder()
             .url(BuildConfig.API_BASE_URL + route)
@@ -76,7 +81,9 @@ public final class CloudClient {
         method.equals("GET")
             ? null
             : RequestBody.create(body == null ? "{}" : body.toString(), JSON));
-    try (Response response = http.newCall(builder.build()).execute()) {
+    Call call = http.newCall(builder.build());
+    if (cancellation != null) cancellation.attach(call);
+    try (Response response = call.execute()) {
       if (response.body() == null) throw new IOException("云端没有返回结果");
       String content = response.body().string();
       if (content.length() > 7500000) throw new IOException("云端返回过大");
@@ -94,7 +101,7 @@ public final class CloudClient {
             response.code());
       }
       return result;
-    }
+    } finally { if (cancellation != null) cancellation.detach(call); }
   }
 
   private void acceptSession(JSONObject next) throws Exception {
@@ -157,7 +164,12 @@ public final class CloudClient {
 
   public JSONObject request(String account, String route, String method, JSONObject body)
       throws Exception {
-    JSONObject result = execute(route, method, body, accessToken(account));
+    return request(account, route, method, body, null);
+  }
+
+  public JSONObject request(String account, String route, String method, JSONObject body,
+      RequestCancellation cancellation) throws Exception {
+    JSONObject result = execute(route, method, body, accessToken(account), cancellation);
     synchronized (this) {
       requireAccount(account);
     }
