@@ -7,6 +7,6 @@
   "upstream": "https://github.com/amzxyz/rime-wanxiang-data",
   "file": "dicts/jichu.dict.yaml",
   "entries": 400000,
-  "assetSha256": "6b5203840c7a212bf2b209d002ffb97b35eb1996e2018a06b7f196ffb1b3ed75",
-  "transform": "top 400000 readings, length 2..8, tone-free pinyin with v for ü; indexed full and initial codes"
+  "assetSha256": "e480785ca3e3618c5d48a80dc112a563da2ae1eb3e0f738bf953d01ff0b1f208",
+  "transform": "top 400000 readings, length 2..8, tone-free pinyin with v for ü; indexed full and initial codes and text continuations"
 }

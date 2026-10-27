@@ -114,31 +114,4 @@ public final class KeyboardExtras {
             }));
   }
 
-  public static List<String> suggest(String pinyin) {
-    switch (pinyin.replace("'", "")) {
-      case "haha":
-      case "hahaha":
-      case "xiaosi":
-        return Arrays.asList("😂", "🤣");
-      case "xiexie":
-      case "ganxie":
-        return Arrays.asList("🙏", "🫶");
-      case "kaixin":
-      case "gaoxing":
-        return Arrays.asList("😄", "🥰");
-      case "liuliuliu":
-      case "lll":
-        return Arrays.asList("👍", "💯");
-      case "aixin":
-      case "aini":
-        return Arrays.asList("❤️", "😘");
-      case "shengri":
-      case "shengrikuaile":
-        return Arrays.asList("🎂", "🎉");
-      case "wuyu":
-        return Arrays.asList("🙄", "😅");
-      default:
-        return Collections.emptyList();
-    }
-  }
 }

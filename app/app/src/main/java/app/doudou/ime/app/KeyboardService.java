@@ -46,12 +46,18 @@ public final class KeyboardService extends InputMethodService
       () -> rememberClipboard(true);
   private long generation;
   private volatile int candidateSerial;
+  private String pendingPrediction;
+  private String dismissedPrediction = "";
   private boolean english, shift, caps, symbols, incognito, sensitive;
   private int compositionChange;
   private int bottomInset, contentHeight = KeyboardView.HEIGHT_DP;
   private boolean forcedLatin, normalEnglish;
   private long lastShift;
   private String pkg = "", mode = "typing", initialDraft = "", lastFeedback = "";
+  private final Runnable selectionSuggestions = () -> {
+    if (root != null && mode.equals("typing") && composing.length() == 0
+        && (voice == null || !voice.active())) refreshPredictions();
+  };
   private int initialStart, initialEnd;
   private EditText localEditor;
   private Runnable finishLocal;
@@ -141,6 +147,7 @@ public final class KeyboardService extends InputMethodService
     generation++;
     candidateSerial++;
     composing.setLength(0);
+    dismissedPrediction = "";
     edits.clear();
     historyEdits.clear();
     trackedHistory = "";
@@ -281,6 +288,9 @@ public final class KeyboardService extends InputMethodService
   private void reset(String next, int height) {
     if (translation != null && !next.equals("translation")) translation.cancel();
     mode = next;
+    candidateSerial++;
+    candidateQuery = null;
+    pendingPrediction = null;
     contentHeight = height;
     root.removeAllViews();
     root.setClipToOutline(false);
@@ -465,22 +475,36 @@ public final class KeyboardService extends InputMethodService
                 showCandidates();
               }
 
+              public void dismissPredictions() {
+                dismissedPrediction = predictionBefore();
+                candidateSerial++;
+                candidateQuery = null;
+                pendingPrediction = null;
+                keyboard.showIdle();
+              }
+
               public void haptic(View key) {
                 KeyboardService.this.haptic(key);
               }
             }, localEditor == null ? workspaceBar(WorkspaceBar.Mode.INPUT) : null);
     root.addView(keyboard, new LinearLayout.LayoutParams(-1, 0, 1));
     if (composing.length() > 0) refreshCandidates();
+    else if (!voice.active()) refreshPredictions();
     if (voice.active()) voice.render();
   }
 
   private void showCandidates() {
-    if (composing.length() == 0 || candidateQuery == null
-        || !candidateQuery.input.equals(PinyinEngine.normalize(composing.toString()))) return;
+    if (candidateQuery == null) return;
     final PinyinEngine.Query query = candidateQuery;
+    if (query.continuation) {
+      if (!predictionMatches(query.input)) return;
+    } else if (composing.length() == 0
+        || !query.input.equals(PinyinEngine.normalize(composing.toString()))) return;
     reset("candidates", KeyboardView.HEIGHT_DP);
-    root.addView(new app.doudou.ime.input.CandidatePanel(this, composing.toString(), query,
-        this::typing, this::choose), new LinearLayout.LayoutParams(-1, 0, 1));
+    root.addView(new app.doudou.ime.input.CandidatePanel(this,
+        query.continuation ? "联想" : composing.toString(), query, this::typing,
+        word -> { if (query.continuation) choosePrediction(word, query.input); else choose(word); }),
+        new LinearLayout.LayoutParams(-1, 0, 1));
   }
 
   private void letter(char ch) {
@@ -507,6 +531,7 @@ public final class KeyboardService extends InputMethodService
     String code = composing.toString();
     keyboard.setComposing(code);
     candidateQuery = null;
+    pendingPrediction = null;
     final long gen = generation;
     final int request = ++candidateSerial;
     final boolean privateInput = privateMode();
@@ -539,11 +564,7 @@ public final class KeyboardService extends InputMethodService
                 keyboard.clearCandidates();
                 keyboard.setComposing(code);
                 candidateQuery = query;
-                List<PinyinEngine.Word> strip = new ArrayList<>(list);
-                int emojiPosition = Math.min(1, strip.size());
-                for (String emoji : KeyboardExtras.suggest(code))
-                  strip.add(emojiPosition++, new PinyinEngine.Word(emoji, code, 0));
-                for (PinyinEngine.Word w : strip)
+                for (PinyinEngine.Word w : list)
                   addCandidate(w.text, () -> choose(w));
                 if (list.isEmpty()) addCandidate(code, () -> choose(code, code));
               });
@@ -559,7 +580,87 @@ public final class KeyboardService extends InputMethodService
   }
 
   private void choose(PinyinEngine.Word word) {
-    choose(word.text, word.code, word.spelling);
+    choose(word.text, word.code, word.kind == PinyinEngine.Kind.WORD ? word.spelling : "");
+  }
+
+  /** One bounded editor snapshot, not an accumulation of typed text or a new history. */
+  private String predictionBefore() {
+    if (english || symbols || sensitive || composing.length() != 0 || voice.active()) return "";
+    InputConnection ic = input();
+    if (ic == null) return "";
+    CharSequence selected = ic.getSelectedText(0);
+    if (selected != null && selected.length() > 0) return "";
+    CharSequence before = ic.getTextBeforeCursor(64, 0);
+    return before == null ? "" : before.toString();
+  }
+
+  private boolean predictionMatches(String before) {
+    return (mode.equals("candidates") || (mode.equals("typing") && keyboard != null
+        && keyboard.acceptsSuggestions())) && !before.isEmpty() && before.equals(predictionBefore());
+  }
+
+  private void refreshPredictions() {
+    if (keyboard == null || !mode.equals("typing")) return;
+    if (!keyboard.acceptsSuggestions()) {
+      candidateSerial++;
+      pendingPrediction = null;
+      candidateQuery = null;
+      return;
+    }
+    String before = predictionBefore();
+    if (PinyinEngine.predictionSuffix(before).isEmpty() || before.equals(dismissedPrediction)) {
+      candidateSerial++;
+      pendingPrediction = null;
+      candidateQuery = null;
+      keyboard.showIdle();
+      return;
+    }
+    if (candidateQuery != null && candidateQuery.continuation
+        && candidateQuery.input.equals(before)) return;
+    if (before.equals(pendingPrediction)) return;
+    if (app.pinyin == null) return;
+    pendingPrediction = before;
+    candidateQuery = null;
+    final long gen = generation;
+    final int request = ++candidateSerial;
+    final boolean privateInput = privateMode();
+    app.worker.execute(() -> {
+      if (request != candidateSerial) return;
+      List<PinyinEngine.Word> personal = new ArrayList<>();
+      if (!privateInput)
+        for (MemoryStore.Item word : app.store.list("word", 0))
+          if (word.usableWord() && !word.body.isEmpty())
+            personal.add(new PinyinEngine.Word(word.title, word.body, 26));
+      app.pinyin.personalWords(personal);
+      PinyinEngine.Query query = app.pinyin.predict(before,
+          privateInput ? Collections.emptyMap() : app.store.frequencies());
+      main.post(() -> {
+        if (request != candidateSerial || gen != generation || !mode.equals("typing")
+            || !keyboard.acceptsSuggestions()) return;
+        pendingPrediction = null;
+        if (!predictionMatches(before)) { refreshPredictions(); return; }
+        candidateQuery = query;
+        if (query.size() == 0) { keyboard.showIdle(); return; }
+        keyboard.showPredictions();
+        for (PinyinEngine.Word word : query.page(0, 16))
+          addCandidate(word.text, () -> choosePrediction(word, before));
+      });
+    });
+  }
+
+  private void choosePrediction(PinyinEngine.Word word, String before) {
+    // Re-check the caret and draft on the tap, not just when a worker result arrived. App
+    // edits, selection changes and deleted drafts can never append a stale prediction.
+    if (!predictionMatches(before)) {
+      if (mode.equals("candidates")) typing(); else refreshPredictions();
+      return;
+    }
+    InputConnection ic = input();
+    if (ic == null) return;
+    voice.beforeEdit();
+    ic.commitText(word.text, 1);
+    candidateSerial++;
+    typing();
   }
 
   private void choose(String text, String code, String spelling) {
@@ -582,7 +683,7 @@ public final class KeyboardService extends InputMethodService
       ic.endBatchEdit();
     }
     candidateSerial++;
-    if (!privateMode())
+    if (!privateMode() && !spelling.isEmpty())
       app.worker.execute(
           () -> {
             app.store.learn(text, spelling);
@@ -612,6 +713,7 @@ public final class KeyboardService extends InputMethodService
     commitComposing();
     InputConnection ic = input();
     if (ic != null) ic.commitText(s, 1);
+    refreshPredictions();
   }
 
   private void space() {
@@ -652,6 +754,7 @@ public final class KeyboardService extends InputMethodService
           ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL));
         } else if (before.length() > 0) ic.deleteSurroundingText(Graphemes.lastLength(before), 0);
       }
+      refreshPredictions();
     }
   }
 
@@ -772,6 +875,10 @@ public final class KeyboardService extends InputMethodService
   public void onUpdateSelection(int os, int oe, int ns, int ne, int cs, int ce) {
     super.onUpdateSelection(os, oe, ns, ne, cs, ce);
     if (localEditor != null) return;
+    if (composing.length() == 0) {
+      main.removeCallbacks(selectionSuggestions);
+      main.post(selectionSuggestions);
+    }
     if (cs < 0 && ce < 0 && composing.length() > 0) {
       final int change = compositionChange;
       final long gen = generation;

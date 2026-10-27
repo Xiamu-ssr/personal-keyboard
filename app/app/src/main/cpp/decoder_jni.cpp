@@ -54,6 +54,31 @@ Java_app_doudou_ime_input_engine_PinyinEngine_nativeCandidates(JNIEnv* e,jclass,
     }
     return out;
 }
+extern "C" JNIEXPORT jobjectArray JNICALL
+Java_app_doudou_ime_input_engine_PinyinEngine_nativePredictions(JNIEnv* e,jclass,jstring history,jint limit) {
+    std::lock_guard<std::mutex> lock(mutex);
+    jclass stringClass=e->FindClass("java/lang/String");
+    if(!opened||!history||limit<=0)return e->NewObjectArray(0,stringClass,nullptr);
+    // The old decoder expects a NUL-terminated, bounded UTF-16 Hanzi suffix. Never hand it
+    // an editor buffer or a supplementary code point split at the native boundary.
+    const jsize length=e->GetStringLength(history);
+    if(length<=0||length>ime_pinyin::kMaxPredictSize)
+        return e->NewObjectArray(0,stringClass,nullptr);
+    std::vector<ime_pinyin::char16> fixed(static_cast<size_t>(length)+1,0);
+    e->GetStringRegion(history,0,length,reinterpret_cast<jchar*>(fixed.data()));
+    for(jsize i=0;i<length;i++)
+        if(fixed[i]<0x3400||fixed[i]>0x9fff)return e->NewObjectArray(0,stringClass,nullptr);
+    ime_pinyin::char16 (*predicted)[ime_pinyin::kMaxPredictSize+1]=nullptr;
+    size_t count=ime_pinyin::im_get_predicts(fixed.data(),predicted);
+    count=std::min(count,static_cast<size_t>(limit));
+    jobjectArray out=e->NewObjectArray(count,stringClass,nullptr);
+    for(size_t i=0;i<count;i++){
+        size_t len=0;while(len<ime_pinyin::kMaxPredictSize&&predicted[i][len])len++;
+        jstring text=e->NewString(reinterpret_cast<const jchar*>(predicted[i]),len);
+        e->SetObjectArrayElement(out,i,text);e->DeleteLocalRef(text);
+    }
+    return out;
+}
 extern "C" JNIEXPORT void JNICALL
 Java_app_doudou_ime_input_engine_PinyinEngine_nativeLearn(JNIEnv* e,jclass,jstring input,jstring selected) {
     std::lock_guard<std::mutex> lock(mutex);if(!opened)return;

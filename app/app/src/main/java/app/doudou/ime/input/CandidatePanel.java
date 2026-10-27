@@ -31,7 +31,7 @@ public final class CandidatePanel extends LinearLayout {
     TextView spelling = Ui.text(context, raw, 16, Ui.ink());
     spelling.setSingleLine(true);
     spelling.setEllipsize(android.text.TextUtils.TruncateAt.START);
-    spelling.setContentDescription("正在输入拼音：" + raw);
+    spelling.setContentDescription(query.continuation ? "联想候选" : "正在输入拼音：" + raw);
     spelling.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
     Ui.pad(context, spelling, 12, 0);
     header.addView(spelling, new LayoutParams(0, -1, 1));
@@ -45,7 +45,7 @@ public final class CandidatePanel extends LinearLayout {
     grid.setVerticalSpacing(Ui.dp(context, 4));
     grid.setPadding(Ui.dp(context, 5), Ui.dp(context, 4), Ui.dp(context, 5), Ui.dp(context, 4));
     grid.setClipToPadding(false);
-    grid.setContentDescription("拼音候选词网格");
+    grid.setContentDescription(query.continuation ? "联想候选词网格" : "拼音候选词网格");
     adapter = new BaseAdapter() {
       public int getCount() { return words.size(); }
       public Object getItem(int position) { return words.get(position); }

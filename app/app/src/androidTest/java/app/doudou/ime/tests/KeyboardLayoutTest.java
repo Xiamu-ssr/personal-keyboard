@@ -41,6 +41,7 @@ public final class KeyboardLayoutTest {
                   false,
                   false,
                   new KeyboardView.Actions() {
+                    public void dismissPredictions() {}
                     public void letter(char c) {
                       letters++;
                     }

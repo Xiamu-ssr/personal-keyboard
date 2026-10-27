@@ -12,9 +12,9 @@ public final class ModernLexicon implements PinyinEngine.Lexicon {
   private final SpellingTrie spellings;
 
   public ModernLexicon(Context context) throws Exception {
-    File file = new File(context.getFilesDir(), "lexicon-08.db");
+    File file = new File(context.getFilesDir(), "lexicon-095.db");
     if (!file.exists()) {
-      File temp = new File(context.getFilesDir(), "lexicon-08.tmp");
+      File temp = new File(context.getFilesDir(), "lexicon-095.tmp");
       try (InputStream in = context.getAssets().open("modern-lexicon.db");
           FileOutputStream out = new FileOutputStream(temp)) {
         byte[] bytes = new byte[32768];
@@ -25,6 +25,9 @@ public final class ModernLexicon implements PinyinEngine.Lexicon {
       if (!temp.renameTo(file)) throw new IOException("词库安装失败");
     }
     db = SQLiteDatabase.openDatabase(file.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
+    // Immutable bundled dictionaries have no user data. Drop the superseded cache only after
+    // the new indexed resource opens; personal selections remain in their separate store.
+    new File(context.getFilesDir(), "lexicon-08.db").delete();
     // Build once, on KeyboardApp's dictionary worker. Primitive arrays keep the 359k-code
     // resource around 16 MB instead of allocating a Java object for each of its 1.15M edges.
     spellings = new SpellingTrie();
@@ -81,6 +84,31 @@ public final class ModernLexicon implements PinyinEngine.Lexicon {
           out.add(new PinyinEngine.Word(c.getString(0), raw,
               325 + Math.min(25, 2 * Math.log1p(Math.max(0, c.getInt(1)))) - 45 * match.cost,
               match.spelling, match.cost));
+      }
+    }
+    return out;
+  }
+
+  @Override
+  public List<PinyinEngine.Word> continuations(String history, int limit) {
+    List<PinyinEngine.Word> out = new ArrayList<>();
+    if (limit <= 0) return out;
+    String tail = PinyinEngine.predictionSuffix(history);
+    // Longest suffix first. The immutable text index keeps all lookups off the UI thread
+    // without scanning the 400k-entry dictionary or loading it into the Java heap.
+    for (int size = Math.min(4, tail.length()); size > 0; size--) {
+      String prefix = tail.substring(tail.length() - size);
+      try (Cursor c = db.rawQuery(
+          "SELECT text,MAX(weight) FROM words INDEXED BY word_text WHERE text>? AND text<?"
+              + " GROUP BY text ORDER BY MAX(weight) DESC,text LIMIT ?",
+          new String[] {prefix, prefix + '\uffff', "" + Math.min(64, limit)})) {
+        int rank = 0;
+        while (c.moveToNext()) {
+          String text = c.getString(0).substring(prefix.length());
+          if (!text.isEmpty()) out.add(new PinyinEngine.Word(text, "",
+              160 + 15 * size + Math.min(25, 2 * Math.log1p(Math.max(0, c.getInt(1))))
+                  - rank++));
+        }
       }
     }
     return out;

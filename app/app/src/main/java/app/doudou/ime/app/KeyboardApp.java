@@ -113,13 +113,16 @@ public final class KeyboardApp extends Application {
         int n;
         while ((n = in.read(b)) != -1) out.write(b, 0, n);
       }
-      pinyin =
+      PinyinEngine decoder =
           new PinyinEngine(
               dictionary.getAbsolutePath(),
               new File(getFilesDir(), "dict.user").getAbsolutePath(),
               InitialLexicon.read(
                   new java.io.InputStreamReader(getAssets().open("initials.tsv"), "UTF-8")));
-      pinyin.lexicon(new app.doudou.ime.input.engine.ModernLexicon(this));
+      decoder.lexicon(new app.doudou.ime.input.engine.ModernLexicon(this));
+      decoder.emoji(app.doudou.ime.input.engine.EmojiLexicon.read(
+          new java.io.InputStreamReader(getAssets().open("emoji-keywords.tsv"), "UTF-8")));
+      pinyin = decoder;
     } catch (Exception | LinkageError ex) {
       dictionaryError = "词库读取失败，请重新安装";
     }

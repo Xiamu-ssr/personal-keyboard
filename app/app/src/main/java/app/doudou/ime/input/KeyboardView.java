@@ -61,14 +61,17 @@ public final class KeyboardView extends LinearLayout {
 
     void expand();
 
+    void dismissPredictions();
+
     void haptic(View key);
   }
 
   private final Actions actions;
   private final LinearLayout candidateRow, idle, busy, editing, keys, keyRows;
+  private final FrameLayout candidateArea;
   private final DictationSurface dictation;
   private final HorizontalScrollView candidateScroll;
-  private final View expand, recover, voiceClose;
+  private final View predictionMenu, predictionClose, expand, recover, voiceClose;
   private final ProgressBar pending;
   private final TextView voiceHint;
   private final TextView composing;
@@ -100,15 +103,27 @@ public final class KeyboardView extends LinearLayout {
     composing = Ui.text(c, "", 16, Ui.ink());
     composing.setSingleLine(true);
     composing.setHorizontallyScrolling(true);
+    composing.setAutoSizeTextTypeUniformWithConfiguration(12, 16, 1,
+        android.util.TypedValue.COMPLEX_UNIT_SP);
     composing.setGravity(Gravity.CENTER_VERTICAL);
-    composing.setPadding(Ui.dp(c, 12), 0, Ui.dp(c, 12), 0);
+    composing.setPadding(Ui.dp(c, 14), 0, Ui.dp(c, 14), 0);
     composing.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
-    composingScroll = new HorizontalScrollView(c);
+    composingScroll = new HorizontalScrollView(c) {
+      @Override protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        super.onLayout(changed, left, top, right, bottom);
+        // Follow the newly measured tail, including text received before the first layout.
+        if (getChildCount() > 0) scrollTo(getChildAt(0).getRight() - getWidth(), 0);
+      }
+
+      @Override public boolean dispatchTouchEvent(MotionEvent event) {
+        // The spelling follows the cursor; candidate targets keep the full 48dp header.
+        return false;
+      }
+    };
     composingScroll.setHorizontalScrollBarEnabled(false);
     composingScroll.setFillViewport(true);
     composingScroll.addView(composing, new HorizontalScrollView.LayoutParams(-2, -1));
     composingRow.addView(composingScroll, new LayoutParams(-1, -1));
-    keys.addView(composingRow, new LayoutParams(-1, Ui.dp(c, 24)));
     surfaces.addView(keys, new FrameLayout.LayoutParams(-1, -1));
     addView(surfaces, new LayoutParams(-1, 0, 1));
     LinearLayout bar = Ui.row(c);
@@ -116,15 +131,26 @@ public final class KeyboardView extends LinearLayout {
     idle = Ui.row(c);
     if (workspace != null) idle.addView(workspace, new LayoutParams(-1, -1));
     bar.addView(idle, new LayoutParams(-1, -1));
+    predictionMenu = Icons.button(c, R.drawable.ic_grid_view, "更多", a::more);
+    predictionMenu.setVisibility(GONE);
+    bar.addView(predictionMenu, new LayoutParams(Ui.dp(c, 48), -1));
     candidateRow = Ui.row(c);
     candidateScroll = new HorizontalScrollView(c);
     candidateScroll.setHorizontalScrollBarEnabled(false);
     candidateScroll.addView(candidateRow, new HorizontalScrollView.LayoutParams(-2, -1));
-    candidateScroll.setVisibility(GONE);
-    bar.addView(candidateScroll, new LayoutParams(0, -1, 1));
+    // Idle, predictions and spelling share one header. Spelling never takes key-row space.
+    candidateArea = new FrameLayout(c);
+    candidateArea.setVisibility(GONE);
+    candidateArea.addView(candidateScroll, new FrameLayout.LayoutParams(-1, -1));
+    candidateArea.addView(composingRow,
+        new FrameLayout.LayoutParams(-1, Ui.dp(c, 24), Gravity.BOTTOM));
+    bar.addView(candidateArea, new LayoutParams(0, -1, 1));
     expand = Ui.icon(c, "展开", a::expand);
     expand.setVisibility(GONE);
     bar.addView(expand, new LayoutParams(Ui.dp(c, 36), -1));
+    predictionClose = Icons.button(c, R.drawable.ic_close, "收起联想", a::dismissPredictions);
+    predictionClose.setVisibility(GONE);
+    bar.addView(predictionClose, new LayoutParams(Ui.dp(c, 48), -1));
     busy = Ui.row(c);
     busy.setVisibility(GONE);
     voiceClose = Icons.button(c, R.drawable.ic_close, "关闭提示", a::cancelVoice);
@@ -409,10 +435,39 @@ public final class KeyboardView extends LinearLayout {
     idle.setVisibility(GONE);
     busy.setVisibility(GONE);
     editing.setVisibility(GONE);
-    candidateScroll.setVisibility(VISIBLE);
+    predictionMenu.setVisibility(GONE);
+    predictionClose.setVisibility(GONE);
+    candidateArea.setVisibility(VISIBLE);
     expand.setVisibility(VISIBLE);
     candidateRow.removeAllViews();
     candidateScroll.scrollTo(0, 0);
+  }
+
+  /** Starts a fresh prediction strip, keeping tools and the candidate grid reachable. */
+  public void showPredictions() {
+    clearCandidates();
+    setComposing("");
+    predictionMenu.setVisibility(VISIBLE);
+    predictionClose.setVisibility(VISIBLE);
+  }
+
+  /** Restores the workspace bar without rebuilding or resizing any typing keys. */
+  public void showIdle() {
+    setComposing("");
+    predictionMenu.setVisibility(GONE);
+    predictionClose.setVisibility(GONE);
+    candidateArea.setVisibility(GONE);
+    expand.setVisibility(GONE);
+    busy.setVisibility(GONE);
+    editing.setVisibility(GONE);
+    idle.setVisibility(VISIBLE);
+  }
+
+  /** Passive suggestions own only an ordinary typing header. Explicit edit controls and
+   * recoverable speech must remain until their own action releases that surface. */
+  public boolean acceptsSuggestions() {
+    return keys.getVisibility() == VISIBLE && voiceState == VoiceState.IDLE
+        && busy.getVisibility() != VISIBLE && editing.getVisibility() != VISIBLE;
   }
 
   /** Independent of the host editor's composing decoration; never grows the keyboard window. */
@@ -421,7 +476,8 @@ public final class KeyboardView extends LinearLayout {
     composing.setText(text);
     composing.setContentDescription("正在输入拼音：" + text);
     composingRow.setVisibility(text.isEmpty() ? GONE : VISIBLE);
-    if (!text.isEmpty()) composingScroll.post(() -> composingScroll.fullScroll(View.FOCUS_RIGHT));
+    for (int i = 0; i < candidateRow.getChildCount(); i++)
+      candidatePadding(candidateRow.getChildAt(i));
   }
 
   public void voice(VoiceState state, String hint, boolean held, VoiceGesture.Target target) {
@@ -435,7 +491,9 @@ public final class KeyboardView extends LinearLayout {
       boolean waiting = state == VoiceState.FINISHING || state == VoiceState.REWRITING;
       idle.setVisibility(waiting ? GONE : VISIBLE);
       busy.setVisibility(waiting ? VISIBLE : GONE);
-      candidateScroll.setVisibility(GONE);
+      predictionMenu.setVisibility(GONE);
+      predictionClose.setVisibility(GONE);
+      candidateArea.setVisibility(GONE);
       expand.setVisibility(GONE);
       pending.setVisibility(waiting ? VISIBLE : GONE);
       voiceClose.setVisibility(waiting ? GONE : VISIBLE);
@@ -469,7 +527,9 @@ public final class KeyboardView extends LinearLayout {
   public void edit() {
     idle.setVisibility(GONE);
     busy.setVisibility(GONE);
-    candidateScroll.setVisibility(GONE);
+    predictionMenu.setVisibility(GONE);
+    predictionClose.setVisibility(GONE);
+    candidateArea.setVisibility(GONE);
     expand.setVisibility(GONE);
     editing.setVisibility(VISIBLE);
   }
@@ -505,13 +565,23 @@ public final class KeyboardView extends LinearLayout {
   public void addCandidate(String text, Runnable click) {
     TextView t =
         Ui.text(getContext(), text, 18, candidateRow.getChildCount() == 0 ? Ui.accent() : Ui.ink());
+    t.setSingleLine(true);
+    t.setAutoSizeTextTypeUniformWithConfiguration(12, 18, 1,
+        android.util.TypedValue.COMPLEX_UNIT_SP);
     t.setGravity(Gravity.CENTER);
-    Ui.pad(getContext(), t, 14, 0);
+    candidatePadding(t);
     t.setMinWidth(Ui.dp(getContext(), 48));
     t.setContentDescription(text);
     t.setBackground(Ui.pressable(getContext(), Color.TRANSPARENT, 8));
     t.setOnClickListener(v -> click.run());
     candidateRow.addView(t, new LayoutParams(-2, -1));
+  }
+
+  private void candidatePadding(View candidate) {
+    int side = Ui.dp(getContext(), 14);
+    // Keep the 48dp hit target; only its label moves above the passive spelling overlay.
+    candidate.setPadding(side, 0, side,
+        composingRow.getVisibility() == VISIBLE ? Ui.dp(getContext(), 24) : 0);
   }
 
   @Override

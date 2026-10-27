@@ -99,6 +99,91 @@ public class BaseKeyboardIntegrationTest {
     bitmap.recycle();
   }
 
+  private android.graphics.Rect bounds(String label) {
+    android.graphics.Rect rect = new android.graphics.Rect();
+    await(label).getBoundsInScreen(rect);
+    return rect;
+  }
+
+  @Test public void compositionContinuationEmojiAndPunctuationPreserveEditorAndKeyGeometry()
+      throws Exception {
+    Assume.assumeTrue("Owned emulator only", "ranchu".equals(Build.HARDWARE));
+    ins = InstrumentationRegistry.getInstrumentation();
+    ui = ins.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+    AccessibilityServiceInfo info = ui.getServiceInfo();
+    info.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
+    ui.setServiceInfo(info);
+    Activity activity = ins.startActivitySync(new Intent(ins.getTargetContext(), PracticeActivity.class)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    try {
+      EditText edit = field(activity.getWindow().getDecorView());
+      assertNotNull(edit);
+      ins.runOnMainSync(() -> {
+        edit.setText(""); edit.requestFocus();
+        ((InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE))
+            .showSoftInput(edit, InputMethodManager.SHOW_IMPLICIT);
+      });
+      await("更多"); if (node("英") != null) click("英");
+      android.graphics.Rect q = bounds("q"), space = bounds("空格");
+      type("ni"); await("正在输入拼音：ni"); await("你");
+      assertEquals(q, bounds("q")); assertEquals(space, bounds("空格"));
+      screenshot(activity, "fixed-pinyin");
+      click("你"); await("好"); await("，");
+      ins.runOnMainSync(() -> assertEquals("你", edit.getText().toString()));
+      assertEquals(q, bounds("q")); assertEquals(space, bounds("空格"));
+      screenshot(activity, "continuations");
+      click("展开"); await("联想候选词网格");
+      click("返回键盘"); await("好");
+      click("好"); await("，");
+      ins.runOnMainSync(() -> assertEquals("你好", edit.getText().toString()));
+      click("，"); await("录音");
+      ins.runOnMainSync(() -> assertEquals("你好，", edit.getText().toString()));
+      assertEquals(q, bounds("q")); assertEquals(space, bounds("空格"));
+
+      ins.runOnMainSync(() -> edit.setText(""));
+      await("输入");
+      type("shengri"); await("生日");
+      KeyboardApp app = (KeyboardApp) activity.getApplication();
+      PinyinEngine.Query birthday = app.worker.submit(
+          () -> app.pinyin.query("shengri", java.util.Collections.emptyMap()))
+          .get(30, TimeUnit.SECONDS);
+      String emoji = birthday.page(0, 12).stream().filter(w -> w.kind == PinyinEngine.Kind.EMOJI)
+          .findFirst().orElseThrow(AssertionError::new).text;
+      await(emoji);
+      screenshot(activity, "emoji-candidates");
+      click(emoji); await("输入");
+      ins.runOnMainSync(() -> assertEquals(emoji, edit.getText().toString()));
+      click("退格");
+      ins.runOnMainSync(() -> assertEquals("", edit.getText().toString()));
+
+      type("shengri"); await("生日"); click("生日"); await(emoji);
+      screenshot(activity, "emoji-continuations");
+      click(emoji);
+      ins.runOnMainSync(() -> assertEquals("生日" + emoji, edit.getText().toString()));
+      click("退格"); await("，");
+      ins.runOnMainSync(() -> assertEquals("生日", edit.getText().toString()));
+      assertEquals(q, bounds("q")); assertEquals(space, bounds("空格"));
+
+      // Capture an old prediction, then move the caret away and clear the host draft. Even an
+      // accessibility click queued before the redraw must not append to the new position.
+      AccessibilityNodeInfo stale = await("，");
+      click("收起联想"); await("翻译");
+      screenshot(activity, "restored-workspaces");
+      click("翻译"); await("原文");
+      click("输入"); await("录音");
+      ins.runOnMainSync(() -> assertEquals("生日", edit.getText().toString()));
+      ins.runOnMainSync(() -> edit.setSelection(0));
+      await("输入"); stale.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+      ins.runOnMainSync(() -> assertEquals("生日", edit.getText().toString()));
+      ins.runOnMainSync(() -> edit.setText(""));
+      await("输入");
+      assertEquals(q, bounds("q")); assertEquals(space, bounds("空格"));
+      android.util.Log.i("BaseKeyboardQA", "Continuation PASS: unchanged Q/space geometry, "
+          + "你→好→， suffix insertion, full prediction grid, composing emoji, committed emoji, "
+          + "grapheme delete, dismiss to workspaces, translation entry, cursor invalidation and empty editor");
+    } finally { ins.runOnMainSync(activity::finish); }
+  }
+
   @Test public void composingCorrectionPagingBackAndToolsUseTheLiveHost() throws Exception {
     Assume.assumeTrue("Owned emulator only", "ranchu".equals(Build.HARDWARE));
     ins = InstrumentationRegistry.getInstrumentation();

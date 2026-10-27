@@ -37,7 +37,7 @@ for line in raw.decode().splitlines():
  if key not in chosen or key in seen:continue
  rows.append((key[0],key[1],''.join(x[0] for x in syllables),chosen[key]));seen.add(key)
 db.executemany('INSERT INTO words VALUES(?,?,?,?)',rows)
-db.executescript('CREATE INDEX full_code ON words(code,weight DESC);CREATE INDEX initials_code ON words(initials,weight DESC);');db.commit();db.execute('VACUUM');db.close()
-manifest['entries']=len(rows);manifest['assetSha256']=hashlib.sha256(asset.read_bytes()).hexdigest();manifest['transform']='top 400000 readings, length 2..8, tone-free pinyin with v for ü; indexed full and initial codes'
+db.executescript('CREATE INDEX full_code ON words(code,weight DESC);CREATE INDEX initials_code ON words(initials,weight DESC);CREATE INDEX word_text ON words(text,weight DESC);');db.commit();db.execute('VACUUM');db.close()
+manifest['entries']=len(rows);manifest['assetSha256']=hashlib.sha256(asset.read_bytes()).hexdigest();manifest['transform']='top 400000 readings, length 2..8, tone-free pinyin with v for ü; indexed full and initial codes and text continuations'
 manifest_path.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
 print('Indexed',len(rows),'readings, asset',asset.stat().st_size,'bytes')
