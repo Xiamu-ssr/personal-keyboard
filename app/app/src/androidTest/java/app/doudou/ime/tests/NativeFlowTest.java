@@ -262,7 +262,6 @@ public class NativeFlowTest {
     click("符号");
     click("数学");
     click("≠");
-    click("ABC");
     await("q");
     assertEquals("😂≠", value());
     screenshot("modern-input");

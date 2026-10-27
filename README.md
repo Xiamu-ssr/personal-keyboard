@@ -7,14 +7,14 @@
 <p align="center">语音输入，也帮你想好怎么回。</p>
 
 <p align="center">
-  <a href="https://github.com/Xiamu-ssr/personal-keyboard/releases/download/v0.9.5-alpha.2/doudou-keyboard.apk"><strong>下载 Android APK</strong></a>
+  <a href="https://github.com/Xiamu-ssr/personal-keyboard/releases/download/v0.9.6-alpha.1/doudou-keyboard.apk"><strong>下载 Android APK</strong></a>
   &nbsp; · &nbsp;
-  <a href="https://github.com/Xiamu-ssr/personal-keyboard/releases/tag/v0.9.5-alpha.2">版本说明</a>
+  <a href="https://github.com/Xiamu-ssr/personal-keyboard/releases/tag/v0.9.6-alpha.1">版本说明</a>
   &nbsp; · &nbsp;
   <a href="https://xiamu-ssr.github.io/personal-keyboard/">产品与架构</a>
 </p>
 
-<p align="center">0.9.5-alpha.2 · Android 11+ · 亮色 / 暗色</p>
+<p align="center">0.9.6-alpha.1 · Android 11+ · 亮色 / 暗色</p>
 
 当前为邀请内测版。在线功能需账号登录，新账号赠送 3,000 Credit；暂未开放充值。本地拼音无需登录。
 

@@ -94,24 +94,29 @@ public final class TypingSurfaceTest {
       boolean originalEnglish = node("英") != null;
       if (node("中") != null) click("中");
       String expected = "3.14 a_b@example.com https://a.cn/x";
+      boolean numbers = false;
       for (char c : expected.toCharArray()) {
         if (c == ' ') {
           click("空格");
           continue;
         }
         boolean letter = c >= 'a' && c <= 'z';
-        if (letter && node("ABC") != null) click("ABC");
-        if (!letter && node(String.valueOf(c)) == null && node("123") != null) click("123");
+        if (letter && numbers) { click("返回键盘"); numbers = false; await("q"); }
+        boolean symbol = false;
+        if (!letter && node(String.valueOf(c)) == null) {
+          if (!numbers) { click("123"); numbers = true; await("数字"); }
+          if (node(String.valueOf(c)) == null) { click("符号"); symbol = true; }
+        }
         click(String.valueOf(c));
+        if (symbol) { numbers = false; await("q"); }
       }
       ins.runOnMainSync(() -> assertEquals(expected, edit.getText().toString()));
-      if (node("ABC") != null) click("ABC");
+      if (numbers) { click("返回键盘"); await("q"); }
       if (!originalEnglish) {
         click("英");
         click("123");
-        click("#+=");
         click("。");
-        click("ABC");
+        click("返回键盘");
         ins.runOnMainSync(() -> assertEquals(expected + "。", edit.getText().toString()));
       }
     } finally {

@@ -15,6 +15,7 @@ import android.widget.*;
 import app.doudou.ime.design.Ui;
 import app.doudou.ime.input.KeyboardExtras;
 import app.doudou.ime.input.KeyboardView;
+import app.doudou.ime.input.KeyboardPage;
 import app.doudou.ime.input.WorkspaceBar;
 import app.doudou.ime.recording.RecordingPanel;
 import app.doudou.ime.translation.TranslationController;
@@ -48,7 +49,8 @@ public final class KeyboardService extends InputMethodService
   private volatile int candidateSerial;
   private String pendingPrediction;
   private String dismissedPrediction = "";
-  private boolean english, shift, caps, symbols, incognito, sensitive;
+  private boolean english, shift, caps, incognito, sensitive;
+  private KeyboardPage inputPage = KeyboardPage.LETTERS;
   private int compositionChange;
   private int bottomInset, contentHeight = KeyboardView.HEIGHT_DP;
   private boolean forcedLatin, normalEnglish;
@@ -170,9 +172,8 @@ public final class KeyboardService extends InputMethodService
       normalEnglish = english;
       english = true;
     }
-    symbols =
-        clazz == android.text.InputType.TYPE_CLASS_NUMBER
-            || clazz == android.text.InputType.TYPE_CLASS_PHONE;
+    inputPage = clazz == android.text.InputType.TYPE_CLASS_NUMBER
+            || clazz == android.text.InputType.TYPE_CLASS_PHONE ? KeyboardPage.NUMBER_PAD : KeyboardPage.LETTERS;
     shift = false;
     caps = false;
     if (root != null) typing();
@@ -238,13 +239,16 @@ public final class KeyboardService extends InputMethodService
         voice.leave();
         return true;
       }
+      if (mode.equals("typing") && inputPage != KeyboardPage.LETTERS) {
+        letters();
+        return true;
+      }
       if (mode.equals("library")) {
         keyboardMenu.show();
         return true;
       }
       if (mode.equals("tools")
           || mode.equals("emoji")
-          || mode.equals("symbols")
           || mode.equals("candidates")
           || mode.equals("keyboards")
           || mode.equals("recorder")) {
@@ -345,15 +349,25 @@ public final class KeyboardService extends InputMethodService
   }
 
   public void letters() {
-    symbols = false;
+    inputPage = KeyboardPage.LETTERS;
     typing();
   }
+
+  private void inputPage(KeyboardPage next) {
+    voice.beforeEdit();
+    // Switching layout adopts the visible first candidate; Enter remains raw-pinyin commit.
+    if (composing.length() > 0) space();
+    inputPage = next;
+    typing();
+  }
+
+  public void symbols() { inputPage(KeyboardPage.SYMBOLS); }
 
   public void typing() {
     if (root == null) return;
     if (app.prefs().contains("preferredEnglish")) {
       english = forcedLatin || app.prefs().getBoolean("preferredEnglish", false);
-      symbols = false;
+      inputPage = KeyboardPage.LETTERS;
       app.prefs().edit().remove("preferredEnglish").apply();
     }
     reset("typing", KeyboardView.HEIGHT_DP + (localEditor == null ? 0 : 110));
@@ -371,13 +385,13 @@ public final class KeyboardService extends InputMethodService
             this,
             english,
             shift || caps,
-            symbols,
+            inputPage,
             privateMode(),
             localEditor != null,
             new app.doudou.ime.input.KeyboardView.Actions() {
               public void letter(char ch) {
                 voice.beforeEdit();
-                if (Character.isLetter(ch)) KeyboardService.this.letter(ch);
+                if (inputPage == KeyboardPage.LETTERS && Character.isLetter(ch)) KeyboardService.this.letter(ch);
                 else literal("" + ch);
               }
 
@@ -401,11 +415,9 @@ public final class KeyboardService extends InputMethodService
                 typing();
               }
 
-              public void symbols() {
-                commitComposing();
-                symbols = !symbols;
-                typing();
-              }
+              public void numbers() { inputPage(KeyboardPage.NUMBERS); }
+              public void numberPad() { inputPage(KeyboardPage.NUMBER_PAD); }
+              public void letters() { KeyboardService.this.letters(); }
 
               public void language() {
                 commitComposing();
@@ -444,7 +456,7 @@ public final class KeyboardService extends InputMethodService
               }
 
               public void symbolPanel() {
-                new KeyboardExtras(KeyboardService.this).symbols();
+                KeyboardService.this.symbols();
               }
 
               public void advisor() {
@@ -585,7 +597,8 @@ public final class KeyboardService extends InputMethodService
 
   /** One bounded editor snapshot, not an accumulation of typed text or a new history. */
   private String predictionBefore() {
-    if (english || symbols || sensitive || composing.length() != 0 || voice.active()) return "";
+    if (english || inputPage != KeyboardPage.LETTERS || sensitive
+        || composing.length() != 0 || voice.active()) return "";
     InputConnection ic = input();
     if (ic == null) return "";
     CharSequence selected = ic.getSelectedText(0);
@@ -705,15 +718,11 @@ public final class KeyboardService extends InputMethodService
   }
 
   private void literal(String s) {
-    if (composing.length() > 0) {
-      commitComposing();
-      typing();
-      return;
-    }
-    commitComposing();
+    if (composing.length() > 0) space();
     InputConnection ic = input();
     if (ic != null) ic.commitText(s, 1);
-    refreshPredictions();
+    if (inputPage == KeyboardPage.SYMBOLS) letters();
+    else refreshPredictions();
   }
 
   private void space() {

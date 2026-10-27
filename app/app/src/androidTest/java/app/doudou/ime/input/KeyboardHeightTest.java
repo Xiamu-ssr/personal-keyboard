@@ -23,7 +23,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.emoji2.widget.EmojiTextView;
 import androidx.test.platform.app.InstrumentationRegistry;
-import app.doudou.ime.app.MainActivity;
+import app.doudou.ime.app.PracticeActivity;
 import app.doudou.ime.design.Skin;
 import app.doudou.ime.design.Ui;
 import java.lang.reflect.Proxy;
@@ -53,7 +53,9 @@ public final class KeyboardHeightTest {
   @Before public void open() throws Exception {
     Assume.assumeTrue("Owned emulator only", "ranchu".equals(Build.HARDWARE));
     ins = InstrumentationRegistry.getInstrumentation();
-    activity = ins.startActivitySync(new Intent(ins.getTargetContext(), MainActivity.class)
+    // The account home can redraw after a real memory refresh. Measure in the inert local scene.
+    activity = ins.startActivitySync(new Intent(ins.getTargetContext(), PracticeActivity.class)
+        .putExtra("scene", "comments")
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     originalLight = Skin.light();
     ins.runOnMainSync(() -> {
@@ -85,7 +87,7 @@ public final class KeyboardHeightTest {
           public void tools() { menus++; }
           public void hide() {}
         });
-    return new KeyboardView(context, false, false, false, false, false, actions, workspace);
+    return new KeyboardView(context, false, false, KeyboardPage.LETTERS, false, false, actions, workspace);
   }
 
   private void mount(int widthDp, int insetDp, float fontScale, boolean light) throws Exception {

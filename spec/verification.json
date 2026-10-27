@@ -1,114 +1,75 @@
 {
-  "reviewedAt": "2026-10-26T13:56:16.035764+00:00",
-  "version": "0.9.4-alpha.1",
+  "reviewedAt": "2026-10-27T04:18:44.924078+00:00",
+  "version": "0.9.6-alpha.1",
   "artifact": {
     "package": "app.doudou.ime",
-    "version": "0.9.4-alpha.1",
-    "sha256": "1dbb4a29fcd5e314f4f50f80fcdae7ae159f2da9283144ddc3a6aef25ef10438",
-    "bytes": 42281357,
+    "version": "0.9.6-alpha.1",
+    "sha256": "d4835a99a82fe9a00481d74c5d09e9fce533f3840005bfd5721e5cb3e6418483",
+    "bytes": 47080080,
     "buildType": "debug",
     "production": false,
     "modelsBundled": false
   },
-  "status": "Invited preview: full candidate grid, weighted pinyin correction, stable emoji return, contextual speech proofreading and qualified vocabulary.",
+  "status": "Invited preview: consistent base keyboard pages, spelling hierarchy and compact credit examples.",
   "checks": [
     {
-      "name": "Node contracts, graph, lexical admission and completion races",
+      "name": "Node graph, contracts and completion races",
       "passed": 44,
       "skipped": 6,
-      "source": "npm run check; database integration separately"
-    },
-    {
-      "name": "PostgreSQL ownership, CAS, model completion and settlement",
-      "status": "passed",
-      "source": "Isolated local PostgreSQL; completion delivered in one waiting GET"
+      "source": "npm run check; PostgreSQL integration not rerun in this UI-only release"
     },
     {
       "name": "Android JVM and lint",
-      "passed": 48,
+      "passed": 70,
       "status": "passed"
     },
     {
-      "name": "Native input and editor integration",
+      "name": "Native keyboard, editor navigation and voice Back priority",
+      "passed": 19,
       "status": "passed",
-      "source": "Uppercase keycaps, visible spelling, typo correction, all candidate pages, raw Enter, emoji return, digits, auto-final edit ownership, qualified-memory projection and workspaces; emulator only. Two changed accessible labels rechecked."
+      "source": "Isolated Android 15 emulator; own practice editor, no microphone or provider inference"
     },
     {
-      "name": "Real ASR and linked correction",
+      "name": "Live read-only bill at 360dp / font scale 1.3",
+      "passed": 2,
       "status": "passed",
-      "source": "Synthetic 3.99s PCM through live Cloud and the actual supplier; original text and linked correction preserved"
+      "source": "Same signed APK, existing isolated QA account, real bill and published pricing; no model calls"
     },
     {
-      "name": "Learning provider lexical quality",
-      "status": "passed",
-      "source": "Synthetic proper terms learned; ordinary corrections and quantities skipped; no profile database writes"
+      "name": "Official Doubao base-keyboard comparison",
+      "status": "observed",
+      "source": "Reinstalled official APK in isolated emulator; letters, numbers, symbols, auto-return and number-pad interactions captured"
     },
     {
       "name": "Signing continuity and public media provenance",
-      "status": "passed"
+      "status": "passed",
+      "source": "Unchanged signing certificate; APK and public media verified against manifests"
     }
   ],
   "cloud": {
     "deployedVersion": "0.9.4-alpha.1",
+    "deploymentChanged": false,
     "models": {
       "asr": "qwen-audio-3.1-asr-flash-message",
       "textAndVision": "qwen3.8-flash"
     },
     "provider": "Alibaba Cloud Model Studio",
-    "accountGrantsMemoryPreserved": true,
-    "historyLocation": "device; temporary learning increments cleared after processing",
-    "sourceModulesVerified": 15,
-    "vocabularyReview": {
-      "reviewed": 19,
-      "kept": 8,
-      "dropped": 11,
-      "manualRecordsProtected": true,
-      "transactionAudit": true,
-      "backupRetained": true
-    }
+    "historyLocation": "device; temporary learning increments cleared after processing"
   },
   "pricing": {
     "unit": "Credit",
     "creditMicroCny": 1000,
     "markupBasisPoints": 17500,
-    "workloads": "Illustrative input/output Token workloads calculated from the current tariff, not fixed fees or measured averages."
+    "workloads": "Illustrative Token workloads from live published pricing, not fixed operation fees."
   },
   "limits": [
-    "No new physical OPPO microphone acceptance; the connected phone remained locked.",
-    "Five screenshots are from this APK; other screenshots and videos retain their original provenance.",
-    "Advisor semantic trials still show extra assumptions in some replies; bounded thinking is not a claim of perfect intent fidelity.",
-    "Existing automatic vocabulary without qualification remains editable but does not boost recognition until reviewed or explicitly edited.",
+    "Emulator only this release; no new physical OPPO microphone or QQ/WeChat acceptance.",
+    "Nine screenshots are from this APK; unchanged screenshots and videos retain original provenance.",
+    "No new paid model or PostgreSQL concurrency test in this UI-only release.",
     "Development preview; purchases remain disabled."
   ],
   "independentReview": {
-    "status": "Two focused source P2 findings fixed and rechecked; five final native screenshots had no new P1/P2 visual blocker.",
-    "scope": "Focused source and static native screenshot review; runtime interaction verified separately."
-  },
-  "performance": {
-    "scope": "Small synthetic provider trials, not production p95 or physical-device latency",
-    "advisorThinkingTokens": 1024,
-    "advisorPreviousThinkingTokens": 4096,
-    "advisorBoundedTrialMs": [
-      11745,
-      11827,
-      12715
-    ],
-    "advisorPreviousTrialMs": [
-      25210,
-      22430,
-      12930
-    ],
-    "proofreadingTrialMs": [
-      793,
-      1455,
-      718,
-      805
-    ],
-    "cloudAsrPipeline": {
-      "audioSeconds": 3.9935625,
-      "finalizationMs": 63,
-      "linkedRewriteMs": 3370
-    },
-    "fixedPollingDelayRemovedMs": 650
+    "status": "Two P2 findings fixed and rechecked; no remaining P1/P2 in reviewed scope.",
+    "scope": "Source and actual native screenshots, including symbol direction arrows, stable delete targets, pinyin hierarchy and live credit examples; final 19-test log reviewed."
   }
 }

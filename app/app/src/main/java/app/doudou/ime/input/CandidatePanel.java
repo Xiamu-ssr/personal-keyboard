@@ -27,8 +27,9 @@ public final class CandidatePanel extends LinearLayout {
     setOrientation(VERTICAL);
     setBackgroundColor(Ui.keyboard());
     LinearLayout header = Ui.row(context);
-    header.addView(Ui.button(context, "返回键盘", back), new LayoutParams(-2, -1));
-    TextView spelling = Ui.text(context, raw, 16, Ui.ink());
+    header.addView(app.doudou.ime.design.Icons.button(context,
+        app.doudou.ime.R.drawable.ic_arrow_back, "返回键盘", back), new LayoutParams(Ui.dp(context, 48), -1));
+    TextView spelling = Ui.text(context, raw, 13, Ui.sub());
     spelling.setSingleLine(true);
     spelling.setEllipsize(android.text.TextUtils.TruncateAt.START);
     spelling.setContentDescription(query.continuation ? "联想候选" : "正在输入拼音：" + raw);

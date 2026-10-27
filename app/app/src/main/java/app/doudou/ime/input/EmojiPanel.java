@@ -20,9 +20,9 @@ public final class EmojiPanel {
     LinearLayout root = host.openPanel("emoji", KeyboardView.HEIGHT_DP);
     root.setBackgroundColor(Ui.keyboard());
     LinearLayout header = Ui.row(c);
-    TextView back = Ui.button(c, "返回键盘", host::letters);
-    back.setMinWidth(Ui.dp(c, 100));
-    header.addView(back, new LinearLayout.LayoutParams(-2, -1));
+    View back = app.doudou.ime.design.Icons.button(c, app.doudou.ime.R.drawable.ic_arrow_back,
+        "返回键盘", host::letters);
+    header.addView(back, new LinearLayout.LayoutParams(Ui.dp(c, 48), -1));
     TextView title = Ui.text(c, "表情", 15, Ui.sub()); Ui.pad(c, title, 10, 0);
     header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
     header.addView(Ui.icon(c, "退格", host::delete), new LinearLayout.LayoutParams(Ui.dp(c, 48), Ui.dp(c, 48)));

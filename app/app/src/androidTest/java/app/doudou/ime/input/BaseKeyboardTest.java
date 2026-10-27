@@ -32,7 +32,8 @@ public class BaseKeyboardTest {
   @Before public void open() {
     Assume.assumeTrue("Owned emulator only", "ranchu".equals(Build.HARDWARE));
     ins = InstrumentationRegistry.getInstrumentation();
-    activity = ins.startActivitySync(new Intent(ins.getTargetContext(), MainActivity.class)
+    activity = ins.startActivitySync(new Intent(ins.getTargetContext(), PracticeActivity.class)
+        .putExtra("scene", "comments")
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     originalLight = Skin.light();
     context = activity;
@@ -80,15 +81,25 @@ public class BaseKeyboardTest {
   }
 
   private KeyboardView keyboard(boolean numbers) {
+    return keyboard(numbers ? KeyboardPage.NUMBERS : KeyboardPage.LETTERS);
+  }
+
+  private KeyboardView keyboard(KeyboardPage page) {
     KeyboardView.Actions actions = (KeyboardView.Actions) Proxy.newProxyInstance(
         KeyboardView.Actions.class.getClassLoader(), new Class<?>[] {KeyboardView.Actions.class},
         (proxy, method, args) -> {
-          if (method.getName().equals("letter")) entered.append((Character) args[0]);
-          if (method.getName().equals("symbolPanel")) new KeyboardExtras(host()).symbols();
+          if (method.getName().equals("letter")) {
+            entered.append((Character) args[0]);
+            if (page == KeyboardPage.SYMBOLS) mount(keyboard(KeyboardPage.LETTERS));
+          }
+          if (method.getName().equals("symbolPanel")) mount(keyboard(KeyboardPage.SYMBOLS));
+          if (method.getName().equals("numberPad")) mount(keyboard(KeyboardPage.NUMBER_PAD));
+          if (method.getName().equals("numbers")) mount(keyboard(KeyboardPage.NUMBERS));
+          if (method.getName().equals("letters")) { returns++; mount(keyboard(KeyboardPage.LETTERS)); }
           if (method.getName().equals("holdVoice")) held++;
           return null;
         });
-    return new KeyboardView(context, false, false, numbers, false, false, actions, null);
+    return new KeyboardView(context, false, false, page, false, false, actions, null);
   }
 
   private View find(View view, String label) {
@@ -193,11 +204,12 @@ public class BaseKeyboardTest {
       assertTrue(visible.width() >= Ui.dp(context, 48));
     }
     screenshot("number-pad");
-    ins.runOnMainSync(() -> find(stage, "#+=").performClick());
-    ins.runOnMainSync(() -> find(panel, "数字").performClick());
-    settle();
-    for (String digit : Arrays.asList("壹", "贰", "叁"))
-      ins.runOnMainSync(() -> find(panel, digit).performClick());
+    for (String digit : Arrays.asList("壹", "贰", "叁")) {
+      ins.runOnMainSync(() -> mount(keyboard(KeyboardPage.SYMBOLS)));
+      ins.runOnMainSync(() -> find(stage, "序号").performClick());
+      settle();
+      ins.runOnMainSync(() -> find(stage, digit).performClick());
+    }
     assertEquals("1234567890壹贰叁", entered.toString());
     screenshot("financial-digits");
   }

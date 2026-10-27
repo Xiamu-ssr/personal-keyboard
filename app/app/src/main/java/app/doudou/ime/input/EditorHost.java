@@ -33,6 +33,7 @@ public interface EditorHost {
   android.view.View workspaceBar(WorkspaceBar.Mode mode);
 
   void letters();
+  void symbols();
 
   void commitComposing();
 

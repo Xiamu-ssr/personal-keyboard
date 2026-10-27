@@ -84,34 +84,66 @@ public final class CreditUsageActivity extends ThemedActivity {
 
   private void examples(JSONArray examples) {
     if (examples == null || examples.length() == 0) return;
-    LinearLayout list = Ui.card(this); Ui.pad(this, list, 14, 10);
-    TextView title = Ui.text(this, "用量示例", 20, Ui.ink()); title.setTypeface(null, android.graphics.Typeface.BOLD);
-    Ui.pad(this, title, 0, 8); list.addView(title);
-    java.text.DecimalFormat format = new java.text.DecimalFormat("#,##0.###");
+    LinearLayout list = Ui.card(this); Ui.pad(this, list, 14, 8);
+    LinearLayout heading = Ui.row(this); Ui.pad(this, heading, 0, 4);
+    TextView title = Ui.text(this, "用量示例", 15, Ui.ink()); title.setTypeface(null, android.graphics.Typeface.BOLD);
+    heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+    heading.addView(Ui.text(this, "约需 Credit", 13, Ui.sub())); list.addView(heading);
+    java.text.DecimalFormat format = new java.text.DecimalFormat("#,##0.#");
+    format.setRoundingMode(java.math.RoundingMode.HALF_UP);
     for (int i = 0; i < examples.length(); i++) {
       JSONObject example = examples.optJSONObject(i); if (example == null) continue;
       double amount = example.optDouble("credits");
-      String value = amount == 0 ? "0 Credit" : "约 " + format.format(amount) + " Credit";
+      String value = amount > 0 && amount < .1 ? "<0.1" : format.format(amount);
       LinearLayout row = Ui.row(this); row.setGravity(Gravity.CENTER_VERTICAL);
-      row.setMinimumHeight(Ui.dp(this, 52)); Ui.pad(this, row, 0, 10);
-      row.addView(Ui.text(this, example.optString("title"), 16, Ui.ink()), new LinearLayout.LayoutParams(0, -2, 1));
-      TextView price = Ui.text(this, value, 16, Ui.appAccent()); price.setTypeface(null, android.graphics.Typeface.BOLD);
+      row.setMinimumHeight(Ui.dp(this, 48)); Ui.pad(this, row, 0, 6);
+      TextView label = Ui.text(this, example.optString("title"), 15, Ui.ink());
+      label.setPadding(0, 0, Ui.dp(this, 12), 0);
+      row.addView(label, new LinearLayout.LayoutParams(0, -2, 1));
+      TextView price = Ui.text(this, value, 15, Ui.appAccent()); price.setTypeface(null, android.graphics.Typeface.BOLD);
+      price.setFontFeatureSettings("'kern', 'tnum'");
       row.addView(price); row.setFocusable(true);
-      row.setContentDescription(example.optString("title") + "用量示例：" + value);
+      label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+      price.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+      row.setContentDescription(example.optString("title") + "用量示例："
+          + (amount == 0 ? "0" : amount < .1 ? "小于0.1" : "约 " + value) + " Credit，查看明细");
       row.setBackground(Ui.pressable(this, android.graphics.Color.TRANSPARENT, 8));
-      row.setOnClickListener(v -> {
-        String detail = "recording".equals(example.optString("id")) ? "仅保存、播放音频不扣积分；实时转写按实际用量扣分。"
-            : "按输入 " + example.optInt("input") + "、输出 " + example.optInt("output")
-              + " Token 演算。这是用量示例，不是固定收费或实测均价。";
-        new android.app.AlertDialog.Builder(this).setTitle(example.optString("title")).setMessage(detail)
-            .setPositiveButton("完成", null).show();
-      });
+      row.setOnClickListener(v -> showExample(example));
       list.addView(row);
       if (i + 1 < examples.length()) list.addView(Ui.divider(this));
     }
-    Ui.gap(this, list, 10);
-    list.addView(Ui.text(this, "用量示例，实际随内容与上下文变化。1 Credit = 0.001 元。", 13, Ui.sub()));
+    Ui.gap(this, list, 4);
+    list.addView(Ui.text(this, "按实际用量结算", 13, Ui.sub()));
     body.addView(list);
+  }
+
+  private void showExample(JSONObject example) {
+    String detail;
+    if ("recording".equals(example.optString("id"))) {
+      detail = "保存、播放录音不扣积分。\n实时转写按实际用量计分。";
+    } else {
+      java.text.DecimalFormat f = new java.text.DecimalFormat("#,##0.###");
+      StringBuilder text = new StringBuilder("本例 ").append(f.format(example.optDouble("credits"))).append(" Credit\n\n")
+          .append("示例 Token：输入 ").append(f.format(example.optLong("input")))
+          .append(" · 输出 ").append(f.format(example.optLong("output")));
+      JSONObject definition = pricing == null ? null : pricing.optJSONObject("definition");
+      JSONArray models = definition == null ? null : definition.optJSONArray("models");
+      if (models != null) {
+        for (int i = 0; i < models.length(); i++) {
+          JSONObject model = models.optJSONObject(i);
+          if (model == null || !model.optString("id").equals(example.optString("model"))) continue;
+          double markup = definition.optDouble("markupBasisPoints") / 10000;
+          text.append("\n每千 Token：输入 ")
+              .append(f.format(model.optDouble("inputMicroCnyPerMillion") * markup / 1000000))
+              .append(" · 输出 ").append(f.format(model.optDouble("outputMicroCnyPerMillion") * markup / 1000000))
+              .append(" Credit\n").append(model.optString("id")).append(" · 计价 v").append(pricing.optInt("version"));
+          break;
+        }
+      }
+      detail = text.append("\n\n按示例 Token 演算，实际随内容与上下文变化。").toString();
+    }
+    new android.app.AlertDialog.Builder(this).setTitle(example.optString("title")).setMessage(detail)
+        .setPositiveButton("完成", null).show();
   }
 
   private String title(String kind) {

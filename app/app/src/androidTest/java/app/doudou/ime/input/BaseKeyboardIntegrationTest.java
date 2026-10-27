@@ -100,9 +100,67 @@ public class BaseKeyboardIntegrationTest {
   }
 
   private android.graphics.Rect bounds(String label) {
-    android.graphics.Rect rect = new android.graphics.Rect();
-    await(label).getBoundsInScreen(rect);
-    return rect;
+    // Accessibility exposes the IME while its window is still sliding onto the display.
+    // Compare settled, fully visible targets instead of recording an animation frame.
+    android.graphics.Rect previous = null;
+    long stable = 0, until = SystemClock.uptimeMillis() + 5000;
+    android.util.DisplayMetrics display = ins.getTargetContext().getResources().getDisplayMetrics();
+    while (SystemClock.uptimeMillis() < until) {
+      android.graphics.Rect rect = new android.graphics.Rect();
+      AccessibilityNodeInfo target = await(label); target.refresh(); target.getBoundsInScreen(rect);
+      long now = SystemClock.uptimeMillis();
+      if (!rect.isEmpty() && rect.left >= 0 && rect.top >= 0
+          && rect.right <= display.widthPixels && rect.bottom <= display.heightPixels) {
+        if (rect.equals(previous)) {
+          if (now - stable >= 180) return rect;
+        } else { previous = rect; stable = now; }
+      } else { previous = null; stable = 0; }
+      SystemClock.sleep(40);
+    }
+    throw new AssertionError("IME target did not settle on screen: " + label);
+  }
+
+  @Test public void numberSymbolAndKeypadNavigationPreservesDeletionAndDraft() throws Exception {
+    Assume.assumeTrue("Owned emulator only", "ranchu".equals(Build.HARDWARE));
+    ins = InstrumentationRegistry.getInstrumentation();
+    ui = ins.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+    AccessibilityServiceInfo info = ui.getServiceInfo();
+    info.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS; ui.setServiceInfo(info);
+    Activity activity = ins.startActivitySync(new Intent(ins.getTargetContext(), PracticeActivity.class)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    try {
+      EditText edit = field(activity.getWindow().getDecorView());
+      ins.runOnMainSync(() -> {
+        edit.setText(""); edit.requestFocus();
+        ((InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE))
+            .showSoftInput(edit, InputMethodManager.SHOW_IMPLICIT);
+      });
+      await("更多"); if (node("英") != null) click("英");
+      android.graphics.Rect deletion = bounds("退格");
+      type("ni"); await("你"); click("123"); await("1");
+      ins.runOnMainSync(() -> assertEquals("你", edit.getText().toString()));
+      assertEquals("Numbers keep the letter-page delete position", deletion, bounds("退格"));
+      screenshot(activity,"numbers");
+      click("1"); click("符号"); await("数学");
+      assertEquals("Symbols keep the same delete target", deletion, bounds("退格"));
+      screenshot(activity,"symbols");
+      click("123"); await("数字"); click("数字"); await("空格");
+      screenshot(activity,"number-pad"); click("退格"); click("0");
+      ins.runOnMainSync(() -> assertEquals("你0", edit.getText().toString()));
+      click("符号"); click("数学"); await("π"); screenshot(activity,"math-symbols");
+      click("π"); await("q");
+      ins.runOnMainSync(() -> assertEquals("你0π", edit.getText().toString()));
+      click("更多"); click("符号"); click("序号"); await("下一页符号");
+      click("下一页符号"); await("⑩"); screenshot(activity,"symbol-last-page");
+      click("⑩"); await("q");
+      ins.runOnMainSync(() -> assertEquals("你0π⑩", edit.getText().toString()));
+      click("123"); await("1"); ins.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK); await("q");
+      ins.runOnMainSync(() -> assertEquals("你0π⑩", edit.getText().toString()));
+      type("hao"); await("好"); click("，"); await("q");
+      ins.runOnMainSync(() -> assertEquals("你0π⑩好，", edit.getText().toString()));
+      android.util.Log.i("BaseKeyboardQA","Numbers/symbols PASS: stable delete, "
+          + "pinyin handoff, keypad deletion, literal Greek, all category pages, auto return, Android Back, punctuation commit");
+    } finally { ins.runOnMainSync(activity::finish); }
   }
 
   @Test public void compositionContinuationEmojiAndPunctuationPreserveEditorAndKeyGeometry()
@@ -241,7 +299,7 @@ public class BaseKeyboardIntegrationTest {
       click("输入"); await("更多");
       ins.runOnMainSync(() -> assertEquals("你好" + selected + "nihsao😀", edit.getText().toString()));
       click("123"); await("1"); screenshot(activity, "numbers");
-      click("ABC"); await("q");
+      click("返回键盘"); await("q");
       android.util.Log.i("BaseKeyboardQA", "Host integration PASS: spelling, correction, "
           + pages + " pages, Android Back, last-page select, raw Enter, emoji return, recording standby");
     } finally { ins.runOnMainSync(activity::finish); }

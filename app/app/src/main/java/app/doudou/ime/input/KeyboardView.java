@@ -29,7 +29,9 @@ public final class KeyboardView extends LinearLayout {
 
     void shift();
 
-    void symbols();
+    void numbers();
+    void numberPad();
+    void letters();
 
     void language();
 
@@ -81,18 +83,21 @@ public final class KeyboardView extends LinearLayout {
   private VoiceState voiceState = VoiceState.IDLE;
   private final Handler repeats = new Handler(Looper.getMainLooper());
   private final boolean english;
+  private final KeyboardPage page;
+  private int symbolCategory, symbolPage;
 
   public KeyboardView(
       Context c,
       boolean english,
       boolean capital,
-      boolean symbols,
+      KeyboardPage page,
       boolean privacy,
       boolean nested,
       Actions a,
       View workspace) {
     super(c);
     this.english = english;
+    this.page = page;
     actions = a;
     setOrientation(VERTICAL);
     FrameLayout surfaces = new FrameLayout(c);
@@ -100,10 +105,10 @@ public final class KeyboardView extends LinearLayout {
     keys.setPadding(Ui.dp(c, 3), 0, Ui.dp(c, 3), 0);
     composingRow = Ui.row(c);
     composingRow.setVisibility(GONE);
-    composing = Ui.text(c, "", 16, Ui.ink());
+    composing = Ui.text(c, "", 13, Ui.sub());
     composing.setSingleLine(true);
     composing.setHorizontallyScrolling(true);
-    composing.setAutoSizeTextTypeUniformWithConfiguration(12, 16, 1,
+    composing.setAutoSizeTextTypeUniformWithConfiguration(11, 13, 1,
         android.util.TypedValue.COMPLEX_UNIT_SP);
     composing.setGravity(Gravity.CENTER_VERTICAL);
     composing.setPadding(Ui.dp(c, 14), 0, Ui.dp(c, 14), 0);
@@ -129,7 +134,8 @@ public final class KeyboardView extends LinearLayout {
     LinearLayout bar = Ui.row(c);
     bar.setPadding(Ui.dp(c, 4), 0, Ui.dp(c, 4), 0);
     idle = Ui.row(c);
-    if (workspace != null) idle.addView(workspace, new LayoutParams(-1, -1));
+    if (workspace != null && page == KeyboardPage.LETTERS)
+      idle.addView(workspace, new LayoutParams(-1, -1));
     bar.addView(idle, new LayoutParams(-1, -1));
     predictionMenu = Icons.button(c, R.drawable.ic_grid_view, "更多", a::more);
     predictionMenu.setVisibility(GONE);
@@ -143,7 +149,7 @@ public final class KeyboardView extends LinearLayout {
     candidateArea.setVisibility(GONE);
     candidateArea.addView(candidateScroll, new FrameLayout.LayoutParams(-1, -1));
     candidateArea.addView(composingRow,
-        new FrameLayout.LayoutParams(-1, Ui.dp(c, 24), Gravity.TOP));
+        new FrameLayout.LayoutParams(-1, Ui.dp(c, 18), Gravity.TOP));
     bar.addView(candidateArea, new LayoutParams(0, -1, 1));
     expand = Ui.icon(c, "展开", a::expand);
     expand.setVisibility(GONE);
@@ -181,40 +187,46 @@ public final class KeyboardView extends LinearLayout {
     keys.addView(bar, new LayoutParams(-1, Ui.dp(c, 48)));
     keyRows = Ui.col(c);
     keys.addView(keyRows, new LayoutParams(-1, 0, 1));
-    if (symbols) {
+    if (page == KeyboardPage.NUMBERS) {
       numbers(!privacy && !nested);
+    } else if (page == KeyboardPage.NUMBER_PAD) {
+      numberPad();
+    } else if (page == KeyboardPage.SYMBOLS) {
+      symbols();
     } else {
       String[] rows = {"qwertyuiop", "asdfghjkl", "zxcvbnm"};
       for (int n = 0; n < rows.length; n++) {
         LinearLayout row = row();
+        LinearLayout letters = row;
         if (n == 1) row.addView(new Space(c), new LayoutParams(0, 1, .5f));
         if (n == 2) {
-          icon(row, "大写", 1.35f, a::shift, false);
+          icon(row, "大写", 1.35f, a::shift);
           View shiftKey = row.getChildAt(row.getChildCount() - 1);
-          ((Ui.Glyph) shiftKey).color = capital ? Ui.bg() : Ui.ink();
-          shiftKey.setBackground(Ui.pressable(c, capital ? Ui.ink() : Ui.specialKey(), 7));
+          ((Ui.Glyph) shiftKey).color = Ui.ink();
+          shiftKey.setBackground(Ui.pressable(c, capital ? Ui.selected() : Ui.specialKey(), 7));
           shiftKey.setSelected(capital);
           shiftKey.setStateDescription(capital ? "大写已开启" : "小写输入");
+          letters = centerKeys(row);
         }
         for (char ch : rows[n].toCharArray()) {
           key(
-              row,
+              letters,
               ("" + ch).toUpperCase(java.util.Locale.ROOT),
               1,
               () -> a.letter(ch),
               false);
-          row.getChildAt(row.getChildCount() - 1).setContentDescription(
+          letters.getChildAt(letters.getChildCount() - 1).setContentDescription(
               english && capital ? ("" + ch).toUpperCase(java.util.Locale.ROOT) : "" + ch);
         }
         if (n == 1) row.addView(new Space(c), new LayoutParams(0, 1, .5f));
-        if (n == 2) icon(row, "退格", 1.35f, a::delete, false);
+        if (n == 2) icon(row, "退格", 1.35f, a::delete);
       }
       LinearLayout row = row();
-      key(row, "123", 1.8f, a::symbols, true);
+      key(row, "123", 1.8f, a::numbers, true);
       key(row, english ? "," : "，", .9f, () -> a.letter(english ? ',' : '，'), false);
       space(row, 3.6f, !privacy && !nested);
       key(row, english ? "英" : "中", .95f, a::language, true);
-      icon(row, "换行", 1.85f, a::enter, true);
+      icon(row, "换行", 1.85f, a::enter);
     }
     dictation =
         new DictationSurface(
@@ -234,41 +246,149 @@ public final class KeyboardView extends LinearLayout {
 
   private void numbers(boolean speech) {
     keyRows.removeAllViews();
-    // Official Doubao reference: the primary numbers/symbols surface keeps a full 1–0 row;
-    // its separate keypad is reached explicitly. Decimal/email/URL punctuation stays visible.
-    for (String chars : new String[] {"1234567890", "-/:~()_@#&", "+%=?!,.;'\""}) {
+    auxiliaryHeader();
+    for (String[] chars : new String[][] {
+        {"1","2","3","4","5","6","7","8","9","0"},
+        {"-","/",":","~","(",")","…","@","“","”"}}) {
       LinearLayout row = row();
-      for (char ch : chars.toCharArray()) key(row, "" + ch, 1, () -> actions.letter(ch), false);
+      for (String value : chars) character(row, value, 1);
     }
+    punctuationRow("符号", actions::symbolPanel,
+        new String[] {"。", "，", "、", "?", "!", "."});
     LinearLayout row = row();
-    key(row, "ABC", 1.4f, actions::symbols, true);
-    key(row, "12\n34", 1.1f, () -> numberPad(speech), true);
+    back(row, 1.8f);
+    key(row, "12\n34", 1.1f, actions::numberPad, false);
     row.getChildAt(row.getChildCount() - 1).setContentDescription("数字");
-    key(row, "#+=", .9f, actions::symbolPanel, true);
-    space(row, 3f, speech);
-    icon(row, "退格", 1.4f, actions::delete, false);
-    icon(row, "换行", 1.85f, actions::enter, true);
+    space(row, 4.1f, speech);
+    icon(row, "换行", 1.85f, actions::enter);
   }
 
-  private void numberPad(boolean speech) {
+  private void numberPad() {
     keyRows.removeAllViews();
-    String[] digits = {"123", "456", "789"};
-    for (int i = 0; i < 3; i++) {
-      LinearLayout row = row();
-      final char symbol = i == 0 ? '.' : i == 1 ? ',' : '%';
-      key(row, "" + symbol, 1.15f, () -> actions.letter(symbol), true);
-      for (char digit : digits[i].toCharArray())
-        key(row, "" + digit, 1.75f, () -> actions.letter(digit), false);
-      if (i == 0) icon(row, "退格", 1.65f, actions::delete, false);
-      else if (i == 1) key(row, "#+=", 1.65f, actions::symbolPanel, true);
-      else key(row, "符号", 1.65f, () -> numbers(speech), true);
+    auxiliaryHeader();
+    LinearLayout columns = Ui.row(getContext());
+    keyRows.addView(columns, new LayoutParams(-1, -1));
+    LinearLayout left = Ui.col(getContext()), middle = Ui.col(getContext()), right = Ui.col(getContext());
+    columns.addView(left, new LayoutParams(0, -1, 1.15f));
+    columns.addView(middle, new LayoutParams(0, -1, 4.2f));
+    columns.addView(right, new LayoutParams(0, -1, 1.15f));
+    for (char symbol : "%+-*".toCharArray()) {
+      LinearLayout line = columnRow(left, .75f);
+      key(line, "" + symbol, 1, () -> actions.letter(symbol), true);
     }
+    back(columnRow(left, 1), 1);
+    for (String digits : new String[] {"123", "456", "789"}) {
+      LinearLayout line = columnRow(middle, 1);
+      for (char digit : digits.toCharArray())
+        key(line, "" + digit, 1, () -> actions.letter(digit), false);
+    }
+    LinearLayout last = columnRow(middle, 1);
+    key(last, "符号", 1, actions::symbolPanel, false);
+    character(last, "0", 1); character(last, ".", 1);
+    icon(columnRow(right, 1), "退格", 1, actions::delete);
+    key(columnRow(right, 1), "空格", 1, actions::space, true);
+    icon(columnRow(right, 2), "换行", 1, actions::enter);
+  }
+
+  private LinearLayout columnRow(LinearLayout column, float weight) {
+    LinearLayout row = Ui.row(getContext());
+    column.addView(row, new LayoutParams(-1, 0, weight));
+    return row;
+  }
+
+  private void character(LinearLayout row, String value, float weight) {
+    key(row, value, weight, () -> {
+      for (char ch : value.toCharArray()) actions.letter(ch);
+    }, false);
+  }
+
+  private void punctuationRow(String label, Runnable switchPage, String[] values) {
     LinearLayout row = row();
-    key(row, "ABC", 1.15f, actions::symbols, true);
-    space(row, 1.75f, speech);
-    key(row, "0", 1.75f, () -> actions.letter('0'), false);
-    key(row, "=", 1.75f, () -> actions.letter('='), true);
-    icon(row, "换行", 1.65f, actions::enter, true);
+    key(row, label, 1.35f, switchPage, true);
+    LinearLayout middle = centerKeys(row);
+    for (String value : values) {
+      if (value.isEmpty()) middle.addView(new Space(getContext()), geometry(1));
+      else character(middle, value, 1);
+    }
+    icon(row, "退格", 1.35f, actions::delete);
+  }
+
+  private LinearLayout centerKeys(LinearLayout row) {
+    LinearLayout middle = Ui.row(getContext());
+    row.addView(middle, new LayoutParams(0, -1, 7));
+    return middle;
+  }
+
+  private void back(LinearLayout row, float weight) {
+    View key = Icons.button(getContext(), R.drawable.ic_arrow_back, "返回键盘", actions::letters);
+    key.setBackground(Ui.pressable(getContext(), Ui.specialKey(), 7));
+    key.setElevation(Ui.dp(getContext(), .8f));
+    row.addView(key, geometry(weight));
+  }
+
+  private void auxiliaryHeader() {
+    Context c = getContext();
+    idle.removeAllViews();
+    HorizontalScrollView scroll = new HorizontalScrollView(c);
+    scroll.setHorizontalScrollBarEnabled(false);
+    LinearLayout quick = Ui.row(c);
+    for (String value : new String[] {"#", "%", "&", "+", "…", "《", "》"}) {
+      TextView item = Ui.text(c, value, 20, Ui.ink());
+      item.setGravity(Gravity.CENTER); item.setContentDescription(value);
+      item.setBackground(Ui.pressable(c, Color.TRANSPARENT, 7));
+      item.setOnClickListener(v -> { for (char ch : value.toCharArray()) actions.letter(ch); });
+      quick.addView(item, new LayoutParams(Ui.dp(c, 48), -1));
+    }
+    scroll.addView(quick, new HorizontalScrollView.LayoutParams(-2, -1));
+    idle.addView(scroll, new LayoutParams(0, -1, 1));
+    if (page == KeyboardPage.SYMBOLS && SymbolCatalog.pages(symbolCategory) > 1) {
+      View previous = Icons.button(c, R.drawable.ic_arrow_back, "上一页符号",
+          () -> { symbolPage--; symbols(); });
+      previous.setEnabled(symbolPage > 0);
+      previous.setAlpha(previous.isEnabled() ? 1 : .35f);
+      idle.addView(previous, new LayoutParams(Ui.dp(c, 40), -1));
+      TextView number = Ui.text(c, (symbolPage + 1) + "/" + SymbolCatalog.pages(symbolCategory), 13, Ui.sub());
+      number.setGravity(Gravity.CENTER); idle.addView(number, new LayoutParams(Ui.dp(c, 36), -1));
+      View next = Icons.button(c, R.drawable.ic_arrow_back, "下一页符号",
+          () -> { symbolPage++; symbols(); });
+      next.setRotation(180); next.setEnabled(symbolPage + 1 < SymbolCatalog.pages(symbolCategory));
+      next.setAlpha(next.isEnabled() ? 1 : .35f);
+      idle.addView(next, new LayoutParams(Ui.dp(c, 40), -1));
+    }
+    idle.addView(Icons.button(c, R.drawable.ic_close, "返回键盘", actions::letters),
+        new LayoutParams(Ui.dp(c, 48), -1));
+  }
+
+  private void symbols() {
+    keyRows.removeAllViews();
+    auxiliaryHeader();
+    java.util.List<String> values = SymbolCatalog.page(symbolCategory, symbolPage);
+    for (int n = 0; n < 2; n++) {
+      LinearLayout row = row();
+      for (int i = n * 10; i < (n + 1) * 10; i++) {
+        if (i < values.size()) character(row, values.get(i), 1);
+        else row.addView(new Space(getContext()), geometry(1));
+      }
+    }
+    String[] last = new String[6];
+    for (int i = 0; i < 6; i++) last[i] = i + 20 < values.size() ? values.get(i + 20) : "";
+    punctuationRow("123", actions::numbers, last);
+    LinearLayout footer = row();
+    back(footer, 1.35f);
+    HorizontalScrollView viewport = new HorizontalScrollView(getContext());
+    viewport.setHorizontalScrollBarEnabled(false);
+    LinearLayout tabs = Ui.row(getContext());
+    for (int i = 0; i < SymbolCatalog.NAMES.length; i++) {
+      final int category = i;
+      TextView tab = Ui.text(getContext(), SymbolCatalog.NAMES[i], 14,
+          i == symbolCategory ? Ui.ink() : Ui.sub());
+      tab.setGravity(Gravity.CENTER); tab.setSingleLine(); tab.setContentDescription(SymbolCatalog.NAMES[i]);
+      tab.setBackground(Ui.pressable(getContext(), i == symbolCategory ? Ui.selected() : Color.TRANSPARENT, 12));
+      tab.setSelected(i == symbolCategory); tab.setOnClickListener(v -> { symbolCategory = category; symbolPage = 0; symbols(); });
+      tabs.addView(tab, new LayoutParams(Ui.dp(getContext(), 52), -1));
+    }
+    viewport.addView(tabs, new HorizontalScrollView.LayoutParams(-2, -1));
+    footer.addView(viewport, new LayoutParams(0, -1, 8.35f));
   }
 
   private LinearLayout row() {
@@ -399,7 +519,7 @@ public final class KeyboardView extends LinearLayout {
         });
   }
 
-  private void icon(LinearLayout row, String name, float weight, Runnable click, boolean primary) {
+  private void icon(LinearLayout row, String name, float weight, Runnable click) {
     Context c = getContext();
     View key =
         Ui.icon(
@@ -409,8 +529,8 @@ public final class KeyboardView extends LinearLayout {
               actions.haptic(this);
               click.run();
             });
-    ((Ui.Glyph) key).color = primary ? Ui.bg() : Ui.ink();
-    key.setBackground(Ui.pressable(c, primary ? Ui.ink() : Ui.specialKey(), 7));
+    ((Ui.Glyph) key).color = Ui.ink();
+    key.setBackground(Ui.pressable(c, Ui.specialKey(), 7));
     key.setElevation(Ui.dp(c, .8f));
     row.addView(key, geometry(weight));
     if (name.equals("退格")) {
@@ -564,9 +684,9 @@ public final class KeyboardView extends LinearLayout {
 
   public void addCandidate(String text, Runnable click) {
     TextView t =
-        Ui.text(getContext(), text, 18, candidateRow.getChildCount() == 0 ? Ui.accent() : Ui.ink());
+        Ui.text(getContext(), text, 20, candidateRow.getChildCount() == 0 ? Ui.accent() : Ui.ink());
     t.setSingleLine(true);
-    t.setAutoSizeTextTypeUniformWithConfiguration(12, 18, 1,
+    t.setAutoSizeTextTypeUniformWithConfiguration(14, 20, 1,
         android.util.TypedValue.COMPLEX_UNIT_SP);
     t.setGravity(Gravity.CENTER);
     candidatePadding(t);
@@ -581,7 +701,7 @@ public final class KeyboardView extends LinearLayout {
     int side = Ui.dp(getContext(), 14);
     // Spelling sits above candidates; the shared 48dp hit target never resizes the keys.
     candidate.setPadding(side,
-        composingRow.getVisibility() == VISIBLE ? Ui.dp(getContext(), 24) : 0, side, 0);
+        composingRow.getVisibility() == VISIBLE ? Ui.dp(getContext(), 18) : 0, side, 0);
   }
 
   @Override

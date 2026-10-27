@@ -9,7 +9,7 @@ import android.os.*;
 import android.view.*;
 import android.widget.*;
 import androidx.test.platform.app.InstrumentationRegistry;
-import app.doudou.ime.app.MainActivity;
+import app.doudou.ime.app.PracticeActivity;
 import app.doudou.ime.input.KeyboardView;
 import app.doudou.ime.voice.VoiceGesture;
 import app.doudou.ime.voice.VoiceState;
@@ -28,7 +28,8 @@ public final class KeyboardLayoutTest {
     ins = InstrumentationRegistry.getInstrumentation();
     activity =
         ins.startActivitySync(
-            new Intent(ins.getTargetContext(), MainActivity.class)
+            new Intent(ins.getTargetContext(), PracticeActivity.class)
+                .putExtra("scene", "comments")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     ins.runOnMainSync(
         () -> {
@@ -37,7 +38,7 @@ public final class KeyboardLayoutTest {
                   activity,
                   false,
                   false,
-                  false,
+                  app.doudou.ime.input.KeyboardPage.LETTERS,
                   false,
                   false,
                   new KeyboardView.Actions() {
@@ -56,7 +57,9 @@ public final class KeyboardLayoutTest {
 
                     public void shift() {}
 
-                    public void symbols() {}
+                    public void numbers() {}
+                    public void numberPad() {}
+                    public void letters() {}
 
                     public void language() {}
 

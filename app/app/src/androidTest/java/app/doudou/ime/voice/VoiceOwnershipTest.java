@@ -23,11 +23,45 @@ public class VoiceOwnershipTest {
     }
     return null;
   }
-  private void state(VoiceController voice,String name,Object value) throws Exception {
+  private void state(VoiceController voice,String name,Object value) throws ReflectiveOperationException {
     Field f=VoiceController.class.getDeclaredField(name);f.setAccessible(true);f.set(voice,value);
   }
   @Test public void automaticFinalAllowsFirstPinyinEditDuringCorrection() throws Exception { check(VoiceState.REWRITING); }
   @Test public void delayedMicrophoneProcessingAlsoAllowsFirstEdit() throws Exception { check(VoiceState.FINISHING); }
+  @Test public void serviceBackCancelsSpeechBeforeChangingAnyKeyboardPage() {
+    Assume.assumeTrue("Own emulator only", "ranchu".equals(Build.HARDWARE));
+    Instrumentation ins = InstrumentationRegistry.getInstrumentation();
+    KeyboardApp app = (KeyboardApp)ins.getTargetContext().getApplicationContext();
+    ins.runOnMainSync(() -> {
+      for (KeyboardPage page : new KeyboardPage[] {KeyboardPage.LETTERS, KeyboardPage.NUMBERS}) {
+        for (VoiceState phase : new VoiceState[] {VoiceState.RECORDING, VoiceState.FINISHING, VoiceState.REWRITING}) {
+          int[] typing = {0};
+          EditorHost host = (EditorHost)Proxy.newProxyInstance(EditorHost.class.getClassLoader(),
+              new Class<?>[] {EditorHost.class}, (p, m, a) -> {
+                if (m.getName().equals("context")) return ins.getTargetContext();
+                if (m.getName().equals("services")) return app;
+                if (m.getName().equals("typing")) typing[0]++;
+                if (m.getReturnType() == boolean.class) return false;
+                if (m.getReturnType() == long.class) return 1L;
+                if (m.getReturnType() == int.class) return 0;
+                return null;
+              });
+          VoiceController voice = new VoiceController(host);
+          KeyboardService service = new KeyboardService();
+          try {
+            state(voice, "sessionActive", true); state(voice, "state", phase);
+            state(voice, "stopping", phase != VoiceState.RECORDING);
+            Field controller = KeyboardService.class.getDeclaredField("voice"); controller.setAccessible(true); controller.set(service, voice);
+            Field layout = KeyboardService.class.getDeclaredField("inputPage"); layout.setAccessible(true); layout.set(service, page);
+            assertTrue(service.onKeyDown(KeyEvent.KEYCODE_BACK, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK)));
+            assertFalse(page + " / " + phase + " cancels instead of navigating under active speech", voice.active());
+            assertEquals(1, typing[0]);
+            assertEquals("Speech cancellation owns Back; page navigation is a later action", page, layout.get(service));
+          } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+        }
+      }
+    });
+  }
   private void check(VoiceState phase) throws Exception {
     Assume.assumeTrue("Own emulator only", "ranchu".equals(Build.HARDWARE));
     Instrumentation ins=InstrumentationRegistry.getInstrumentation();
