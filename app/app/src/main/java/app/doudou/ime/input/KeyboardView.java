@@ -143,7 +143,7 @@ public final class KeyboardView extends LinearLayout {
     candidateArea.setVisibility(GONE);
     candidateArea.addView(candidateScroll, new FrameLayout.LayoutParams(-1, -1));
     candidateArea.addView(composingRow,
-        new FrameLayout.LayoutParams(-1, Ui.dp(c, 24), Gravity.BOTTOM));
+        new FrameLayout.LayoutParams(-1, Ui.dp(c, 24), Gravity.TOP));
     bar.addView(candidateArea, new LayoutParams(0, -1, 1));
     expand = Ui.icon(c, "展开", a::expand);
     expand.setVisibility(GONE);
@@ -579,9 +579,9 @@ public final class KeyboardView extends LinearLayout {
 
   private void candidatePadding(View candidate) {
     int side = Ui.dp(getContext(), 14);
-    // Keep the 48dp hit target; only its label moves above the passive spelling overlay.
-    candidate.setPadding(side, 0, side,
-        composingRow.getVisibility() == VISIBLE ? Ui.dp(getContext(), 24) : 0);
+    // Spelling sits above candidates; the shared 48dp hit target never resizes the keys.
+    candidate.setPadding(side,
+        composingRow.getVisibility() == VISIBLE ? Ui.dp(getContext(), 24) : 0, side, 0);
   }
 
   @Override

@@ -278,10 +278,12 @@ public final class KeyboardHeightTest {
       ins.runOnMainSync(() -> {
         TextView candidate = (TextView) visible("你好");
         assertEquals(Ui.dp(context, 48), bounds(candidate).height());
-        assertTrue("Candidate text fits above the spelling overlay",
+        assertTrue("Candidate text fits below the spelling overlay",
             candidate.getLineHeight() <= candidate.getHeight()
                 - candidate.getPaddingTop() - candidate.getPaddingBottom());
         TextView spelling = (TextView) visible("正在输入拼音：zhongguoshurufa");
+        assertTrue("Spelling precedes candidate text",
+            bounds(spelling).bottom <= bounds(candidate).top + candidate.getPaddingTop());
         assertTrue("Spelling fits at large font scale", spelling.getLineHeight() <= spelling.getHeight());
         keyboard.showPredictions();
         keyboard.addCandidate("👨‍👩‍👧‍👦", () -> selections++);

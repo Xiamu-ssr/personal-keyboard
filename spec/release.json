@@ -1,9 +1,9 @@
 {
-  "version": "0.9.5-alpha.1",
+  "version": "0.9.5-alpha.2",
   "files": {
     "doudou-keyboard.apk": {
-      "sha256": "f2cb5ea55e1d1d69e32396ebfe4ba746028062852448fd9e0bad03e5ceb768cf",
-      "bytes": 47090112
+      "sha256": "bc1869219f0dc906b11f14a80196c7744b51d03cdaac8297b40c5fd96d044ccf",
+      "bytes": 46898430
     },
     "home.png": {
       "sha256": "1c8b5d7a6c349bd8bdad40291c6d289a7425240868c53f22cd3f50757fcc3959",
@@ -15,11 +15,11 @@
       }
     },
     "typing.png": {
-      "sha256": "3211734a0314227598670409fc3223d68644f2893b6bceb769d3eae2cc3d5391",
-      "bytes": 170414,
+      "sha256": "f81e37f84e722773006602bb4a21e4da32ff611e4a9f9029443f1a7868bd0552",
+      "bytes": 170535,
       "source": {
-        "version": "0.9.5-alpha.1",
-        "apkSha256": "f2cb5ea55e1d1d69e32396ebfe4ba746028062852448fd9e0bad03e5ceb768cf",
+        "version": "0.9.5-alpha.2",
+        "apkSha256": "bc1869219f0dc906b11f14a80196c7744b51d03cdaac8297b40c5fd96d044ccf",
         "kind": "native-runtime"
       }
     },
@@ -78,11 +78,11 @@
       }
     },
     "emoji.png": {
-      "sha256": "61dc3325fc9bf6b3789db47f3231551d412bcc2137060ccfff498ce03a7bb7af",
-      "bytes": 304320,
+      "sha256": "3e10a45d1395f3e59373bc37e5c3f41fab70998cc928b42c3eaed2194bbac345",
+      "bytes": 303838,
       "source": {
-        "version": "0.9.5-alpha.1",
-        "apkSha256": "f2cb5ea55e1d1d69e32396ebfe4ba746028062852448fd9e0bad03e5ceb768cf",
+        "version": "0.9.5-alpha.2",
+        "apkSha256": "bc1869219f0dc906b11f14a80196c7744b51d03cdaac8297b40c5fd96d044ccf",
         "kind": "native-runtime"
       }
     },
@@ -142,47 +142,47 @@
       }
     },
     "pinyin.png": {
-      "sha256": "da85fbc1257557fafcc81e810b28315770af26612caa7feaef7631da6038ffd0",
-      "bytes": 175767,
+      "sha256": "8fdb3df05da99c3aabafa3bb8ac9f640fcbd762176e63b86a5d2cccfb04e3cac",
+      "bytes": 175644,
       "source": {
-        "version": "0.9.5-alpha.1",
-        "apkSha256": "f2cb5ea55e1d1d69e32396ebfe4ba746028062852448fd9e0bad03e5ceb768cf",
+        "version": "0.9.5-alpha.2",
+        "apkSha256": "bc1869219f0dc906b11f14a80196c7744b51d03cdaac8297b40c5fd96d044ccf",
         "kind": "native-runtime"
       }
     },
     "candidates.png": {
-      "sha256": "53a0b8fd0dec2606db28d460fdff7c2691989a1e9641018dc95db8738b0dccba",
-      "bytes": 154598,
+      "sha256": "f565d3a24c004df653a6d27a287f6e08db464a083d78423b255eed6db44c7a78",
+      "bytes": 154694,
       "source": {
-        "version": "0.9.5-alpha.1",
-        "apkSha256": "f2cb5ea55e1d1d69e32396ebfe4ba746028062852448fd9e0bad03e5ceb768cf",
+        "version": "0.9.5-alpha.2",
+        "apkSha256": "bc1869219f0dc906b11f14a80196c7744b51d03cdaac8297b40c5fd96d044ccf",
         "kind": "native-runtime"
       }
     },
     "numbers.png": {
-      "sha256": "e70c843d9b2573fa1583bf0ec3c2d767de5965a472f8b30fae1b66081d7594c3",
-      "bytes": 183466,
+      "sha256": "a4cf2c0bc2214b559933f90d69f8e65e8be43012ba4da6b84ecf00f3c8ae3f42",
+      "bytes": 182886,
       "source": {
-        "version": "0.9.5-alpha.1",
-        "apkSha256": "f2cb5ea55e1d1d69e32396ebfe4ba746028062852448fd9e0bad03e5ceb768cf",
+        "version": "0.9.5-alpha.2",
+        "apkSha256": "bc1869219f0dc906b11f14a80196c7744b51d03cdaac8297b40c5fd96d044ccf",
         "kind": "native-runtime"
       }
     },
     "associations.png": {
-      "sha256": "6729fece87ae95a51e64dad0efe473f248322328756142a766377157315da4b5",
-      "bytes": 163886,
+      "sha256": "bbe0860afe3b610c25261911081b9f1f44dd77d150fc58c52a3e46db3554000e",
+      "bytes": 164033,
       "source": {
-        "version": "0.9.5-alpha.1",
-        "apkSha256": "f2cb5ea55e1d1d69e32396ebfe4ba746028062852448fd9e0bad03e5ceb768cf",
+        "version": "0.9.5-alpha.2",
+        "apkSha256": "bc1869219f0dc906b11f14a80196c7744b51d03cdaac8297b40c5fd96d044ccf",
         "kind": "native-runtime"
       }
     },
     "emoji-candidates.png": {
-      "sha256": "10402483ad9c8acea4d6706f4ff838479d7dda4cca72d47059c7b0ec88fd4643",
-      "bytes": 174787,
+      "sha256": "fc3d1d6f52dfec32b8de16db183fdcb1143c0fa935b3dee4ef9b83d34065f27e",
+      "bytes": 174685,
       "source": {
-        "version": "0.9.5-alpha.1",
-        "apkSha256": "f2cb5ea55e1d1d69e32396ebfe4ba746028062852448fd9e0bad03e5ceb768cf",
+        "version": "0.9.5-alpha.2",
+        "apkSha256": "bc1869219f0dc906b11f14a80196c7744b51d03cdaac8297b40c5fd96d044ccf",
         "kind": "native-runtime"
       }
     }
